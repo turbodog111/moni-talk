@@ -25,10 +25,11 @@
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     background: var(--bg); color: var(--text);
-    height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
+    height: var(--app-height, 100dvh); display: flex; flex-direction: column; overflow: hidden;
+    position: fixed; top: 0; left: 0; width: 100%;
   }
 
-  .screen { display: none; flex-direction: column; height: 100dvh; }
+  .screen { display: none; flex-direction: column; height: var(--app-height, 100dvh); }
   .screen.active { display: flex; }
 
   .header {
@@ -113,7 +114,8 @@
 
   /* Chat Screen */
   .chat-header-mood { font-size: 11px; opacity: 0.7; }
-  .chat-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; }
+  .chat-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; min-height: 0; }
+  .chat-area > :first-child { margin-top: auto; }
   .message { display: flex; gap: 8px; max-width: 80%; animation: fadeIn 0.25s ease; }
   .message.monika { align-self: flex-start; }
   .message.user { align-self: flex-end; flex-direction: row-reverse; }
@@ -783,7 +785,8 @@ async function callOpenRouter(chat) {
 async function callPuter(chat) {
   try {
     const r = await puter.ai.chat(buildMessages(chat), { model: puterModel, stream: false });
-    const t = typeof r === 'string' ? r : r?.message?.content || r?.text || r?.toString() || '';
+    const raw = typeof r === 'string' ? r : r?.message?.content || r?.text || r?.toString() || '';
+    const t = typeof raw === 'string' ? raw : String(raw ?? '');
     return t.trim() || 'Hmm, I lost my train of thought...';
   } catch (err) {
     if (err?.message?.includes('auth') || err?.message?.includes('login'))
@@ -1005,6 +1008,21 @@ function handleSignOut() {
   showToast('Signed out. Data stays on this device.');
 }
 
+// ====== MOBILE KEYBOARD ======
+function setupViewport() {
+  const update = () => {
+    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', h + 'px');
+    if (screens.chat.classList.contains('active')) scrollToBottom();
+  };
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', update);
+  }
+  window.addEventListener('resize', update);
+  update();
+}
+
+setupViewport();
 init();
 </script>
 </body>
