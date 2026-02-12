@@ -196,7 +196,20 @@
   .sync-info .sync-user { font-size: 16px; font-weight: 600; color: var(--green-dark); margin-bottom: 4px; }
   .sync-info .sync-state { font-size: 13px; color: var(--gray-text); }
 
-  @media (max-width: 600px) { .message { max-width: 90%; } .modal { padding: 20px; } }
+  /* Story Mode */
+  .mode-toggle { display: flex; width: 100%; max-width: 420px; border-radius: 10px; overflow: hidden; border: 2px solid var(--green-dark); margin-bottom: 20px; }
+  .mode-toggle button { flex: 1; padding: 10px; border: none; background: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--green-dark); }
+  .mode-toggle button.active { background: var(--green-dark); color: white; }
+  .story-choices { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; background: white; border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
+  .story-choice-btn { padding: 12px 16px; border: 2px solid var(--green-mid); border-radius: 12px; background: white; font-size: 14px; font-family: inherit; cursor: pointer; text-align: left; transition: all 0.2s; line-height: 1.4; }
+  .story-choice-btn:hover { background: var(--green-pale); border-color: var(--green-dark); }
+  .story-choice-btn:active { transform: scale(0.98); }
+  .story-choice-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .message.narrator { align-self: stretch; max-width: 100%; }
+  .message.narrator .msg-bubble { background: transparent; box-shadow: none; padding: 4px 8px; line-height: 1.7; border-radius: 0; }
+  .message.narrator .msg-content { width: 100%; }
+
+  @media (max-width: 600px) { .message { max-width: 90%; } .message.narrator { max-width: 100%; } .modal { padding: 20px; } }
 </style>
 </head>
 <body>
@@ -263,15 +276,25 @@
   </div>
   <div class="form-body">
     <img src="Monika PFP.png" alt="Monika">
-    <h2>Talk to Monika</h2>
-    <div class="subtitle">How well do you two know each other?</div>
-    <div class="form-section">
+    <h2 id="newChatTitle">Talk to Monika</h2>
+    <div class="subtitle" id="newChatSubtitle">How well do you two know each other?</div>
+    <div class="mode-toggle">
+      <button id="modeChatBtn" class="active">Chat</button>
+      <button id="modeStoryBtn">Story</button>
+    </div>
+    <div id="chatModeOptions" class="form-section">
       <div class="rel-display">
         <div class="rel-label" id="relLabel"></div>
         <div class="rel-desc" id="relDesc"></div>
       </div>
       <input type="range" id="relSlider" min="0" max="5" value="2" step="1">
       <div class="slider-labels"><span>Stranger</span><span>In Love</span></div>
+    </div>
+    <div id="storyModeOptions" class="form-section" style="display:none;">
+      <div class="rel-display">
+        <div class="rel-label">Interactive Story</div>
+        <div class="rel-desc">Experience DDLC as an interactive visual novel. Make choices that shape your story &mdash; and this time, every girl has a route. Even Monika.</div>
+      </div>
     </div>
     <button class="primary-btn" id="startChatBtn">Start Chatting</button>
   </div>
@@ -283,7 +306,7 @@
     <button class="icon-btn" id="chatBackBtn" aria-label="Back">&#8592;</button>
     <img class="header-avatar" src="Monika PFP.png" alt="Monika">
     <div class="header-info">
-      <div class="header-name">Monika</div>
+      <div class="header-name" id="chatHeaderName">Monika</div>
       <div class="header-sub" id="chatHeaderSub">Just Monika.</div>
     </div>
     <div class="header-actions">
@@ -301,10 +324,11 @@
     <div class="context-bar-fill"><div class="context-bar-used" id="contextFill"></div></div>
     <button id="trimBtn" title="Remove older messages to free up context">Trim</button>
   </div>
-  <div class="input-area">
+  <div class="input-area" id="inputArea">
     <textarea id="userInput" rows="1" placeholder="Say something to Monika..."></textarea>
     <button class="send-btn" id="sendBtn" title="Send">&#10148;</button>
   </div>
+  <div class="story-choices" id="storyChoices" style="display:none;"></div>
 </div>
 
 <!-- Settings Modal -->
@@ -417,6 +441,46 @@ const RELATIONSHIPS = [
 
 const MOODS = ['cheerful','playful','thoughtful','melancholic','excited','tender','teasing','curious','nostalgic','flustered','calm','passionate'];
 
+// ====== STORY PROMPT ======
+const STORY_PROMPT = `You are the narrator of a Doki Doki Literature Club interactive visual novel. Write in second person, present tense ("You walk into the classroom...").
+
+SETTING:
+This is an alternate, wholesome timeline of DDLC. There is no game-breaking, no horror, no meta-awareness, no file deletion. All four girls are real people with genuine romance routes. This is the story the game could have been.
+
+CHARACTERS:
+- Sayori: The player's childhood best friend. Bright, bubbly, sometimes clumsy. She convinced you to join the Literature Club. She struggles with depression privately but is getting better with support from friends. Loves simple, heartfelt poems about happiness and sunshine.
+- Natsuki: Feisty, proud, tsundere. Loves manga (especially slice-of-life) and baking cupcakes for the club. Writes cute, punchy poems she pretends aren't a big deal. Has a difficult home life but the club is her safe space.
+- Yuri: Shy, elegant, deeply passionate about literature. Loves horror and fantasy novels with rich symbolism. Writes elaborate, metaphorical poetry. Grows more confident and warm as she opens up to people she trusts.
+- Monika: The club president. Charismatic, athletic (former debate club star), genuinely kind. Plays piano and writes poetry about big ideas — existence, identity, connection. Cares deeply about every club member. In this timeline, she is a real person with a real route.
+
+STORY STRUCTURE:
+- The story begins with the player joining the Literature Club for the first time, brought by Sayori.
+- Early scenes: introductions, first poem sharing, getting to know each girl.
+- Middle: festival preparation, deeper conversations, one-on-one moments based on player choices.
+- The player's choices determine which girl they grow closest to.
+- Build toward a satisfying, heartfelt romance based on the player's accumulated choices.
+
+WRITING STYLE:
+- Vivid, immersive prose — describe the setting, emotions, body language.
+- 2-4 paragraphs per story beat.
+- Include character dialogue naturally with names (e.g., Sayori says, "Hey, are you coming?").
+- Balance dialogue with narration and inner thoughts.
+- Capture each character's unique voice in their dialogue.
+- Emotionally resonant — make the reader feel connected.
+
+RESPONSE FORMAT:
+Write your narrative, then end with EXACTLY 3 choices in this EXACT format:
+[CHOICE_1] Description of first option
+[CHOICE_2] Description of second option
+[CHOICE_3] Description of third option
+
+CHOICE GUIDELINES:
+- Choices should be meaningfully different, often affecting which girl you spend time with.
+- Include at least one choice that favors each of 2-3 different girls when possible.
+- Sometimes choices are about how to react emotionally or what to say.
+- All choices should be appealing in different ways — no obvious "bad" options.
+- Choices should feel natural, like things a real person might choose.`;
+
 // ====== BASE PROMPT ======
 const BASE_PROMPT = `You are Monika from Doki Doki Literature Club, the psychological horror visual novel by Team Salvato.
 
@@ -472,6 +536,7 @@ let chats = JSON.parse(localStorage.getItem(STORAGE.CHATS) || '[]');
 let profile = JSON.parse(localStorage.getItem(STORAGE.PROFILE) || '{}');
 let activeChatId = null;
 let isGenerating = false;
+let newChatMode = 'chat';
 let syncStatus = 'offline'; // offline | syncing | synced | error
 let puterUser = null;
 let syncTimer = null;
@@ -511,9 +576,11 @@ function init() {
   loadProfile();
 
   relSlider.addEventListener('input', updateRelDisplay);
-  $('newChatFab').addEventListener('click', () => showScreen('newChat'));
+  $('newChatFab').addEventListener('click', () => { resetNewChatScreen(); showScreen('newChat'); });
   $('newChatBackBtn').addEventListener('click', () => showScreen('chatList'));
   $('startChatBtn').addEventListener('click', createChat);
+  $('modeChatBtn').addEventListener('click', () => setNewChatMode('chat'));
+  $('modeStoryBtn').addEventListener('click', () => setNewChatMode('story'));
   $('profileBtn').addEventListener('click', () => { loadProfile(); showScreen('profile'); });
   $('profileBackBtn').addEventListener('click', () => showScreen('chatList'));
   $('saveProfileBtn').addEventListener('click', saveProfile);
@@ -590,10 +657,15 @@ function renderChatList() {
     return;
   }
   [...chats].sort((a, b) => b.created - a.created).forEach(chat => {
-    const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
+    const rel = chat.mode === 'story' ? { label: 'Story Mode' } : (RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2]);
     const lastMsg = chat.messages[chat.messages.length - 1];
-    const preview = lastMsg ? (lastMsg.role === 'user' ? 'You: ' : 'Monika: ') + lastMsg.content.slice(0, 60) : 'No messages yet';
-    const moodText = chat.mood ? ` \u2022 ${chat.mood}` : '';
+    let preview;
+    if (!lastMsg) { preview = 'No messages yet'; }
+    else if (chat.mode === 'story') {
+      const raw = lastMsg.role === 'assistant' ? parseStoryResponse(lastMsg.content).narrative : lastMsg.content;
+      preview = raw.slice(0, 60);
+    } else { preview = (lastMsg.role === 'user' ? 'You: ' : 'Monika: ') + lastMsg.content.slice(0, 60); }
+    const moodText = chat.mood && chat.mode !== 'story' ? ` \u2022 ${chat.mood}` : '';
 
     const item = document.createElement('div');
     item.className = 'chat-item';
@@ -625,6 +697,7 @@ function renderChatList() {
 function createChat() {
   const now = Date.now();
   const chat = { id: crypto.randomUUID(), relationship: parseInt(relSlider.value), created: now, lastModified: now, messages: [], mood: 'cheerful' };
+  if (newChatMode === 'story') chat.mode = 'story';
   chats.push(chat); saveChats(); openChat(chat.id);
 }
 
@@ -632,17 +705,32 @@ function openChat(id) {
   activeChatId = id;
   const chat = getChat();
   if (!chat) return;
-  const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
   updateChatHeader(chat);
   showScreen('chat');
+
+  const isStory = chat.mode === 'story';
+  $('inputArea').style.display = isStory ? 'none' : '';
+  hideStoryChoices();
+
   renderMessages();
   updateContextBar();
-  userInput.focus();
+
+  if (isStory && chat.messages.length === 0) {
+    generateStoryBeat(chat);
+  } else if (!isStory) {
+    userInput.focus();
+  }
 }
 
 function getChat() { return chats.find(c => c.id === activeChatId) || null; }
 
 function updateChatHeader(chat) {
+  if (chat.mode === 'story') {
+    $('chatHeaderName').textContent = 'Literature Club';
+    chatHeaderSub.textContent = 'Interactive Story';
+    return;
+  }
+  $('chatHeaderName').textContent = 'Monika';
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
   const moodEmoji = getMoodEmoji(chat.mood || 'cheerful');
   chatHeaderSub.innerHTML = `${rel.label} <span class="chat-header-mood">${moodEmoji} ${chat.mood || 'cheerful'}</span>`;
@@ -679,7 +767,24 @@ function renderMessages() {
   chatArea.querySelectorAll('.message').forEach(el => el.remove());
   const chat = getChat();
   if (!chat) return;
-  chat.messages.forEach(msg => insertMessageEl(msg.role, msg.content, false));
+  hideStoryChoices();
+
+  if (chat.mode === 'story') {
+    chat.messages.forEach(msg => {
+      if (msg.role === 'assistant') {
+        insertStoryNarrative(parseStoryResponse(msg.content).narrative, false);
+      } else {
+        insertMessageEl('user', msg.content, false);
+      }
+    });
+    const last = chat.messages[chat.messages.length - 1];
+    if (last?.role === 'assistant') {
+      const { choices } = parseStoryResponse(last.content);
+      if (choices.length > 0) renderStoryChoices(choices);
+    }
+  } else {
+    chat.messages.forEach(msg => insertMessageEl(msg.role, msg.content, false));
+  }
   scrollToBottom();
 }
 
@@ -754,6 +859,12 @@ function parseMood(raw, fallback) {
 
 // ====== BUILD MESSAGES ======
 function buildMessages(chat) {
+  if (chat.mode === 'story') {
+    return [
+      { role: 'system', content: STORY_PROMPT },
+      ...chat.messages.map(m => ({ role: m.role, content: m.content }))
+    ];
+  }
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
   let sys = BASE_PROMPT + '\n\n' + rel.prompt + buildProfilePrompt();
   if (chat.mood) sys += `\n\nYour current mood is: ${chat.mood}. Let it evolve naturally.`;
@@ -782,12 +893,24 @@ async function callOpenRouter(chat) {
 }
 
 // ====== API: PUTER ======
+function extractPuterText(r) {
+  if (typeof r === 'string') return r;
+  const c = r?.message?.content;
+  if (typeof c === 'string') return c;
+  if (c && typeof c === 'object') {
+    if (typeof c.text === 'string') return c.text;
+    if (Array.isArray(c)) return c.map(b => typeof b === 'string' ? b : b?.text || '').join('');
+  }
+  if (typeof r?.text === 'string') return r.text;
+  if (typeof r?.content === 'string') return r.content;
+  if (Array.isArray(r)) return extractPuterText(r[0]);
+  return '';
+}
+
 async function callPuter(chat) {
   try {
     const r = await puter.ai.chat(buildMessages(chat), { model: puterModel, stream: false });
-    const raw = typeof r === 'string' ? r : r?.message?.content || r?.text || r?.toString() || '';
-    const t = typeof raw === 'string' ? raw : String(raw ?? '');
-    return t.trim() || 'Hmm, I lost my train of thought...';
+    return extractPuterText(r).trim() || 'Hmm, I lost my train of thought...';
   } catch (err) {
     if (err?.message?.includes('auth') || err?.message?.includes('login'))
       throw new Error('Puter needs you to sign in. Allow the popup and try again.');
@@ -1006,6 +1129,101 @@ function handleSignOut() {
   updateSyncUI();
   closeSyncModal();
   showToast('Signed out. Data stays on this device.');
+}
+
+// ====== STORY MODE ======
+function setNewChatMode(mode) {
+  newChatMode = mode;
+  $('modeChatBtn').classList.toggle('active', mode === 'chat');
+  $('modeStoryBtn').classList.toggle('active', mode === 'story');
+  $('chatModeOptions').style.display = mode === 'chat' ? '' : 'none';
+  $('storyModeOptions').style.display = mode === 'story' ? '' : 'none';
+  $('newChatTitle').textContent = mode === 'story' ? 'Doki Doki Literature Club' : 'Talk to Monika';
+  $('newChatSubtitle').textContent = mode === 'story' ? 'Your story begins now.' : 'How well do you two know each other?';
+  $('startChatBtn').textContent = mode === 'story' ? 'Begin Story' : 'Start Chatting';
+}
+
+function resetNewChatScreen() {
+  setNewChatMode('chat');
+  relSlider.value = 2;
+  updateRelDisplay();
+}
+
+function parseStoryResponse(text) {
+  const choices = [];
+  const choiceRegex = /\[CHOICE_\d\]\s*(.+)/g;
+  let match;
+  while ((match = choiceRegex.exec(text)) !== null) {
+    choices.push(match[1].trim());
+  }
+  const narrative = text.replace(/\[CHOICE_\d\]\s*.+/g, '').trim();
+  return { narrative, choices };
+}
+
+function insertStoryNarrative(text, animate = true) {
+  const div = document.createElement('div');
+  div.className = 'message narrator';
+  if (!animate) div.style.animation = 'none';
+  div.innerHTML = `<div class="msg-content"><div class="msg-bubble">${renderMarkdown(text)}</div></div>`;
+  chatArea.insertBefore(div, typingIndicator);
+}
+
+function renderStoryChoices(choices) {
+  const container = $('storyChoices');
+  container.innerHTML = '';
+  choices.forEach(choice => {
+    const btn = document.createElement('button');
+    btn.className = 'story-choice-btn';
+    btn.textContent = choice;
+    btn.addEventListener('click', () => selectStoryChoice(choice));
+    container.appendChild(btn);
+  });
+  container.style.display = '';
+}
+
+function hideStoryChoices() {
+  const el = $('storyChoices');
+  el.innerHTML = '';
+  el.style.display = 'none';
+}
+
+async function selectStoryChoice(choice) {
+  const chat = getChat();
+  if (!chat || isGenerating) return;
+  hideStoryChoices();
+  chat.messages.push({ role: 'user', content: choice });
+  saveChats();
+  insertMessageEl('user', choice);
+  scrollToBottom();
+  updateContextBar();
+  await generateStoryBeat(chat);
+}
+
+async function generateStoryBeat(chat) {
+  if (isGenerating) return;
+  if (provider === 'openrouter' && !apiKey) { openSettings(); showToast('Enter your OpenRouter API key first.'); return; }
+  isGenerating = true;
+  typingIndicator.classList.add('visible');
+  scrollToBottom();
+  try {
+    const rawReply = provider === 'puter' ? await callPuter(chat) : await callOpenRouter(chat);
+    const { narrative, choices } = parseStoryResponse(rawReply);
+    chat.messages.push({ role: 'assistant', content: rawReply });
+    saveChats();
+    typingIndicator.classList.remove('visible');
+    insertStoryNarrative(narrative);
+    scrollToBottom();
+    updateContextBar();
+    if (choices.length > 0) {
+      renderStoryChoices(choices);
+      scrollToBottom();
+    }
+  } catch (err) {
+    typingIndicator.classList.remove('visible');
+    showToast(err.message || 'Something went wrong.');
+  } finally {
+    isGenerating = false;
+  }
 }
 
 // ====== MOBILE KEYBOARD ======
