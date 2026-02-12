@@ -14,12 +14,20 @@ function buildMessages(chat) {
   if (chat.mode === 'story') {
     const day = chat.storyDay || 1;
     const mcName = chat.mcName || 'MC';
-    const context = `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}`;
+    const aff = chat.storyAffinity || { sayori: 15, natsuki: 1, yuri: 1, monika: 10 };
+    const phaseInstruction = buildPhaseInstruction(chat);
+
+    const systemPrompt = STORY_PROMPT_BASE
+      + (phaseInstruction ? `\n\n${phaseInstruction}` : '')
+      + `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}\nAffinity: Sayori=${aff.sayori}, Natsuki=${aff.natsuki}, Yuri=${aff.yuri}, Monika=${aff.monika}`;
+
     const msgs = [
-      { role: 'system', content: STORY_PROMPT + context },
+      { role: 'system', content: systemPrompt },
       ...chat.messages.map(m => ({ role: m.role, content: m.content }))
     ];
-    if (chat.messages.length === 0) msgs.push({ role: 'user', content: `Begin the story at the very start of Day 1. My name is ${mcName}. The final bell just rang in math class. Monika is nearby — we share this class and she's been mentioning her Literature Club lately. Sayori is about to ambush me in the hallway to guilt-trip me into finally coming to the club ("I told everyone I was bringing a new member! Natsuki made cupcakes and everything!"). I'll reluctantly agree and she'll lead me to the clubroom, where I'll see Yuri and Natsuki for the very first time — two complete strangers. Follow the Day 1 sequence from the instructions closely.` });
+    if (chat.messages.length === 0) {
+      msgs.push({ role: 'user', content: `Begin the story. My name is ${mcName}.` });
+    }
     return msgs;
   }
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];

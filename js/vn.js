@@ -18,6 +18,16 @@ function updateVnDay(day) {
   if (el) el.textContent = day;
 }
 
+function updatePhaseDisplay(chat) {
+  if (!chat || !chat.storyPhase) return;
+  const phase = STORY_PHASES[chat.storyPhase];
+  if (!phase) return;
+  const label = $('vnSceneLabel');
+  if (label) label.textContent = phase.label;
+  // Also update header
+  updateChatHeader(chat);
+}
+
 function updateVnSprites(narrative) {
   const names = ['sayori', 'natsuki', 'yuri', 'monika'];
   const lower = narrative.toLowerCase();
@@ -151,8 +161,10 @@ function closeJournal() {
   const chat = getChat();
   if (!chat) return;
   chat.storyDay = (chat.storyDay || 1) + 1;
+  initPhaseForDay(chat);
   updateChatHeader(chat);
   updateVnDay(chat.storyDay);
+  updatePhaseDisplay(chat);
   saveChats();
   generateStoryBeat(chat);
 }

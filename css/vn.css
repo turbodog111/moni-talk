@@ -124,6 +124,13 @@
 }
 .vn-day-number { font-size: 32px; font-weight: 800; color: #FFD700; }
 .vn-day-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+.vn-scene-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  margin-top: 8px;
+  font-style: italic;
+  min-height: 16px;
+}
 
 /* VN Affinity Rows */
 .vn-affinity-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }

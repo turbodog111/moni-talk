@@ -17,6 +17,60 @@ function resetNewChatScreen() {
   $('mcNameInput').value = profile.name || '';
 }
 
+// ====== PHASE HELPERS ======
+function initPhaseForDay(chat) {
+  const day = chat.storyDay || 1;
+  const seq = getPhaseSequence(day);
+  chat.storyPhase = seq[0];
+  chat.storyBeatInPhase = 0;
+}
+
+function advancePhase(chat) {
+  const day = chat.storyDay || 1;
+  const seq = getPhaseSequence(day);
+  const idx = seq.indexOf(chat.storyPhase);
+  if (idx >= 0 && idx < seq.length - 1) {
+    chat.storyPhase = seq[idx + 1];
+    chat.storyBeatInPhase = 0;
+    return true;
+  }
+  return false;
+}
+
+function buildPhaseInstruction(chat) {
+  const phaseKey = chat.storyPhase;
+  const phase = STORY_PHASES[phaseKey];
+  if (!phase) return '';
+
+  let instruction = phase.instruction;
+
+  // Dynamic wrap_up instruction based on highest affinity
+  if (!instruction && phaseKey === 'wrap_up') {
+    const aff = chat.storyAffinity || {};
+    const girls = ['sayori', 'natsuki', 'yuri', 'monika'];
+    const highest = girls.reduce((a, b) => (aff[a] || 0) >= (aff[b] || 0) ? a : b);
+    const name = highest.charAt(0).toUpperCase() + highest.slice(1);
+    const isSayori = highest === 'sayori';
+    instruction = `Scene: Monika announces the meeting is over for today. MC walks home with ${name}${isSayori ? ' (they always walk together as neighbors)' : ' (she offered to walk together)'}. A nice bonding moment on the walk. End your response with [END_OF_DAY] on its own line. Do NOT include [CHOICE] tags after [END_OF_DAY].`;
+  }
+
+  if (!instruction) return '';
+  return `=== CURRENT SCENE: ${phase.label} ===\n${instruction}`;
+}
+
+// Ensure phase is valid for the current day; re-init if stale or missing
+function ensurePhase(chat) {
+  if (!chat.storyPhase) {
+    initPhaseForDay(chat);
+    return;
+  }
+  const seq = getPhaseSequence(chat.storyDay || 1);
+  if (!seq.includes(chat.storyPhase)) {
+    initPhaseForDay(chat);
+  }
+}
+
+// ====== PARSING ======
 function parseStoryResponse(text) {
   const choices = [];
   const choiceRegex = /\[CHOICE_\d\]\s*(.+)/g;
@@ -47,6 +101,7 @@ function parseStoryResponse(text) {
   return { narrative, choices, day, hasPoetry, isEndOfDay, affinity };
 }
 
+// ====== UI HELPERS ======
 function insertStoryNarrative(text, animate = true) {
   const div = document.createElement('div');
   div.className = 'message narrator';
@@ -126,6 +181,10 @@ async function submitPoem() {
   const message = `[Poem words: ${selectedWords.join(', ')}] My poem resonates most with ${topName}'s style.`;
   hideWordPicker();
   chat.messages.push({ role: 'user', content: message });
+  // After poem submission, advance to poem_reactions phase
+  if (chat.storyPhase === 'poem_sharing') {
+    advancePhase(chat);
+  }
   saveChats();
   insertMessageEl('user', `Wrote a poem with: ${selectedWords.join(', ')}`);
   scrollToBottom();
@@ -137,45 +196,131 @@ async function selectStoryChoice(choice) {
   const chat = getChat();
   if (!chat || isGenerating) return;
   hideStoryChoices();
-  chat.messages.push({ role: 'user', content: choice });
-  saveChats();
-  insertMessageEl('user', choice);
-  scrollToBottom();
+
+  // Retry doesn't push a message
+  if (choice === 'Retry') {
+    await generateStoryBeat(chat);
+    return;
+  }
+
+  // "Begin next day" from replay — advance day only if closeJournal didn't already run
+  if (choice === 'Begin next day') {
+    const lastMsg = chat.messages[chat.messages.length - 1];
+    const isStillWrapUp = chat.storyPhase === 'wrap_up' || chat.storyPhase === 'd1_wrap_up';
+    if (isStillWrapUp && lastMsg?.role === 'assistant' && /\[END_OF_DAY\]/i.test(lastMsg.content)) {
+      chat.storyDay = (chat.storyDay || 1) + 1;
+      initPhaseForDay(chat);
+      updateChatHeader(chat);
+      updateVnDay(chat.storyDay);
+      updatePhaseDisplay(chat);
+      saveChats();
+    }
+    await generateStoryBeat(chat);
+    return;
+  }
+
+  // Don't push "Continue" as a visible user message — just nudge the story forward
+  if (choice === 'Continue') {
+    chat.messages.push({ role: 'user', content: '[Continue]' });
+    saveChats();
+  } else {
+    chat.messages.push({ role: 'user', content: choice });
+    saveChats();
+    insertMessageEl('user', choice);
+    scrollToBottom();
+  }
   updateContextBar();
   await generateStoryBeat(chat);
 }
 
-// ====== GENERATE STORY BEAT ======
+// ====== GENERATE STORY BEAT (phase-aware) ======
 async function generateStoryBeat(chat) {
   if (isGenerating) return;
   if (provider === 'openrouter' && !apiKey) { openSettings(); showToast('Enter your OpenRouter API key first.'); return; }
+
+  // Ensure phase is initialized and valid
+  ensurePhase(chat);
+
   isGenerating = true;
   typingIndicator.classList.add('visible');
   scrollToBottom();
+  updatePhaseDisplay(chat);
+
   try {
     const rawReply = await callProvider(chat);
     const { narrative, choices, day, hasPoetry, isEndOfDay, affinity } = parseStoryResponse(rawReply);
-    if (day) { chat.storyDay = day; updateChatHeader(chat); updateVnDay(day); }
-    if (affinity) { chat.storyAffinity = affinity; updateAffinityPanel(affinity); }
+
+    // Day is JS-authoritative — ignore model's day tag, use our tracked day
+    updateChatHeader(chat);
+    updateVnDay(chat.storyDay || 1);
+
+    // Affinity fallback — merge with existing, never lose values
+    const prev = chat.storyAffinity || { sayori: 15, natsuki: 1, yuri: 1, monika: 10 };
+    if (affinity) {
+      chat.storyAffinity = {
+        sayori: affinity.sayori ?? prev.sayori,
+        natsuki: affinity.natsuki ?? prev.natsuki,
+        yuri: affinity.yuri ?? prev.yuri,
+        monika: affinity.monika ?? prev.monika
+      };
+    } else {
+      chat.storyAffinity = prev;
+    }
+    updateAffinityPanel(chat.storyAffinity);
+
     chat.messages.push({ role: 'assistant', content: rawReply });
-    saveChats();
     typingIndicator.classList.remove('visible');
     insertStoryNarrative(narrative);
     updateVnSprites(narrative);
     scrollToBottom();
     updateContextBar();
 
-    if (isEndOfDay) {
+    // Increment beat counter
+    chat.storyBeatInPhase = (chat.storyBeatInPhase || 0) + 1;
+    const phase = STORY_PHASES[chat.storyPhase];
+
+    // 1. Handle end of day (model output or forced)
+    if (isEndOfDay || (phase && phase.forceEndOfDay && chat.storyBeatInPhase >= phase.maxBeats)) {
+      saveChats();
       await showEndOfDay(chat);
-    } else if (hasPoetry) {
+      return;
+    }
+
+    // 2. Handle poetry tag
+    if (hasPoetry) {
+      saveChats();
       showWordPicker();
-    } else if (choices.length > 0) {
-      renderStoryChoices(choices);
-      scrollToBottom();
-    } else {
+      return;
+    }
+
+    // 3. Check if we've hit maxBeats — advance to next phase
+    if (phase && chat.storyBeatInPhase >= phase.maxBeats) {
+      advancePhase(chat);
+      updatePhaseDisplay(chat);
+      saveChats();
       renderStoryChoices(['Continue']);
       scrollToBottom();
+      return;
     }
+
+    // 4. noChoices enforcement — show Continue instead of model's choices
+    if (phase && phase.noChoices) {
+      saveChats();
+      renderStoryChoices(['Continue']);
+      scrollToBottom();
+      return;
+    }
+
+    // 5. Normal: show model's choices or fallback to Continue
+    saveChats();
+    if (choices.length > 0) {
+      renderStoryChoices(choices);
+    } else {
+      renderStoryChoices(['Continue']);
+    }
+    scrollToBottom();
+    updatePhaseDisplay(chat);
+
   } catch (err) {
     typingIndicator.classList.remove('visible');
     showToast(err.message || 'Something went wrong.');
@@ -191,7 +336,6 @@ function forceStoryRetry() {
   const chat = getChat();
   if (!chat || chat.mode !== 'story') return;
   if (isGenerating) {
-    // Force-reset a hung generation
     isGenerating = false;
     typingIndicator.classList.remove('visible');
   }

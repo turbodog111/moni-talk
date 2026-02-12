@@ -49,6 +49,10 @@ function createChat() {
   if (newChatMode === 'story') {
     chat.mode = 'story';
     chat.mcName = $('mcNameInput').value.trim() || 'MC';
+    chat.storyDay = 1;
+    chat.storyPhase = 'd1_classroom';
+    chat.storyBeatInPhase = 0;
+    chat.storyAffinity = { sayori: 15, natsuki: 1, yuri: 1, monika: 10 };
   }
   chats.push(chat); saveChats(); openChat(chat.id);
 }
@@ -57,9 +61,19 @@ function openChat(id) {
   activeChatId = id;
   const chat = getChat();
   if (!chat) return;
-  updateChatHeader(chat);
 
   const isStory = chat.mode === 'story';
+
+  // Migration for legacy story chats without phase fields
+  if (isStory && !chat.storyPhase) {
+    if (!chat.storyDay) chat.storyDay = 1;
+    if (!chat.storyAffinity) chat.storyAffinity = { sayori: 15, natsuki: 1, yuri: 1, monika: 10 };
+    initPhaseForDay(chat);
+    saveChats();
+  }
+
+  updateChatHeader(chat);
+
   screens.chat.classList.toggle('vn-mode', isStory);
   $('vnPanelBtn').style.display = isStory ? '' : 'none';
   showScreen('chat');
@@ -73,6 +87,7 @@ function openChat(id) {
   if (isStory) {
     if (chat.storyAffinity) updateAffinityPanel(chat.storyAffinity);
     updateVnDay(chat.storyDay || 1);
+    updatePhaseDisplay(chat);
   }
   hideAffinityPanel();
 
@@ -91,7 +106,9 @@ function getChat() { return chats.find(c => c.id === activeChatId) || null; }
 function updateChatHeader(chat) {
   if (chat.mode === 'story') {
     $('chatHeaderName').textContent = 'Literature Club';
-    chatHeaderSub.textContent = `Day ${chat.storyDay || 1}`;
+    const phase = STORY_PHASES[chat.storyPhase];
+    const phaseLabel = phase ? ` \u2014 ${phase.label}` : '';
+    chatHeaderSub.textContent = `Day ${chat.storyDay || 1}${phaseLabel}`;
     return;
   }
   $('chatHeaderName').textContent = 'Monika';
@@ -143,6 +160,8 @@ function renderMessages() {
         if (parsed.affinity) lastAffinity = parsed.affinity;
         insertStoryNarrative(parsed.narrative, false);
       } else {
+        // Hide [Continue] system messages from display
+        if (msg.content === '[Continue]') return;
         const display = msg.content.startsWith('[Poem words:')
           ? msg.content.replace(/\[Poem words: ([^\]]+)\].*/, 'Wrote a poem with: $1')
           : msg.content;
@@ -157,10 +176,23 @@ function renderMessages() {
     const last = chat.messages[chat.messages.length - 1];
     if (last?.role === 'assistant') {
       const parsed = parseStoryResponse(last.content);
-      if (parsed.isEndOfDay) renderStoryChoices(['Begin next day']);
-      else if (parsed.hasPoetry) showWordPicker();
-      else if (parsed.choices.length > 0) renderStoryChoices(parsed.choices);
-      else renderStoryChoices(['Continue']);
+      if (parsed.isEndOfDay) {
+        renderStoryChoices(['Begin next day']);
+      } else if (parsed.hasPoetry) {
+        showWordPicker();
+      } else if (chat.storyBeatInPhase === 0 && chat.messages.length > 1) {
+        // Phase was just advanced (beat reset to 0), show Continue for next phase
+        renderStoryChoices(['Continue']);
+      } else {
+        const phase = STORY_PHASES[chat.storyPhase];
+        if (phase && phase.noChoices) {
+          renderStoryChoices(['Continue']);
+        } else if (parsed.choices.length > 0) {
+          renderStoryChoices(parsed.choices);
+        } else {
+          renderStoryChoices(['Continue']);
+        }
+      }
     }
   } else {
     chat.messages.forEach(msg => insertMessageEl(msg.role, msg.content, false));
