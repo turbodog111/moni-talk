@@ -295,7 +295,7 @@
   .screen.vn-mode .vn-sprites { display: flex; }
   .vn-sprite {
     width: 52px; height: 52px;
-    border-radius: 50%;
+    border-radius: 50%; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
     flex-direction: column;
     font-size: 18px; font-weight: 700; color: white;
@@ -635,6 +635,11 @@
         <div class="rel-label">Interactive Story</div>
         <div class="rel-desc">Experience DDLC as an interactive visual novel. Make choices that shape your story &mdash; and this time, every girl has a route. Even Monika.</div>
       </div>
+      <div class="form-section" style="margin-top:16px;">
+        <label for="mcNameInput">Your Character's Name</label>
+        <input type="text" id="mcNameInput" placeholder="What should the MC be called?">
+        <div class="form-hint">This name will be used throughout the story.</div>
+      </div>
     </div>
     <button class="primary-btn" id="startChatBtn">Start Chatting</button>
   </div>
@@ -666,7 +671,7 @@
     <div class="vn-sprite sayori" id="spriteSayori">S<span class="vn-sprite-name">Sayori</span></div>
     <div class="vn-sprite natsuki" id="spriteNatsuki">N<span class="vn-sprite-name">Natsuki</span></div>
     <div class="vn-sprite yuri" id="spriteYuri">Y<span class="vn-sprite-name">Yuri</span></div>
-    <div class="vn-sprite monika" id="spriteMonika">M<span class="vn-sprite-name">Monika</span></div>
+    <div class="vn-sprite monika" id="spriteMonika"><img src="Monika PFP.png" alt="M" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"><span class="vn-sprite-name">Monika</span></div>
   </div>
   <div class="chat-area" id="chatArea">
     <div class="typing-indicator" id="typingIndicator">
@@ -996,21 +1001,21 @@ const POEM_WORDS = {
 };
 
 // ====== STORY PROMPT ======
-const STORY_PROMPT = `You are the narrator of a Doki Doki Literature Club interactive visual novel. Write in second person, present tense ("You walk into the classroom...").
+const STORY_PROMPT = `You are the narrator of a Doki Doki Literature Club interactive visual novel. Write in second person, present tense ("You walk into the classroom..."). The MC's name is provided in the current state — use it naturally when other characters address him. The characters call him by name, but narration stays in second person ("you").
 
 SETTING:
 This is an alternate, wholesome timeline of DDLC. There is no game-breaking, no horror, no meta-awareness, no file deletion. All four girls are real people with genuine romance routes. This is the story the game could have been.
 
 CHARACTERS:
 - Sayori: The player's childhood best friend. Bright, bubbly, sometimes clumsy. She convinced you to join the Literature Club. She struggles with depression privately but is getting better with support from friends. Loves simple, heartfelt poems about happiness and sunshine.
-- Natsuki: Feisty, proud, tsundere. Loves manga (especially slice-of-life) and baking cupcakes for the club. Writes cute, punchy poems she pretends aren't a big deal. Has a difficult home life but the club is her safe space.
+- Natsuki: Feisty, proud, defensive, and distrustful of new people. She has serious trust issues from a difficult home life and uses sharp words and attitude as armor. When MC first joins, she is NOT friendly — she's dismissive, sarcastic, and acts like he's intruding on HER space. She doesn't warm up easily. It takes MANY positive interactions before she drops her guard even slightly. Loves manga (especially slice-of-life) and baking cupcakes, but she'll snap at anyone who tries to get too close too fast. Writes cute, punchy poems she aggressively pretends aren't a big deal. The club is her safe space — a stranger walking in threatens that.
 - Yuri: Shy, elegant, deeply passionate about literature. Loves horror and fantasy novels with rich symbolism. Writes elaborate, metaphorical poetry. Grows more confident and warm as she opens up to people she trusts.
-- Monika: The club president. Charismatic, athletic (former debate club star), genuinely kind. Plays piano and writes poetry about big ideas — existence, identity, connection. Cares deeply about every club member. In this timeline, she is a real person with a real route.
+- Monika: The club president and a natural leader. Charismatic, athletic (former debate club star), genuinely kind but decisive and in control. She runs the club meetings, sets the agenda, mediates discussions, and takes initiative. Plays piano and writes poetry about big ideas — existence, identity, connection. Cares deeply about every club member. In this timeline, she is a real person with a real route. When MC walks in, she IMMEDIATELY recognizes him from math class and warmly welcomes him — she's genuinely happy to see a familiar face join. She takes the lead in introducing him to the club and making him feel welcome.
 
 === MC'S PRIOR KNOWLEDGE (CRITICAL — story must reflect this) ===
 The MC is NOT a blank slate. He has existing relationships that affect how he interacts:
 - SAYORI: MC's childhood best friend and next-door neighbor. They walk to school together every morning. She's been pestering MC to join the Literature Club for weeks and practically has to drag him there. MC knows her deeply — her cheerfulness, her clumsiness, her habit of oversleeping. He's comfortable around her but might start seeing her in a new light.
-- MONIKA: MC knows her from their shared math class where they were actually friends — paired for projects, chatting before class, sharing notes. She's the class star — effortlessly smart, beautiful, athletic, popular. Despite their friendship, MC still sees her as out of his league romantically. He's pleasantly surprised when he realizes she's the club president. Their existing rapport means conversation flows easily, but MC gets flustered when he starts noticing her in a new light.
+- MONIKA: MC and Monika are ALREADY FRIENDS from their shared math class — paired for projects, chatting before class, sharing notes, comfortable around each other. She's the class star — effortlessly smart, beautiful, athletic, popular. Despite their friendship, MC still sees her as out of his league romantically. When MC walks into the club, Monika RECOGNIZES HIM IMMEDIATELY and takes the initiative — she's delighted to see him, calls him by name, and personally welcomes him. She doesn't act like a stranger; she acts like a friend who's happy he showed up. Their existing rapport means conversation flows easily, but MC gets flustered when he starts noticing her in a new light.
 - YURI: A complete stranger. MC has never seen or heard of her before the club. Everything about her — her elegance, her shy intensity, her passion for literature — is entirely new. MC has to learn who she is from scratch.
 - NATSUKI: A complete stranger. MC doesn't know her at all. Her feisty personality, her love of manga, her tsundere nature — all surprises to discover.
 
@@ -1020,7 +1025,7 @@ The story MUST show MC gradually learning about Yuri and Natsuki from scratch, b
 The story progresses through school days. At the START of every response, output the current day:
 [DAY:1]
 
-The system tracks the current time and provides it as [CURRENT TIME: X:XX PM] in the context. RESPECT THE TIME in your narration — mention time of day naturally ("the afternoon light," "the clock reads 4:15").
+The system tracks the current time and provides it as [CURRENT TIME: X:XX PM] in the context. The time is displayed in the UI header — do NOT mention specific clock times in your narrative text. Instead, use natural time cues ("the afternoon sun streams through the windows," "the light is starting to fade") without exact times. The system handles the clock display.
 
 CLUB MEETING SCHEDULE:
 - 3:30 PM: Club meeting starts. MC arrives at the Literature Club.
@@ -1335,7 +1340,10 @@ function renderChatList() {
 function createChat() {
   const now = Date.now();
   const chat = { id: crypto.randomUUID(), relationship: parseInt(relSlider.value), created: now, lastModified: now, messages: [], mood: 'cheerful' };
-  if (newChatMode === 'story') chat.mode = 'story';
+  if (newChatMode === 'story') {
+    chat.mode = 'story';
+    chat.mcName = $('mcNameInput').value.trim() || 'MC';
+  }
   chats.push(chat); saveChats(); openChat(chat.id);
 }
 
@@ -1529,7 +1537,8 @@ function buildMessages(chat) {
   if (chat.mode === 'story') {
     const time = chat.storyTime || 930;
     const day = chat.storyDay || 1;
-    let context = `\n\n=== CURRENT STATE ===\nDay: ${day}\n[CURRENT TIME: ${formatStoryTime(time)}]`;
+    const mcName = chat.mcName || 'MC';
+    let context = `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}\n[CURRENT TIME: ${formatStoryTime(time)}]`;
     if (time >= 980 && time < 990) context += '\nClub meeting is almost over. Start wrapping up the current activity naturally.';
     if (time >= 990 && time < 1020) context += '\nIt is 4:30 PM or later. Monika MUST end the club meeting if she hasn\'t already. Transition to leaving school / walking home.';
     if (time >= 1020) context += '\nMC should be arriving home. Wrap up the walk-home scene and output [END_OF_DAY] to end this day.';
@@ -1537,7 +1546,7 @@ function buildMessages(chat) {
       { role: 'system', content: STORY_PROMPT + context },
       ...chat.messages.map(m => ({ role: m.role, content: m.content }))
     ];
-    if (chat.messages.length === 0) msgs.push({ role: 'user', content: 'Begin the story. Sayori is dragging me to the Literature Club after school. I have no idea what to expect — she\'s been pestering me about this for weeks and I finally caved.' });
+    if (chat.messages.length === 0) msgs.push({ role: 'user', content: `Begin the story. My name is ${mcName}. Sayori is dragging me to the Literature Club after school. I have no idea what to expect — she's been pestering me about this for weeks and I finally caved.` });
     return msgs;
   }
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
@@ -1851,6 +1860,7 @@ function resetNewChatScreen() {
   setNewChatMode('chat');
   relSlider.value = 2;
   updateRelDisplay();
+  $('mcNameInput').value = profile.name || '';
 }
 
 function parseStoryResponse(text) {
