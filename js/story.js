@@ -73,16 +73,17 @@ function ensurePhase(chat) {
 // ====== PARSING ======
 function parseStoryResponse(text) {
   const choices = [];
-  const choiceRegex = /\[CHOICE_\d\]\s*(.+)/g;
+  // Flexible regex: matches [CHOICE_1], [CHOICE 1], [CHOICE1], [Choice_1], etc.
+  const choiceRegex = /\[CHOICE[_ ]?(\d)\]\s*(.+)/gi;
   let match;
   while ((match = choiceRegex.exec(text)) !== null) {
-    choices.push(match[1].trim());
+    choices.push(match[2].trim());
   }
   const dayMatch = text.match(/\[DAY:(\d+)\]/);
   const day = dayMatch ? parseInt(dayMatch[1]) : null;
   const hasPoetry = /\[POETRY\]/i.test(text);
   const isEndOfDay = /\[END_OF_DAY\]/i.test(text);
-  const affinityMatch = text.match(/\[AFFINITY:([^\]]+)\]/);
+  const affinityMatch = text.match(/\[AFFINITY:([^\]]+)\]/i);
   let affinity = null;
   if (affinityMatch) {
     affinity = {};
@@ -95,8 +96,8 @@ function parseStoryResponse(text) {
     .replace(/\[DAY:\d+\]\s*/g, '')
     .replace(/\[POETRY\]\s*/gi, '')
     .replace(/\[END_OF_DAY\]\s*/gi, '')
-    .replace(/\[AFFINITY:[^\]]+\]\s*/g, '')
-    .replace(/\[CHOICE_\d\]\s*.+/g, '')
+    .replace(/\[AFFINITY:[^\]]+\]\s*/gi, '')
+    .replace(/\[CHOICE[_ ]?\d?\]\s*.+/gi, '')
     .trim();
   return { narrative, choices, day, hasPoetry, isEndOfDay, affinity };
 }
@@ -311,10 +312,12 @@ async function generateStoryBeat(chat) {
       return;
     }
 
-    // 5. Normal: show model's choices or fallback to Continue
+    // 5. Normal: show model's choices, phase fallbacks, or Continue
     saveChats();
-    if (choices.length > 0) {
+    if (choices.length >= 2) {
       renderStoryChoices(choices);
+    } else if (phase && phase.fallbackChoices) {
+      renderStoryChoices(phase.fallbackChoices);
     } else {
       renderStoryChoices(['Continue']);
     }

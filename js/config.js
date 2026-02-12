@@ -279,25 +279,61 @@ const STORY_PHASES = {
     label: 'Meeting the Club',
     maxBeats: 2,
     noChoices: false,
-    instruction: `Scene: Monika introduces the club members. She says: "This is Yuri" and "This is Natsuki" — THIS is when MC learns their names for the first time. Yuri is shy but polite. Natsuki is annoyed a boy showed up. MC's internal reaction: this club is full of cute girls. Include 3 [CHOICE] tags for MC's reaction.`
+    instruction: `Scene: Monika introduces the club members. She says: "This is Yuri" and "This is Natsuki" — THIS is when MC learns their names for the first time. Yuri is shy but polite. Natsuki is annoyed a boy showed up. MC's internal reaction: this club is full of cute girls.
+You MUST end with exactly 3 choices:
+[CHOICE_1] (an option involving Yuri)
+[CHOICE_2] (an option involving Natsuki)
+[CHOICE_3] (an option involving Monika or a general reaction)`,
+    fallbackChoices: [
+      'Introduce yourself to Yuri — she seems interesting',
+      'Say something to Natsuki — she looks annoyed and you want to break the ice',
+      'Ask Monika to tell you more about what the club does'
+    ]
   },
   d1_cupcakes: {
     label: 'Cupcakes',
     maxBeats: 2,
     noChoices: false,
-    instruction: `Scene: Natsuki reveals cupcakes she baked — white fluffy cupcakes decorated like cats with icing whiskers and chocolate chip ears. She watches MC's reaction closely while pretending she doesn't care ("It's not like I made them for YOU or anything!"). Classic tsundere moment. Include 3 [CHOICE] tags.`
+    instruction: `Scene: Natsuki reveals cupcakes she baked — white fluffy cupcakes decorated like cats with icing whiskers and chocolate chip ears. She watches MC's reaction closely while pretending she doesn't care ("It's not like I made them for YOU or anything!"). Classic tsundere moment.
+You MUST end with exactly 3 choices:
+[CHOICE_1] (compliment the cupcakes)
+[CHOICE_2] (tease Natsuki playfully)
+[CHOICE_3] (a different reaction)`,
+    fallbackChoices: [
+      'Tell Natsuki these are the cutest cupcakes you\'ve ever seen',
+      'Tease her gently — "You sure put a lot of effort in for someone who doesn\'t care"',
+      'Take a bite and dramatically declare it the best thing you\'ve ever tasted'
+    ]
   },
   d1_settling: {
     label: 'Getting to Know Everyone',
     maxBeats: 3,
     noChoices: false,
-    instruction: `Scene: Casual conversation in the clubroom. MC learns about each girl naturally — Yuri likes reading, Natsuki is defensive about her manga hobby, Monika explains she founded the club because she wanted something more personal than debate club. Include 3 [CHOICE] tags for who MC talks to or how he responds.`
+    instruction: `Scene: Casual conversation in the clubroom. MC learns about each girl naturally — Yuri likes reading, Natsuki is defensive about her manga hobby, Monika explains she founded the club because she wanted something more personal than debate club.
+You MUST end with exactly 3 choices:
+[CHOICE_1] (talk to one girl)
+[CHOICE_2] (talk to a different girl)
+[CHOICE_3] (talk to a third girl or do something else)`,
+    fallbackChoices: [
+      'Ask Yuri what she\'s reading — the book looks thick and intriguing',
+      'Ask Natsuki if manga counts as literature — you\'re genuinely curious',
+      'Chat with Monika about why she left the debate club'
+    ]
   },
   d1_activity: {
     label: 'Club Activity',
     maxBeats: 3,
     noChoices: false,
-    instruction: `Scene: Monika takes charge as president. She explains what the Literature Club does and proposes everyone write a poem at home to share at the next meeting. MC hesitates about officially joining. Include 3 [CHOICE] tags.`
+    instruction: `Scene: Monika takes charge as president. She explains what the Literature Club does and proposes everyone write a poem at home to share at the next meeting. MC hesitates about officially joining.
+You MUST end with exactly 3 choices:
+[CHOICE_1] (enthusiastic response)
+[CHOICE_2] (hesitant response)
+[CHOICE_3] (curious response)`,
+    fallbackChoices: [
+      'Agree to write a poem — how hard can it be?',
+      'Hesitate — you\'re really not a writer, what would you even write about?',
+      'Ask the girls what kind of poems they like to write'
+    ]
   },
   d1_wrap_up: {
     label: 'Wrapping Up',
@@ -331,19 +367,46 @@ const STORY_PHASES = {
     label: 'Poem Reactions',
     maxBeats: 2,
     noChoices: false,
-    instruction: `Scene: The girls react to MC's poem. The girl whose style matched most is excited and wants to discuss it. Other girls share their honest reactions too — some impressed, some offering critique. Include 3 [CHOICE] tags for who MC discusses poetry with.`
+    instruction: `Scene: The girls react to MC's poem. The girl whose style matched most is excited and wants to discuss it. Other girls share their honest reactions too — some impressed, some offering critique.
+You MUST end with exactly 3 choices:
+[CHOICE_1] (discuss poem with one girl)
+[CHOICE_2] (discuss poem with a different girl)
+[CHOICE_3] (discuss poem with a third girl)`,
+    fallbackChoices: [
+      'Discuss your poem with Yuri — her literary insight could be fascinating',
+      'See what Natsuki thought — she seems to have strong opinions',
+      'Talk to Monika about the themes in your poem'
+    ]
   },
   club_activity: {
     label: 'Club Activity',
     maxBeats: 3,
     noChoices: false,
-    instruction: `Scene: The club does an activity — group discussion, reading exercise, writing prompt, or literary debate. Monika leads it. Each girl shows their unique personality and literary taste through the activity. Include 3 [CHOICE] tags.`
+    instruction: `Scene: The club does an activity — group discussion, reading exercise, writing prompt, or literary debate. Monika leads it. Each girl shows their unique personality and literary taste through the activity.
+You MUST end with exactly 3 choices:
+[CHOICE_1] (engage with one girl's perspective)
+[CHOICE_2] (engage with a different girl's perspective)
+[CHOICE_3] (share your own opinion or try something different)`,
+    fallbackChoices: [
+      'Side with Yuri\'s deeper interpretation of the topic',
+      'Back up Natsuki\'s argument — she makes a good point',
+      'Share your own take that surprises everyone'
+    ]
   },
   free_time: {
     label: 'Free Time',
     maxBeats: 4,
     noChoices: false,
-    instruction: `Scene: Free time in the club! MC can choose who to spend time with. This is the key bonding phase — meaningful one-on-one conversation happens here. Include 3 [CHOICE] tags, each favoring spending time with a different girl.`
+    instruction: `Scene: Free time in the club! MC can choose who to spend time with. This is the key bonding phase — meaningful one-on-one conversation happens here.
+You MUST end with exactly 3 choices:
+[CHOICE_1] Spend time with (girl 1)
+[CHOICE_2] Spend time with (girl 2)
+[CHOICE_3] Spend time with (girl 3)`,
+    fallbackChoices: [
+      'Sit with Sayori — she\'s waving you over with that big grin',
+      'Join Yuri by the window — she seems absorbed in her book',
+      'Check on Natsuki — she\'s in the corner with her manga collection'
+    ]
   },
   wrap_up: {
     label: 'Wrapping Up',
@@ -388,6 +451,8 @@ MC'S EXISTING RELATIONSHIPS:
 
 STRICT: MC only knows what he has learned on-screen. Do not use names, facts, or details he hasn't encountered yet. Characters only call MC by name if they know it.
 
+NAME RULE: Always use MC's name EXACTLY as provided in the current state — never shorten, abbreviate, or create nicknames. If the name is "Joshua", always write "Joshua", NEVER "Josh". If the name is "Alexander", NEVER "Alex". Use the full name every time.
+
 AFFINITY: At the END of every response, output:
 [AFFINITY:Sayori=X,Natsuki=X,Yuri=X,Monika=X]
 Small interaction: +1-2. Meaningful moment: +2-4. Major event: +4-6. Max +6 per response. Never increase multiple girls by large amounts at once.
@@ -395,8 +460,14 @@ Small interaction: +1-2. Meaningful moment: +2-4. Major event: +4-6. Max +6 per 
 RESPONSE FORMAT (mandatory — never skip):
 1. [DAY:X] on the first line
 2. 3-5 paragraphs of rich narrative — sensory detail, body language, MC's inner thoughts, distinct character voices
-3. One of: exactly 3 [CHOICE_1/2/3] tags, a [POETRY] tag, or [END_OF_DAY]
+3. One of: exactly 3 choice tags, OR [POETRY], OR [END_OF_DAY]
 4. [AFFINITY:...] on the last line
+
+CHOICE FORMAT (use this EXACT format when choices are needed):
+[CHOICE_1] A specific, meaningful option — not generic
+[CHOICE_2] A different option, ideally favoring a different girl
+[CHOICE_3] A third distinct option
+Choices must be specific and interesting. Bad: "Talk to someone." Good: "Ask Yuri about the book she was reading." Each choice should hint at consequences or which girl benefits.
 
 Show emotions through body language and actions, not labels. Each girl must sound distinctly different in dialogue. MC has a rich inner voice — curious, nervous, witty, sometimes flustered.`;
 

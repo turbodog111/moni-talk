@@ -187,8 +187,10 @@ function renderMessages() {
         const phase = STORY_PHASES[chat.storyPhase];
         if (phase && phase.noChoices) {
           renderStoryChoices(['Continue']);
-        } else if (parsed.choices.length > 0) {
+        } else if (parsed.choices.length >= 2) {
           renderStoryChoices(parsed.choices);
+        } else if (phase && phase.fallbackChoices) {
+          renderStoryChoices(phase.fallbackChoices);
         } else {
           renderStoryChoices(['Continue']);
         }
