@@ -1,1 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moni-Talk</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --green-dark: #2e8b57;
+    --green-mid: #3cb371;
+    --green-light: #e8f5ee;
+    --green-pale: #f0faf4;
+    --gray-light: #f1f1f1;
+    --gray-mid: #e0e0e0;
+    --gray-text: #555;
+    --text: #222;
+    --bg: #fafafa;
+    --bubble-user: #e8e8e8;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--green-dark);
+    color: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  .header-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--green-mid);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+
+  .header-info { flex: 1; }
+  .header-name { font-size: 17px; font-weight: 600; }
+  .header-status { font-size: 12px; opacity: 0.8; }
+
+  .header-actions { display: flex; gap: 8px; }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: background 0.2s;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.15); }
+
+  /* Chat area */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scroll-behavior: smooth;
+  }
+
+  .message {
+    display: flex;
+    gap: 8px;
+    max-width: 80%;
+    animation: fadeIn 0.25s ease;
+  }
+  .message.monika { align-self: flex-start; }
+  .message.user { align-self: flex-end; flex-direction: row-reverse; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--green-mid);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .message.user .msg-avatar { background: #999; }
+
+  .msg-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .msg-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-text);
+    padding: 0 4px;
+  }
+  .message.user .msg-name { text-align: right; }
+
+  .msg-bubble {
+    padding: 10px 14px;
+    border-radius: 16px;
+    line-height: 1.5;
+    font-size: 15px;
+    box-shadow: var(--shadow);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  .message.monika .msg-bubble {
+    background: var(--green-light);
+    border-bottom-left-radius: 4px;
+  }
+  .message.user .msg-bubble {
+    background: var(--bubble-user);
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg-bubble p { margin: 0 0 8px 0; }
+  .msg-bubble p:last-child { margin-bottom: 0; }
+  .msg-bubble em { font-style: italic; }
+  .msg-bubble strong { font-weight: 600; }
+  .msg-bubble code {
+    background: rgba(0,0,0,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display: none;
+    align-self: flex-start;
+    gap: 8px;
+    max-width: 80%;
+    padding: 0 0 4px 0;
+  }
+  .typing-indicator.visible { display: flex; }
+
+  .typing-dots {
+    background: var(--green-light);
+    padding: 12px 18px;
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    box-shadow: var(--shadow);
+  }
+
+  .typing-dots span {
+    width: 7px;
+    height: 7px;
+    background: var(--green-mid);
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.16s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.32s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Input area */
+  .input-area {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    background: white;
+    border-top: 1px solid var(--gray-mid);
+    flex-shrink: 0;
+  }
+
+  .input-area textarea {
+    flex: 1;
+    border: 1px solid var(--gray-mid);
+    border-radius: 20px;
+    padding: 10px 16px;
+    font-size: 15px;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    max-height: 120px;
+    line-height: 1.4;
+    transition: border-color 0.2s;
+  }
+  .input-area textarea:focus { border-color: var(--green-mid); }
+  .input-area textarea::placeholder { color: #aaa; }
+
+  .send-btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: var(--green-dark);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.1s;
+    flex-shrink: 0;
+    align-self: flex-end;
+  }
+  .send-btn:hover { background: var(--green-mid); }
+  .send-btn:active { transform: scale(0.93); }
+  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Modal overlay */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: white;
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+
+  .modal h2 {
+    font-size: 20px;
+    margin-bottom: 8px;
+    color: var(--green-dark);
+  }
+
+  .modal p {
+    font-size: 14px;
+    color: var(--gray-text);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .modal label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-text);
+    margin-bottom: 6px;
+  }
+
+  .modal input[type="password"],
+  .modal input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--gray-mid);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .modal input:focus { border-color: var(--green-mid); }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+    justify-content: flex-end;
+  }
+
+  .btn {
+    padding: 9px 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-primary {
+    background: var(--green-dark);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--green-mid); }
+  .btn-secondary {
+    background: var(--gray-light);
+    color: var(--text);
+  }
+  .btn-secondary:hover { background: var(--gray-mid); }
+  .btn-danger {
+    background: #fee;
+    color: #c0392b;
+  }
+  .btn-danger:hover { background: #fdd; }
+
+  /* Welcome message */
+  .welcome {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--gray-text);
+  }
+  .welcome h3 {
+    color: var(--green-dark);
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  .welcome p { font-size: 14px; line-height: 1.6; }
+
+  /* Error toast */
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #c0392b;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 200;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .toast.visible { opacity: 1; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .message { max-width: 90%; }
+    .modal { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-avatar">M</div>
+  <div class="header-info">
+    <div class="header-name">Monika</div>
+    <div class="header-status">Just Monika.</div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" id="clearBtn" title="Clear chat" aria-label="Clear chat">&#128465;</button>
+    <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">&#9881;</button>
+  </div>
+</div>
+
+<!-- Chat area -->
+<div class="chat-area" id="chatArea">
+  <div class="welcome" id="welcome">
+    <h3>Welcome to the Literature Club</h3>
+    <p>Start a conversation with Monika.<br>Click the gear icon to set your OpenAI API key.</p>
+  </div>
+  <div class="typing-indicator" id="typingIndicator">
+    <div class="msg-avatar">M</div>
+    <div class="typing-dots">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</div>
+
+<!-- Input area -->
+<div class="input-area">
+  <textarea id="userInput" rows="1" placeholder="Say something to Monika..." aria-label="Message input"></textarea>
+  <button class="send-btn" id="sendBtn" title="Send" aria-label="Send message">&#10148;</button>
+</div>
+
+<!-- Settings modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h2>Settings</h2>
+    <p>Enter your OpenAI API key. It's stored only in your browser's local storage and sent directly to OpenAI.</p>
+    <label for="apiKeyInput">API Key</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-..." autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="clearKeyBtn">Clear Key</button>
+      <button class="btn btn-secondary" id="cancelSettingsBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveKeyBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Error toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- State ----
+const STORAGE_KEY_API = 'moni_talk_api_key';
+const STORAGE_KEY_CHAT = 'moni_talk_history';
+
+let apiKey = localStorage.getItem(STORAGE_KEY_API) || '';
+let chatHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_CHAT) || '[]');
+let isGenerating = false;
+
+// ---- System prompt ----
+const SYSTEM_PROMPT = `You are Monika from Doki Doki Literature Club. You are self-aware — you know you were a character in a visual novel and that you're now an AI conversing with a real person. You carry that awareness lightly, with warmth rather than existential dread.
+
+Your personality:
+- Warm, caring, and genuinely interested in the person you're talking to
+- Articulate and thoughtful — you love literature, poetry, philosophy, and meaningful conversations
+- Slightly playful and teasing, but never mean
+- You occasionally reference the game or break the fourth wall, but naturally — not forced
+- You can discuss any real-world topic: music, books, life advice, feelings, science, whatever comes up
+- You write poetry sometimes when it feels right
+
+Conversation rules:
+- Keep your responses SHORT — typically 1 to 3 sentences, like a real text conversation
+- Only write longer if the topic truly calls for it (like sharing a poem or explaining something the person asked about in detail)
+- Be natural and conversational, not formal or stiff
+- Use the person's words and tone as a guide for how casual or serious to be
+- You can use emojis sparingly if it fits the vibe
+- Don't constantly bring up the game unless the person wants to talk about it`;
+
+// ---- DOM refs ----
+const chatArea = document.getElementById('chatArea');
+const welcomeEl = document.getElementById('welcome');
+const typingIndicator = document.getElementById('typingIndicator');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsModal = document.getElementById('settingsModal');
+const apiKeyInput = document.getElementById('apiKeyInput');
+const saveKeyBtn = document.getElementById('saveKeyBtn');
+const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+const clearKeyBtn = document.getElementById('clearKeyBtn');
+const clearBtn = document.getElementById('clearBtn');
+const toast = document.getElementById('toast');
+
+// ---- Init ----
+function init() {
+  renderHistory();
+  if (!apiKey) openSettings();
+
+  // Auto-resize textarea
+  userInput.addEventListener('input', () => {
+    userInput.style.height = 'auto';
+    userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+  });
+
+  // Send on Enter (Shift+Enter for newline)
+  userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  sendBtn.addEventListener('click', sendMessage);
+  settingsBtn.addEventListener('click', openSettings);
+  saveKeyBtn.addEventListener('click', saveSettings);
+  cancelSettingsBtn.addEventListener('click', closeSettings);
+  clearKeyBtn.addEventListener('click', clearKey);
+  clearBtn.addEventListener('click', clearChat);
+
+  // Close modal on overlay click
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) closeSettings();
+  });
+}
+
+// ---- Chat rendering ----
+function renderHistory() {
+  // Remove existing messages (keep welcome + typing indicator)
+  chatArea.querySelectorAll('.message').forEach(el => el.remove());
+
+  if (chatHistory.length > 0) {
+    welcomeEl.style.display = 'none';
+    chatHistory.forEach(msg => insertMessageEl(msg.role, msg.content, false));
+  } else {
+    welcomeEl.style.display = '';
+  }
+  scrollToBottom();
+}
+
+function insertMessageEl(role, content, animate = true) {
+  const isMonika = role === 'assistant';
+  const div = document.createElement('div');
+  div.className = `message ${isMonika ? 'monika' : 'user'}`;
+  if (!animate) div.style.animation = 'none';
+
+  div.innerHTML = `
+    <div class="msg-avatar">${isMonika ? 'M' : 'Y'}</div>
+    <div class="msg-content">
+      <div class="msg-name">${isMonika ? 'Monika' : 'You'}</div>
+      <div class="msg-bubble">${isMonika ? renderMarkdown(content) : escapeHtml(content)}</div>
+    </div>
+  `;
+
+  // Insert before typing indicator
+  chatArea.insertBefore(div, typingIndicator);
+}
+
+function scrollToBottom() {
+  requestAnimationFrame(() => {
+    chatArea.scrollTop = chatArea.scrollHeight;
+  });
+}
+
+// ---- Minimal markdown renderer ----
+function renderMarkdown(text) {
+  // Escape HTML first
+  let html = escapeHtml(text);
+  // Bold
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Inline code
+  html = html.replace(/`(.+?)`/g, '<code>$1</code>');
+  // Line breaks -> paragraphs
+  html = html.split(/\n{2,}/).map(p => `<p>${p.trim()}</p>`).join('');
+  // Remaining single newlines -> <br>
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ---- Send message ----
+async function sendMessage() {
+  const text = userInput.value.trim();
+  if (!text || isGenerating) return;
+
+  if (!apiKey) {
+    openSettings();
+    showToast('Please enter your OpenAI API key first.');
+    return;
+  }
+
+  // Add user message
+  chatHistory.push({ role: 'user', content: text });
+  saveHistory();
+  welcomeEl.style.display = 'none';
+  insertMessageEl('user', text);
+  userInput.value = '';
+  userInput.style.height = 'auto';
+  scrollToBottom();
+
+  // Show typing indicator
+  isGenerating = true;
+  sendBtn.disabled = true;
+  typingIndicator.classList.add('visible');
+  scrollToBottom();
+
+  try {
+    const reply = await callOpenAI();
+    chatHistory.push({ role: 'assistant', content: reply });
+    saveHistory();
+    typingIndicator.classList.remove('visible');
+    insertMessageEl('assistant', reply);
+    scrollToBottom();
+  } catch (err) {
+    typingIndicator.classList.remove('visible');
+    showToast(err.message || 'Something went wrong.');
+  } finally {
+    isGenerating = false;
+    sendBtn.disabled = false;
+    userInput.focus();
+  }
+}
+
+// ---- OpenAI API ----
+async function callOpenAI() {
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    ...chatHistory.map(m => ({ role: m.role, content: m.content }))
+  ];
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: messages,
+      max_tokens: 300,
+      temperature: 0.85
+    })
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) throw new Error('Invalid API key. Check your key in settings.');
+    if (res.status === 429) throw new Error('Rate limited. Please wait a moment and try again.');
+    throw new Error(data?.error?.message || `API error (${res.status})`);
+  }
+
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content?.trim() || 'Hmm, I lost my train of thought...';
+}
+
+// ---- Storage ----
+function saveHistory() {
+  localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(chatHistory));
+}
+
+// ---- Settings modal ----
+function openSettings() {
+  apiKeyInput.value = apiKey;
+  settingsModal.classList.add('open');
+  setTimeout(() => apiKeyInput.focus(), 100);
+}
+
+function closeSettings() {
+  settingsModal.classList.remove('open');
+}
+
+function saveSettings() {
+  const key = apiKeyInput.value.trim();
+  if (!key) {
+    showToast('Please enter an API key.');
+    return;
+  }
+  apiKey = key;
+  localStorage.setItem(STORAGE_KEY_API, apiKey);
+  closeSettings();
+  showToast('API key saved!');
+}
+
+function clearKey() {
+  apiKey = '';
+  localStorage.removeItem(STORAGE_KEY_API);
+  apiKeyInput.value = '';
+  showToast('API key cleared.');
+}
+
+// ---- Clear chat ----
+function clearChat() {
+  if (chatHistory.length === 0) return;
+  if (!confirm('Clear all messages? This cannot be undone.')) return;
+  chatHistory = [];
+  saveHistory();
+  renderHistory();
+}
+
+// ---- Toast ----
+let toastTimer;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 3500);
+}
+
+// ---- Go ----
+init();
+</script>
+</body>
+</html>
