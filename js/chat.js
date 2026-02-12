@@ -65,6 +65,7 @@ function openChat(id) {
   showScreen('chat');
 
   $('inputArea').style.display = isStory ? 'none' : '';
+  $('storyRetryBtn').style.display = isStory ? '' : 'none';
   hideStoryChoices();
   hideWordPicker();
   closeVnPanel();

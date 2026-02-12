@@ -179,7 +179,23 @@ async function generateStoryBeat(chat) {
   } catch (err) {
     typingIndicator.classList.remove('visible');
     showToast(err.message || 'Something went wrong.');
+    renderStoryChoices(['Retry']);
+    scrollToBottom();
   } finally {
     isGenerating = false;
   }
+}
+
+// Failsafe: user can always force-continue if stuck
+function forceStoryRetry() {
+  const chat = getChat();
+  if (!chat || chat.mode !== 'story') return;
+  if (isGenerating) {
+    // Force-reset a hung generation
+    isGenerating = false;
+    typingIndicator.classList.remove('visible');
+  }
+  hideStoryChoices();
+  hideWordPicker();
+  generateStoryBeat(chat);
 }
