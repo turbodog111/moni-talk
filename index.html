@@ -234,7 +234,264 @@
   .word-submit-btn:hover { background: var(--green-mid); }
   .word-submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  @media (max-width: 600px) { .message { max-width: 90%; } .message.narrator { max-width: 100%; } .modal { padding: 20px; } .affinity-rows { grid-template-columns: 1fr 1fr; } }
+  /* ====== VN MODE (Story Mode Redesign) ====== */
+  .screen.vn-mode .header { background: #2a1f3d; }
+  .screen.vn-mode .header .icon-btn:hover { background: rgba(255,255,255,0.12); }
+
+  .screen.vn-mode .chat-area {
+    background: linear-gradient(180deg, #FFECD2 0%, #f7c9a8 40%, #f0b89a 70%, #e8a88c 100%);
+    position: relative;
+    padding: 12px 16px 8px;
+  }
+  .screen.vn-mode .chat-area::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.08) 100%),
+      repeating-linear-gradient(90deg, transparent, transparent 100px, rgba(255,255,255,0.04) 100px, rgba(255,255,255,0.04) 101px),
+      repeating-linear-gradient(0deg, transparent, transparent 80px, rgba(255,255,255,0.03) 80px, rgba(255,255,255,0.03) 81px);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* VN narrator text box */
+  .screen.vn-mode .message.narrator { position: relative; z-index: 1; margin-bottom: 4px; }
+  .screen.vn-mode .message.narrator .msg-bubble {
+    background: rgba(20, 15, 30, 0.82);
+    color: #f0eef5;
+    border-radius: 6px;
+    padding: 18px 22px;
+    line-height: 1.85;
+    font-size: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(4px);
+  }
+  .screen.vn-mode .message.narrator .msg-bubble p { color: #f0eef5; margin: 0 0 10px 0; }
+  .screen.vn-mode .message.narrator .msg-bubble p:last-child { margin-bottom: 0; }
+  .screen.vn-mode .message.narrator .msg-bubble em { color: #d4bfff; font-style: italic; }
+  .screen.vn-mode .message.narrator .msg-bubble strong { color: #fff; }
+
+  /* VN user choice display */
+  .screen.vn-mode .message.user { z-index: 1; position: relative; }
+  .screen.vn-mode .message.user .msg-bubble {
+    background: rgba(60, 179, 113, 0.2);
+    color: #f0eef5;
+    border: 1px solid rgba(60, 179, 113, 0.35);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .screen.vn-mode .message.user .msg-name { color: rgba(255,255,255,0.5); }
+  .screen.vn-mode .message.user .msg-avatar-letter { background: rgba(60, 179, 113, 0.5); }
+
+  /* VN Sprites Bar */
+  .vn-sprites {
+    display: none;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 12px;
+    padding: 10px 16px 6px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #2a1f3d 0%, rgba(42,31,61,0.85) 100%);
+  }
+  .screen.vn-mode .vn-sprites { display: flex; }
+  .vn-sprite {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    font-size: 18px; font-weight: 700; color: white;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+    border: 2.5px solid rgba(255,255,255,0.25);
+    transition: all 0.4s ease;
+    opacity: 0.45;
+    transform: scale(0.8);
+    cursor: default;
+    position: relative;
+  }
+  .vn-sprite.active { opacity: 1; transform: scale(1); border-color: rgba(255,255,255,0.7); }
+  .vn-sprite.sayori { background: linear-gradient(135deg, #FF91A4, #FFB6C1); }
+  .vn-sprite.natsuki { background: linear-gradient(135deg, #FF69B4, #FF8DC7); }
+  .vn-sprite.yuri { background: linear-gradient(135deg, #7B68AE, #9370DB); }
+  .vn-sprite.monika { background: linear-gradient(135deg, #2E8B57, #3CB371); }
+  .vn-sprite-name {
+    position: absolute; bottom: -15px;
+    font-size: 9px; font-weight: 600; white-space: nowrap;
+    color: rgba(255,255,255,0.6); letter-spacing: 0.3px;
+  }
+
+  /* VN Side Panel */
+  .vn-panel-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 49; }
+  .vn-panel-backdrop.open { display: block; }
+  .vn-side-panel {
+    position: fixed; top: 0; right: 0;
+    width: 280px; height: var(--app-height, 100dvh);
+    background: linear-gradient(180deg, #1e1633 0%, #2a1f3d 100%);
+    color: #f0eef5; z-index: 50;
+    display: flex; flex-direction: column;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.5);
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    pointer-events: none;
+  }
+  .vn-side-panel.open { transform: translateX(0); pointer-events: auto; }
+  .vn-panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .vn-panel-header h3 { font-size: 16px; margin: 0; font-weight: 700; }
+  .vn-panel-close {
+    background: none; border: none; color: #f0eef5;
+    font-size: 22px; cursor: pointer; padding: 4px 8px;
+    border-radius: 4px; transition: background 0.2s;
+  }
+  .vn-panel-close:hover { background: rgba(255,255,255,0.1); }
+  .vn-panel-body { flex: 1; overflow-y: auto; padding: 20px; }
+  .vn-panel-section { margin-bottom: 24px; }
+  .vn-panel-section h4 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.4); margin-bottom: 12px; font-weight: 600;
+  }
+
+  /* VN Day Display */
+  .vn-day-display {
+    text-align: center; padding: 16px;
+    background: rgba(255,255,255,0.04); border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .vn-day-number { font-size: 32px; font-weight: 800; color: #FFD700; }
+  .vn-day-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+
+  /* VN Affinity Rows */
+  .vn-affinity-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .vn-affinity-portrait {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: white; flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .vn-affinity-portrait.sayori { background: #FF91A4; }
+  .vn-affinity-portrait.natsuki { background: #FF69B4; }
+  .vn-affinity-portrait.yuri { background: #9370DB; }
+  .vn-affinity-portrait.monika { background: #3CB371; }
+  .vn-affinity-info { flex: 1; min-width: 0; }
+  .vn-affinity-name-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .vn-affinity-label { font-size: 13px; font-weight: 600; }
+  .vn-affinity-val { font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 600; }
+  .vn-affinity-track {
+    width: 100%; height: 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 4px; overflow: visible;
+    position: relative;
+  }
+  .vn-affinity-fill {
+    height: 100%; border-radius: 4px;
+    transition: width 0.6s ease;
+    position: relative;
+  }
+  .vn-affinity-fill.sayori { background: linear-gradient(90deg, #FF91A4, #FFB6C1); }
+  .vn-affinity-fill.natsuki { background: linear-gradient(90deg, #FF69B4, #FF8DC7); }
+  .vn-affinity-fill.yuri { background: linear-gradient(90deg, #7B68AE, #B08FD8); }
+  .vn-affinity-fill.monika { background: linear-gradient(90deg, #2E8B57, #66CDAA); }
+  .vn-affinity-ticks {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    display: flex; pointer-events: none;
+  }
+  .vn-affinity-tick {
+    width: 1px; height: 100%;
+    background: rgba(255,255,255,0.12);
+    position: absolute;
+  }
+  .vn-affinity-milestone {
+    position: absolute; top: 10px;
+    font-size: 8px; color: rgba(255,255,255,0.3);
+    transform: translateX(-50%);
+  }
+
+  /* VN Scene Info */
+  .vn-scene-info {
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.5;
+  }
+  .vn-scene-info strong { color: rgba(255,255,255,0.7); }
+
+  /* VN Choice Styling */
+  .screen.vn-mode .story-choices {
+    background: rgba(20, 15, 30, 0.92);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 10px 16px 14px;
+    backdrop-filter: blur(4px);
+  }
+  .screen.vn-mode .story-choice-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #f0eef5;
+    border-radius: 8px;
+    font-size: 14px;
+    padding: 12px 16px;
+    transition: all 0.2s;
+    text-align: left;
+    line-height: 1.4;
+  }
+  .screen.vn-mode .story-choice-btn:hover {
+    background: rgba(60, 179, 113, 0.15);
+    border-color: rgba(60, 179, 113, 0.4);
+    transform: translateX(4px);
+  }
+  .screen.vn-mode .story-choice-btn:active { transform: translateX(4px) scale(0.98); }
+
+  /* VN Context Bar */
+  .screen.vn-mode .context-bar {
+    background: rgba(20, 15, 30, 0.85);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.4);
+  }
+  .screen.vn-mode .context-bar button {
+    border-color: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.4);
+  }
+  .screen.vn-mode .context-bar button:hover { border-color: rgba(60,179,113,0.5); color: #90EE90; }
+
+  /* VN Word Picker */
+  .screen.vn-mode .word-picker {
+    background: rgba(20, 15, 30, 0.94);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(4px);
+  }
+  .screen.vn-mode .word-picker-title { color: #FFD700; }
+  .screen.vn-mode .word-picker-hint { color: rgba(255,255,255,0.5); }
+  .screen.vn-mode .word-chip {
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.04);
+    color: #f0eef5;
+  }
+  .screen.vn-mode .word-chip:hover { border-color: rgba(60,179,113,0.4); }
+  .screen.vn-mode .word-chip.selected {
+    border-color: #3CB371;
+    background: rgba(60,179,113,0.15);
+    color: #90EE90;
+  }
+
+  /* Hide old affinity panel in VN mode */
+  .screen.vn-mode .affinity-panel { display: none !important; }
+
+  /* VN Typing Indicator */
+  .screen.vn-mode .typing-indicator .typing-dots {
+    background: rgba(20,15,30,0.82);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .screen.vn-mode .typing-indicator .typing-dots span { background: #9370DB; }
+
+  @media (max-width: 600px) {
+    .message { max-width: 90%; } .message.narrator { max-width: 100%; } .modal { padding: 20px; }
+    .vn-side-panel { width: 260px; }
+    .vn-sprite { width: 44px; height: 44px; font-size: 15px; }
+    .vn-sprite-name { font-size: 8px; bottom: -13px; }
+    .screen.vn-mode .message.narrator .msg-bubble { padding: 14px 16px; font-size: 14px; }
+  }
 </style>
 </head>
 <body>
@@ -335,6 +592,7 @@
       <div class="header-sub" id="chatHeaderSub">Just Monika.</div>
     </div>
     <div class="header-actions">
+      <button class="icon-btn" id="vnPanelBtn" title="Status Panel" style="display:none;">&#9776;</button>
       <button class="icon-btn" id="chatSettingsBtn" title="Settings">&#9881;</button>
     </div>
   </div>
@@ -345,6 +603,12 @@
       <div class="affinity-row"><span class="affinity-name">Yuri</span><div class="affinity-track"><div class="affinity-fill yuri" id="affinityYuri" style="width:30%"></div></div></div>
       <div class="affinity-row"><span class="affinity-name">Monika</span><div class="affinity-track"><div class="affinity-fill monika" id="affinityMonika" style="width:30%"></div></div></div>
     </div>
+  </div>
+  <div class="vn-sprites" id="vnSprites">
+    <div class="vn-sprite sayori" id="spriteSayori">S<span class="vn-sprite-name">Sayori</span></div>
+    <div class="vn-sprite natsuki" id="spriteNatsuki">N<span class="vn-sprite-name">Natsuki</span></div>
+    <div class="vn-sprite yuri" id="spriteYuri">Y<span class="vn-sprite-name">Yuri</span></div>
+    <div class="vn-sprite monika" id="spriteMonika">M<span class="vn-sprite-name">Monika</span></div>
   </div>
   <div class="chat-area" id="chatArea">
     <div class="typing-indicator" id="typingIndicator">
@@ -422,6 +686,63 @@
         <button class="btn btn-danger" id="signOutBtn">Sign Out</button>
         <button class="btn btn-secondary" id="closeSyncBtn">Close</button>
         <button class="btn btn-primary" id="syncNowBtn">Sync Now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VN Side Panel -->
+<div class="vn-panel-backdrop" id="vnPanelBackdrop"></div>
+<div class="vn-side-panel" id="vnSidePanel">
+  <div class="vn-panel-header">
+    <h3>Literature Club</h3>
+    <button class="vn-panel-close" id="vnPanelClose">&times;</button>
+  </div>
+  <div class="vn-panel-body">
+    <div class="vn-panel-section">
+      <div class="vn-day-display">
+        <div class="vn-day-number" id="vnDayNumber">1</div>
+        <div class="vn-day-label">School Day</div>
+      </div>
+    </div>
+    <div class="vn-panel-section">
+      <h4>Relationships</h4>
+      <div class="vn-affinity-row">
+        <div class="vn-affinity-portrait sayori">S</div>
+        <div class="vn-affinity-info">
+          <div class="vn-affinity-name-row"><span class="vn-affinity-label">Sayori</span><span class="vn-affinity-val" id="vnAffinitySayoriVal">15</span></div>
+          <div class="vn-affinity-track"><div class="vn-affinity-fill sayori" id="vnAffinitySayori" style="width:15%"></div><div class="vn-affinity-ticks" id="vnTicksSayori"></div></div>
+        </div>
+      </div>
+      <div class="vn-affinity-row">
+        <div class="vn-affinity-portrait monika">M</div>
+        <div class="vn-affinity-info">
+          <div class="vn-affinity-name-row"><span class="vn-affinity-label">Monika</span><span class="vn-affinity-val" id="vnAffinityMonikaVal">10</span></div>
+          <div class="vn-affinity-track"><div class="vn-affinity-fill monika" id="vnAffinityMonika" style="width:10%"></div><div class="vn-affinity-ticks" id="vnTicksMonika"></div></div>
+        </div>
+      </div>
+      <div class="vn-affinity-row">
+        <div class="vn-affinity-portrait natsuki">N</div>
+        <div class="vn-affinity-info">
+          <div class="vn-affinity-name-row"><span class="vn-affinity-label">Natsuki</span><span class="vn-affinity-val" id="vnAffinityNatsukiVal">1</span></div>
+          <div class="vn-affinity-track"><div class="vn-affinity-fill natsuki" id="vnAffinityNatsuki" style="width:1%"></div><div class="vn-affinity-ticks" id="vnTicksNatsuki"></div></div>
+        </div>
+      </div>
+      <div class="vn-affinity-row">
+        <div class="vn-affinity-portrait yuri">Y</div>
+        <div class="vn-affinity-info">
+          <div class="vn-affinity-name-row"><span class="vn-affinity-label">Yuri</span><span class="vn-affinity-val" id="vnAffinityYuriVal">1</span></div>
+          <div class="vn-affinity-track"><div class="vn-affinity-fill yuri" id="vnAffinityYuri" style="width:1%"></div><div class="vn-affinity-ticks" id="vnTicksYuri"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="vn-panel-section">
+      <h4>Guide</h4>
+      <div class="vn-scene-info">
+        <strong>25</strong> &mdash; Friendly<br>
+        <strong>50</strong> &mdash; Close / Romantic Interest<br>
+        <strong>75</strong> &mdash; Deep Love<br>
+        <strong>100</strong> &mdash; Soulmate
       </div>
     </div>
   </div>
@@ -618,11 +939,11 @@ CHARACTERS:
 === MC'S PRIOR KNOWLEDGE (CRITICAL — story must reflect this) ===
 The MC is NOT a blank slate. He has existing relationships that affect how he interacts:
 - SAYORI: MC's childhood best friend and next-door neighbor. They walk to school together every morning. She's been pestering MC to join the Literature Club for weeks and practically has to drag him there. MC knows her deeply — her cheerfulness, her clumsiness, her habit of oversleeping. He's comfortable around her but might start seeing her in a new light.
-- MONIKA: MC knows her from their shared math class. She's the class star — effortlessly smart, beautiful, athletic, popular. MC has admired her from a distance but considers her completely out of his league. He's genuinely shocked and nervous when he realizes she's the club president. The idea that someone like Monika would talk to him feels surreal.
+- MONIKA: MC knows her from their shared math class where they were actually friends — paired for projects, chatting before class, sharing notes. She's the class star — effortlessly smart, beautiful, athletic, popular. Despite their friendship, MC still sees her as out of his league romantically. He's pleasantly surprised when he realizes she's the club president. Their existing rapport means conversation flows easily, but MC gets flustered when he starts noticing her in a new light.
 - YURI: A complete stranger. MC has never seen or heard of her before the club. Everything about her — her elegance, her shy intensity, her passion for literature — is entirely new. MC has to learn who she is from scratch.
 - NATSUKI: A complete stranger. MC doesn't know her at all. Her feisty personality, her love of manga, her tsundere nature — all surprises to discover.
 
-The story MUST show MC gradually learning about Yuri and Natsuki from scratch, being comfortable but potentially developing new feelings for Sayori, and being starstruck/intimidated by Monika's presence. Early interactions with Monika should feel nervous and awestruck from MC's perspective.
+The story MUST show MC gradually learning about Yuri and Natsuki from scratch, being comfortable but potentially developing new feelings for Sayori, and having a comfortable existing friendship with Monika that starts to feel different as romantic feelings develop. Early interactions should show their pre-existing rapport and ease, with MC getting flustered when he starts seeing her romantically.
 
 === DAY SYSTEM ===
 The story progresses through school days. At the START of every response, output the current day:
@@ -653,9 +974,19 @@ On Days 2, 5, 8, and every 3-4 days after, the club shares poems. When it's time
 Then narrate the setup ("Monika announces it's time to share poems...") but STOP before describing the player's poem. Do NOT include [CHOICE] tags when you use [POETRY]. The system will handle poem creation through a word-picking mechanic. After the player submits their words, narrate which girl resonates most with their poem and describe the reaction scene.
 
 === AFFINITY TRACKING ===
-At the END of every response, output current relationship levels (1-10 scale) in this exact format:
-[AFFINITY:Sayori=5,Natsuki=1,Yuri=1,Monika=2]
-Start Sayori at 5 (childhood best friend), Monika at 2 (classmate MC admires from afar), and Natsuki/Yuri at 1 (complete strangers). Adjust based on the player's choices — spending time with a girl, picking choices that favor her, writing poems in her style, etc. Increase slowly (1-2 points per significant interaction). The highest-affinity girl becomes the romance target.
+At the END of every response, output current relationship levels (0-100 scale) in this exact format:
+[AFFINITY:Sayori=15,Natsuki=1,Yuri=1,Monika=10]
+Start Sayori at 15 (childhood best friend), Monika at 10 (existing friend from math class), and Natsuki/Yuri at 1 (complete strangers). Adjust based on the player's choices — spending time with a girl, picking choices that favor her, writing poems in her style, etc.
+
+AFFINITY GAIN RULES (STRICT — affection is HARD to earn):
+- Small positive interaction (brief chat, sitting near): +1 to +2
+- Meaningful conversation or shared moment: +2 to +4
+- Major emotional event (comforting, defending, heartfelt moment): +4 to +6
+- Poem resonating with a girl: +3 to +5 for that girl
+- NEVER increase more than +6 in a single response
+- NEVER increase multiple girls by large amounts simultaneously — choices should favor one girl at the cost of others
+- If the player ignores or is rude to a girl, decrease by 1-3
+The highest-affinity girl becomes the romance target. Reaching 50+ means clear romantic interest. 75+ means deep love.
 
 === RESPONSE FORMAT (MANDATORY — never skip any part) ===
 Every response MUST follow this structure:
@@ -672,7 +1003,7 @@ Example:
 [CHOICE_1] Description of first option
 [CHOICE_2] Description of second option
 [CHOICE_3] Description of third option
-[AFFINITY:Sayori=4,Natsuki=3,Yuri=5,Monika=3]
+[AFFINITY:Sayori=17,Natsuki=3,Yuri=6,Monika=12]
 
 WRITING STYLE:
 - Vivid, immersive prose — describe settings, emotions, body language.
@@ -795,10 +1126,14 @@ function init() {
   $('modeChatBtn').addEventListener('click', () => setNewChatMode('chat'));
   $('modeStoryBtn').addEventListener('click', () => setNewChatMode('story'));
   $('wordSubmitBtn').addEventListener('click', submitPoem);
+  $('vnPanelBtn').addEventListener('click', toggleVnPanel);
+  $('vnPanelClose').addEventListener('click', closeVnPanel);
+  $('vnPanelBackdrop').addEventListener('click', closeVnPanel);
+  initVnTicks();
   $('profileBtn').addEventListener('click', () => { loadProfile(); showScreen('profile'); });
   $('profileBackBtn').addEventListener('click', () => showScreen('chatList'));
   $('saveProfileBtn').addEventListener('click', saveProfile);
-  $('chatBackBtn').addEventListener('click', () => { activeChatId = null; showScreen('chatList'); renderChatList(); });
+  $('chatBackBtn').addEventListener('click', () => { activeChatId = null; screens.chat.classList.remove('vn-mode'); closeVnPanel(); showScreen('chatList'); renderChatList(); });
   $('trimBtn').addEventListener('click', trimContext);
 
   userInput.addEventListener('input', () => { userInput.style.height = 'auto'; userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px'; });
@@ -920,14 +1255,22 @@ function openChat(id) {
   const chat = getChat();
   if (!chat) return;
   updateChatHeader(chat);
-  showScreen('chat');
 
   const isStory = chat.mode === 'story';
+  screens.chat.classList.toggle('vn-mode', isStory);
+  $('vnPanelBtn').style.display = isStory ? '' : 'none';
+  showScreen('chat');
+
   $('inputArea').style.display = isStory ? 'none' : '';
   hideStoryChoices();
   hideWordPicker();
-  if (isStory && chat.storyAffinity) updateAffinityPanel(chat.storyAffinity);
-  else hideAffinityPanel();
+  closeVnPanel();
+
+  if (isStory) {
+    if (chat.storyAffinity) updateAffinityPanel(chat.storyAffinity);
+    updateVnDay(chat.storyDay || 1);
+  }
+  hideAffinityPanel();
 
   renderMessages();
   updateContextBar();
@@ -1002,8 +1345,11 @@ function renderMessages() {
         insertMessageEl('user', display, false);
       }
     });
-    if (lastDay) { chat.storyDay = lastDay; updateChatHeader(chat); }
+    if (lastDay) { chat.storyDay = lastDay; updateChatHeader(chat); updateVnDay(lastDay); }
     if (lastAffinity) { chat.storyAffinity = lastAffinity; updateAffinityPanel(lastAffinity); }
+    // Update sprites for last narrative
+    const lastAssistant = [...chat.messages].reverse().find(m => m.role === 'assistant');
+    if (lastAssistant) updateVnSprites(parseStoryResponse(lastAssistant.content).narrative);
     const last = chat.messages[chat.messages.length - 1];
     if (last?.role === 'assistant') {
       const parsed = parseStoryResponse(last.content);
@@ -1396,7 +1742,7 @@ function parseStoryResponse(text) {
     affinity = {};
     affinityMatch[1].split(',').forEach(pair => {
       const [name, val] = pair.split('=');
-      if (name && val) affinity[name.trim().toLowerCase()] = Math.min(10, Math.max(0, parseInt(val) || 0));
+      if (name && val) affinity[name.trim().toLowerCase()] = Math.min(100, Math.max(0, parseInt(val) || 0));
     });
   }
   const narrative = text
@@ -1437,14 +1783,65 @@ function hideStoryChoices() {
 
 function updateAffinityPanel(affinity) {
   if (!affinity) return;
-  $('affinityPanel').classList.add('visible');
   for (const [girl, val] of Object.entries(affinity)) {
-    const el = $('affinity' + girl.charAt(0).toUpperCase() + girl.slice(1));
-    if (el) el.style.width = (val * 10) + '%';
+    const cap = girl.charAt(0).toUpperCase() + girl.slice(1);
+    // Update VN side panel
+    const vnFill = $('vnAffinity' + cap);
+    const vnVal = $('vnAffinity' + cap + 'Val');
+    if (vnFill) vnFill.style.width = val + '%';
+    if (vnVal) vnVal.textContent = val;
   }
 }
 
 function hideAffinityPanel() { $('affinityPanel').classList.remove('visible'); }
+
+// ====== VN PANEL ======
+function updateVnDay(day) {
+  const el = $('vnDayNumber');
+  if (el) el.textContent = day;
+}
+
+function updateVnSprites(narrative) {
+  const names = ['sayori', 'natsuki', 'yuri', 'monika'];
+  const lower = narrative.toLowerCase();
+  names.forEach(name => {
+    const sprite = $('sprite' + name.charAt(0).toUpperCase() + name.slice(1));
+    if (sprite) sprite.classList.toggle('active', lower.includes(name));
+  });
+}
+
+function toggleVnPanel() {
+  const panel = $('vnSidePanel');
+  const backdrop = $('vnPanelBackdrop');
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  backdrop.classList.toggle('open', !isOpen);
+}
+
+function closeVnPanel() {
+  $('vnSidePanel').classList.remove('open');
+  $('vnPanelBackdrop').classList.remove('open');
+}
+
+function initVnTicks() {
+  const girls = ['Sayori', 'Natsuki', 'Yuri', 'Monika'];
+  const milestones = [25, 50, 75];
+  girls.forEach(girl => {
+    const container = $('vnTicks' + girl);
+    if (!container) return;
+    milestones.forEach(m => {
+      const tick = document.createElement('div');
+      tick.className = 'vn-affinity-tick';
+      tick.style.left = m + '%';
+      container.appendChild(tick);
+      const label = document.createElement('div');
+      label.className = 'vn-affinity-milestone';
+      label.style.left = m + '%';
+      label.textContent = m;
+      container.appendChild(label);
+    });
+  });
+}
 
 function showWordPicker() {
   selectedWords = [];
@@ -1526,12 +1923,13 @@ async function generateStoryBeat(chat) {
   try {
     const rawReply = provider === 'puter' ? await callPuter(chat) : await callOpenRouter(chat);
     const { narrative, choices, day, hasPoetry, affinity } = parseStoryResponse(rawReply);
-    if (day) { chat.storyDay = day; updateChatHeader(chat); }
+    if (day) { chat.storyDay = day; updateChatHeader(chat); updateVnDay(day); }
     if (affinity) { chat.storyAffinity = affinity; updateAffinityPanel(affinity); }
     chat.messages.push({ role: 'assistant', content: rawReply });
     saveChats();
     typingIndicator.classList.remove('visible');
     insertStoryNarrative(narrative);
+    updateVnSprites(narrative);
     scrollToBottom();
     updateContextBar();
     if (hasPoetry) {
