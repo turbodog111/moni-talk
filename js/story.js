@@ -73,11 +73,24 @@ function ensurePhase(chat) {
 // ====== PARSING ======
 function parseStoryResponse(text) {
   const choices = [];
-  // Flexible regex: matches [CHOICE_1], [CHOICE 1], [CHOICE1], [Choice_1], etc.
+  // Primary: [CHOICE_1], [CHOICE 1], [CHOICE1], [Choice_1], etc.
   const choiceRegex = /\[CHOICE[_ ]?(\d)\]\s*(.+)/gi;
   let match;
   while ((match = choiceRegex.exec(text)) !== null) {
     choices.push(match[2].trim());
+  }
+  // Secondary: numbered/lettered options (e.g. "1. Talk to Yuri", "A) Ask about the book")
+  if (choices.length === 0) {
+    const altRegex = /^(?:[1-4][.):\-]\s+|[A-D][.):\-]\s+)(.+)/gm;
+    const altChoices = [];
+    let altMatch;
+    while ((altMatch = altRegex.exec(text)) !== null) {
+      const c = altMatch[1].trim();
+      if (c.length > 5 && c.length < 200) altChoices.push(c);
+    }
+    if (altChoices.length >= 2 && altChoices.length <= 4) {
+      choices.push(...altChoices);
+    }
   }
   const dayMatch = text.match(/\[DAY:(\d+)\]/);
   const day = dayMatch ? parseInt(dayMatch[1]) : null;
@@ -98,6 +111,8 @@ function parseStoryResponse(text) {
     .replace(/\[END_OF_DAY\]\s*/gi, '')
     .replace(/\[AFFINITY:[^\]]+\]\s*/gi, '')
     .replace(/\[CHOICE[_ ]?\d?\]\s*.+/gi, '')
+    // Strip secondary choice patterns (numbered/lettered) if they were parsed as choices
+    .replace(choices.length > 0 ? /^(?:[1-4][.):\-]\s+|[A-D][.):\-]\s+).+$/gm : /(?!x)x/, '')
     .trim();
   return { narrative, choices, day, hasPoetry, isEndOfDay, affinity };
 }
@@ -257,6 +272,11 @@ async function generateStoryBeat(chat) {
     }
 
     const { narrative, choices, day, hasPoetry, isEndOfDay, affinity } = parseStoryResponse(rawReply);
+
+    // Guard: if parsed narrative is too short (model returned only tags or garbage), retry
+    if (narrative.length < 20) {
+      throw new Error('Model returned a garbled response. Try again.');
+    }
 
     // Day is JS-authoritative — ignore model's day tag, use our tracked day
     updateChatHeader(chat);

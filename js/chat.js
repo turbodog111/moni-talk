@@ -173,6 +173,7 @@ function renderMessages() {
     // Update sprites for last narrative
     const lastAssistant = [...chat.messages].reverse().find(m => m.role === 'assistant');
     if (lastAssistant) updateVnSprites(parseStoryResponse(lastAssistant.content).narrative);
+    // ALWAYS show buttons so the user is never stuck
     const last = chat.messages[chat.messages.length - 1];
     if (last?.role === 'assistant') {
       const parsed = parseStoryResponse(last.content);
@@ -181,7 +182,6 @@ function renderMessages() {
       } else if (parsed.hasPoetry) {
         showWordPicker();
       } else if (chat.storyBeatInPhase === 0 && chat.messages.length > 1) {
-        // Phase was just advanced (beat reset to 0), show Continue for next phase
         renderStoryChoices(['Continue']);
       } else {
         const phase = STORY_PHASES[chat.storyPhase];
@@ -195,6 +195,13 @@ function renderMessages() {
           renderStoryChoices(['Continue']);
         }
       }
+    } else if (last?.role === 'user') {
+      // User made a choice but response never came (app closed, error, etc.)
+      // Show Continue to resume generation
+      renderStoryChoices(['Continue']);
+    } else if (chat.messages.length === 0) {
+      // Brand new story — openChat handles this, but safety net
+      renderStoryChoices(['Continue']);
     }
   } else {
     chat.messages.forEach(msg => insertMessageEl(msg.role, msg.content, false));
@@ -221,6 +228,7 @@ async function sendMessage() {
   const chat = getChat();
   if (!chat) return;
   if (provider === 'openrouter' && !apiKey) { openSettings(); showToast('Enter your OpenRouter API key first.'); return; }
+  if (provider === 'gemini' && !geminiKey) { openSettings(); showToast('Enter your Gemini API key first.'); return; }
 
   chat.messages.push({ role: 'user', content: text });
   saveChats(); insertMessageEl('user', text);
