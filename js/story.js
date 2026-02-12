@@ -238,6 +238,7 @@ async function selectStoryChoice(choice) {
 async function generateStoryBeat(chat) {
   if (isGenerating) return;
   if (provider === 'openrouter' && !apiKey) { openSettings(); showToast('Enter your OpenRouter API key first.'); return; }
+  if (provider === 'gemini' && !geminiKey) { openSettings(); showToast('Enter your Gemini API key first.'); return; }
 
   // Ensure phase is initialized and valid
   ensurePhase(chat);

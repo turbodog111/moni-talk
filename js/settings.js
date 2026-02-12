@@ -3,6 +3,7 @@ function toggleProviderFields(p) {
   openrouterFields.style.display = p === 'openrouter' ? '' : 'none';
   puterFields.style.display = p === 'puter' ? '' : 'none';
   ollamaFields.style.display = p === 'ollama' ? '' : 'none';
+  geminiFields.style.display = p === 'gemini' ? '' : 'none';
   providerHint.textContent = PROVIDER_HINTS[p];
   if (p === 'ollama') refreshOllamaModels();
 }
@@ -10,6 +11,7 @@ function openSettings() {
   providerSelect.value = provider; apiKeyInput.value = apiKey;
   orModelSelect.value = selectedModel; puterModelSelect.value = puterModel;
   ollamaEndpointInput.value = ollamaEndpoint;
+  geminiKeyInput.value = geminiKey; geminiModelSelect.value = geminiModel;
   toggleProviderFields(provider); settingsModal.classList.add('open');
 }
 function closeSettings() { settingsModal.classList.remove('open'); }
@@ -25,6 +27,12 @@ function saveSettings() {
     ollamaEndpoint = ollamaEndpointInput.value.trim().replace(/\/+$/, '') || 'http://localhost:11434';
     localStorage.setItem(STORAGE.MODEL_OLLAMA, ollamaModel);
     localStorage.setItem(STORAGE.OLLAMA_ENDPOINT, ollamaEndpoint);
+  } else if (p === 'gemini') {
+    const k = geminiKeyInput.value.trim();
+    if (!k) { showToast('Enter a Gemini API key.'); return; }
+    geminiKey = k; geminiModel = geminiModelSelect.value;
+    localStorage.setItem(STORAGE.GEMINI_API, geminiKey);
+    localStorage.setItem(STORAGE.MODEL_GEMINI, geminiModel);
   } else {
     puterModel = puterModelSelect.value;
     localStorage.setItem(STORAGE.MODEL_PUTER, puterModel);
@@ -32,7 +40,12 @@ function saveSettings() {
   provider = p; localStorage.setItem(STORAGE.PROVIDER, provider);
   closeSettings(); showToast('Settings saved!', 'success');
 }
-function clearKey() { apiKey = ''; localStorage.removeItem(STORAGE.API); apiKeyInput.value = ''; showToast('Key cleared.'); }
+function clearKey() {
+  apiKey = ''; geminiKey = '';
+  localStorage.removeItem(STORAGE.API); localStorage.removeItem(STORAGE.GEMINI_API);
+  apiKeyInput.value = ''; geminiKeyInput.value = '';
+  showToast('Keys cleared.');
+}
 
 async function refreshOllamaModels() {
   ollamaModelSelect.innerHTML = '';

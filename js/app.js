@@ -4,6 +4,8 @@ function init() {
   orModelSelect.value = selectedModel;
   PUTER_MODELS.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.label; puterModelSelect.appendChild(o); });
   puterModelSelect.value = puterModel;
+  GEMINI_MODELS.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.label; geminiModelSelect.appendChild(o); });
+  geminiModelSelect.value = geminiModel;
 
   renderChatList();
   updateRelDisplay();

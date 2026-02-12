@@ -5,6 +5,8 @@ let selectedModel = localStorage.getItem(STORAGE.MODEL_OR) || OPENROUTER_MODELS[
 let puterModel = localStorage.getItem(STORAGE.MODEL_PUTER) || PUTER_MODELS[0].id;
 let ollamaModel = localStorage.getItem(STORAGE.MODEL_OLLAMA) || 'qwen2.5:14b';
 let ollamaEndpoint = localStorage.getItem(STORAGE.OLLAMA_ENDPOINT) || 'http://localhost:11434';
+let geminiKey = localStorage.getItem(STORAGE.GEMINI_API) || '';
+let geminiModel = localStorage.getItem(STORAGE.MODEL_GEMINI) || GEMINI_MODELS[0].id;
 let chats = JSON.parse(localStorage.getItem(STORAGE.CHATS) || '[]');
 let profile = JSON.parse(localStorage.getItem(STORAGE.PROFILE) || '{}');
 let activeChatId = null;
@@ -31,9 +33,10 @@ const syncUsername = $('syncUsername'), syncStateText = $('syncStateText');
 const settingsModal = $('settingsModal');
 const providerSelect = $('providerSelect'), providerHint = $('providerHint');
 const orModelSelect = $('orModelSelect'), puterModelSelect = $('puterModelSelect');
-const openrouterFields = $('openrouterFields'), puterFields = $('puterFields'), ollamaFields = $('ollamaFields');
+const openrouterFields = $('openrouterFields'), puterFields = $('puterFields'), ollamaFields = $('ollamaFields'), geminiFields = $('geminiFields');
 const apiKeyInput = $('apiKeyInput'), toast = $('toast');
 const ollamaModelSelect = $('ollamaModelSelect'), ollamaEndpointInput = $('ollamaEndpointInput');
+const geminiModelSelect = $('geminiModelSelect'), geminiKeyInput = $('geminiKeyInput');
 
 function showScreen(name) {
   Object.values(screens).forEach(s => s.classList.remove('active'));

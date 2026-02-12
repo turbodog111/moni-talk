@@ -41,6 +41,7 @@ function buildMessages(chat) {
 
 // ====== PROVIDER DISPATCH ======
 async function callProvider(chat) {
+  if (provider === 'gemini') return await callGemini(chat);
   if (provider === 'ollama') return await callOllama(chat);
   if (provider === 'puter') return await callPuter(chat);
   return await callOpenRouter(chat);
@@ -88,6 +89,28 @@ async function callPuter(chat) {
       throw new Error('Puter needs you to sign in. Allow the popup and try again.');
     throw new Error(err?.message || 'Puter request failed.');
   }
+}
+
+// ====== API: GEMINI (Google AI, OpenAI-compatible endpoint) ======
+async function callGemini(chat) {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${geminiKey}` },
+    body: JSON.stringify({
+      model: geminiModel,
+      messages: buildMessages(chat),
+      max_tokens: chat.mode === 'story' ? 2000 : 400,
+      temperature: chat.mode === 'story' ? 0.85 : 0.8
+    })
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 || res.status === 403) throw new Error('Invalid Gemini API key. Get one at aistudio.google.com.');
+    if (res.status === 429) throw new Error('Gemini rate limit hit. Free tier allows 15 req/min, 1500/day. Wait a moment.');
+    throw new Error(data?.error?.message || `Gemini error (${res.status})`);
+  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content?.trim() || 'Hmm, I lost my train of thought...';
 }
 
 // ====== API: OLLAMA (local, native API for full parameter control) ======
@@ -144,6 +167,16 @@ async function callAI(messages, maxTokens = 600) {
     } catch (err) {
       throw new Error(err?.message || 'Puter request failed.');
     }
+  }
+  if (provider === 'gemini') {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${geminiKey}` },
+      body: JSON.stringify({ model: geminiModel, messages, max_tokens: maxTokens, temperature: 0.9 })
+    });
+    if (!res.ok) throw new Error('Gemini API error');
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || '';
   }
   if (provider === 'ollama') {
     try {
