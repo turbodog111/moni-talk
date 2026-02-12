@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Moni-Talk</title>
+<script src="https://js.puter.com/v2/"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -263,9 +264,11 @@
     background: white;
     border-radius: 16px;
     padding: 28px;
-    max-width: 420px;
+    max-width: 460px;
     width: 100%;
     box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    max-height: 90dvh;
+    overflow-y: auto;
   }
 
   .modal h2 {
@@ -315,6 +318,8 @@
     transition: border-color 0.2s;
   }
 
+  .field-gap { height: 14px; }
+
   .modal-actions {
     display: flex;
     gap: 8px;
@@ -347,6 +352,25 @@
   }
   .btn-danger:hover { background: #fdd; }
 
+  .hint {
+    font-size: 12px;
+    color: var(--gray-text);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  .provider-badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+  .badge-openrouter { background: #e8f5ee; color: var(--green-dark); }
+  .badge-puter { background: #e8eef5; color: #2b5ea7; }
+
   /* Welcome message */
   .welcome {
     text-align: center;
@@ -376,8 +400,11 @@
     opacity: 0;
     transition: opacity 0.3s;
     pointer-events: none;
+    max-width: 90vw;
+    text-align: center;
   }
   .toast.visible { opacity: 1; }
+  .toast.success { background: var(--green-dark); }
 
   /* Responsive */
   @media (max-width: 600px) {
@@ -405,7 +432,7 @@
 <div class="chat-area" id="chatArea">
   <div class="welcome" id="welcome">
     <h3>Welcome to the Literature Club</h3>
-    <p>Start a conversation with Monika.<br>Click the gear icon to set your OpenAI API key.</p>
+    <p>Start a conversation with Monika.<br>Click the gear icon to configure your provider.</p>
   </div>
   <div class="typing-indicator" id="typingIndicator">
     <div class="msg-avatar">M</div>
@@ -425,12 +452,33 @@
 <div class="modal-overlay" id="settingsModal">
   <div class="modal">
     <h2>Settings</h2>
-    <p>Enter your OpenAI API key. It's stored only in your browser's local storage and sent directly to OpenAI.</p>
-    <label for="modelSelect">Model</label>
-    <select id="modelSelect"></select>
-    <div style="height: 14px;"></div>
-    <label for="apiKeyInput">API Key</label>
-    <input type="password" id="apiKeyInput" placeholder="sk-..." autocomplete="off">
+
+    <label for="providerSelect">Provider</label>
+    <select id="providerSelect">
+      <option value="openrouter">OpenRouter (free, best roleplay quality)</option>
+      <option value="puter">Puter (unlimited, no key needed)</option>
+    </select>
+    <div class="hint" id="providerHint"></div>
+
+    <div class="field-gap"></div>
+
+    <!-- OpenRouter fields -->
+    <div id="openrouterFields">
+      <label for="orModelSelect">Model</label>
+      <select id="orModelSelect"></select>
+      <div class="field-gap"></div>
+      <label for="apiKeyInput">API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-or-v1-..." autocomplete="off">
+      <div class="hint">Get a free key at <strong>openrouter.ai</strong>. Stored only in your browser.</div>
+    </div>
+
+    <!-- Puter fields -->
+    <div id="puterFields" style="display:none;">
+      <label for="puterModelSelect">Model</label>
+      <select id="puterModelSelect"></select>
+      <div class="hint">No API key needed. You'll sign into Puter when you send your first message.</div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-danger" id="clearKeyBtn">Clear Key</button>
       <button class="btn btn-secondary" id="cancelSettingsBtn">Cancel</button>
@@ -443,21 +491,41 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ---- State ----
+// ---- Config ----
 const STORAGE_KEY_API = 'moni_talk_api_key';
 const STORAGE_KEY_CHAT = 'moni_talk_history';
 const STORAGE_KEY_MODEL = 'moni_talk_model';
+const STORAGE_KEY_PROVIDER = 'moni_talk_provider';
+const STORAGE_KEY_PUTER_MODEL = 'moni_talk_puter_model';
 
-const MODELS = [
-  { id: 'gpt-4o-mini', label: 'GPT-4o Mini (fast, cheap, recommended)' },
-  { id: 'gpt-4o', label: 'GPT-4o (smarter, slower, higher cost)' },
-  { id: 'gpt-4.1-nano', label: 'GPT-4.1 Nano (fastest, cheapest)' },
-  { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini (fast, affordable)' },
-  { id: 'gpt-4.1', label: 'GPT-4.1 (latest, smartest)' },
+const OPENROUTER_MODELS = [
+  { id: 'nousresearch/hermes-3-llama-3.1-405b:free', label: 'Hermes 3 405B (best for roleplay)' },
+  { id: 'meta-llama/llama-3.1-405b-instruct:free', label: 'Llama 3.1 405B (very capable)' },
+  { id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B (fast, great quality)' },
+  { id: 'deepseek/deepseek-chat-v3-0324:free', label: 'DeepSeek V3 (strong reasoning)' },
+  { id: 'google/gemini-2.0-flash-exp:free', label: 'Gemini 2.0 Flash (1M context)' },
+  { id: 'mistralai/mistral-small-3.1-24b-instruct:free', label: 'Mistral Small 3.1 (fast)' },
 ];
 
+const PUTER_MODELS = [
+  { id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5 (excellent roleplay)' },
+  { id: 'gpt-4o-mini', label: 'GPT-4o Mini (fast, reliable)' },
+  { id: 'deepseek-chat', label: 'DeepSeek Chat (good quality)' },
+  { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (fast)' },
+  { id: 'llama-3.1-70b-versatile', label: 'Llama 3.1 70B (strong)' },
+  { id: 'mistral-large-latest', label: 'Mistral Large (creative)' },
+];
+
+const PROVIDER_HINTS = {
+  openrouter: 'Free tier: ~50 requests/day. Great roleplay models. Needs a free API key from openrouter.ai.',
+  puter: 'No limits, no API key. Uses your Puter account (free sign-up on first message).'
+};
+
+// ---- State ----
+let provider = localStorage.getItem(STORAGE_KEY_PROVIDER) || 'puter';
 let apiKey = localStorage.getItem(STORAGE_KEY_API) || '';
-let selectedModel = localStorage.getItem(STORAGE_KEY_MODEL) || 'gpt-4o-mini';
+let selectedModel = localStorage.getItem(STORAGE_KEY_MODEL) || OPENROUTER_MODELS[0].id;
+let puterModel = localStorage.getItem(STORAGE_KEY_PUTER_MODEL) || PUTER_MODELS[0].id;
 let chatHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_CHAT) || '[]');
 let isGenerating = false;
 
@@ -495,22 +563,42 @@ const clearKeyBtn = document.getElementById('clearKeyBtn');
 const clearBtn = document.getElementById('clearBtn');
 const toast = document.getElementById('toast');
 const headerStatus = document.getElementById('headerStatus');
-const modelSelect = document.getElementById('modelSelect');
+const providerSelect = document.getElementById('providerSelect');
+const providerHint = document.getElementById('providerHint');
+const orModelSelect = document.getElementById('orModelSelect');
+const puterModelSelect = document.getElementById('puterModelSelect');
+const openrouterFields = document.getElementById('openrouterFields');
+const puterFields = document.getElementById('puterFields');
 
 // ---- Init ----
 function init() {
-  // Populate model dropdown
-  MODELS.forEach(m => {
+  // Populate model dropdowns
+  OPENROUTER_MODELS.forEach(m => {
     const opt = document.createElement('option');
     opt.value = m.id;
     opt.textContent = m.label;
-    modelSelect.appendChild(opt);
+    orModelSelect.appendChild(opt);
   });
-  modelSelect.value = selectedModel;
-  updateHeaderStatus();
+  orModelSelect.value = selectedModel;
 
+  PUTER_MODELS.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.label;
+    puterModelSelect.appendChild(opt);
+  });
+  puterModelSelect.value = puterModel;
+
+  updateHeaderStatus();
   renderHistory();
-  if (!apiKey) openSettings();
+
+  // Open settings on first visit if using openrouter with no key
+  if (provider === 'openrouter' && !apiKey) openSettings();
+
+  // Provider toggle in settings
+  providerSelect.addEventListener('change', () => {
+    toggleProviderFields(providerSelect.value);
+  });
 
   // Auto-resize textarea
   userInput.addEventListener('input', () => {
@@ -533,15 +621,29 @@ function init() {
   clearKeyBtn.addEventListener('click', clearKey);
   clearBtn.addEventListener('click', clearChat);
 
-  // Close modal on overlay click
   settingsModal.addEventListener('click', (e) => {
     if (e.target === settingsModal) closeSettings();
   });
 }
 
+// ---- Provider field toggling ----
+function toggleProviderFields(prov) {
+  openrouterFields.style.display = prov === 'openrouter' ? '' : 'none';
+  puterFields.style.display = prov === 'puter' ? '' : 'none';
+  providerHint.textContent = PROVIDER_HINTS[prov];
+}
+
+// ---- Header status ----
+function updateHeaderStatus() {
+  const modelName = provider === 'puter'
+    ? PUTER_MODELS.find(m => m.id === puterModel)?.label?.split(' (')[0] || puterModel
+    : OPENROUTER_MODELS.find(m => m.id === selectedModel)?.label?.split(' (')[0] || selectedModel;
+  const provLabel = provider === 'puter' ? 'Puter' : 'OpenRouter';
+  headerStatus.textContent = `${provLabel} \u2022 ${modelName}`;
+}
+
 // ---- Chat rendering ----
 function renderHistory() {
-  // Remove existing messages (keep welcome + typing indicator)
   chatArea.querySelectorAll('.message').forEach(el => el.remove());
 
   if (chatHistory.length > 0) {
@@ -567,7 +669,6 @@ function insertMessageEl(role, content, animate = true) {
     </div>
   `;
 
-  // Insert before typing indicator
   chatArea.insertBefore(div, typingIndicator);
 }
 
@@ -579,17 +680,11 @@ function scrollToBottom() {
 
 // ---- Minimal markdown renderer ----
 function renderMarkdown(text) {
-  // Escape HTML first
   let html = escapeHtml(text);
-  // Bold
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  // Italic
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  // Inline code
   html = html.replace(/`(.+?)`/g, '<code>$1</code>');
-  // Line breaks -> paragraphs
   html = html.split(/\n{2,}/).map(p => `<p>${p.trim()}</p>`).join('');
-  // Remaining single newlines -> <br>
   html = html.replace(/\n/g, '<br>');
   return html;
 }
@@ -605,9 +700,9 @@ async function sendMessage() {
   const text = userInput.value.trim();
   if (!text || isGenerating) return;
 
-  if (!apiKey) {
+  if (provider === 'openrouter' && !apiKey) {
     openSettings();
-    showToast('Please enter your OpenAI API key first.');
+    showToast('Please enter your OpenRouter API key first.');
     return;
   }
 
@@ -627,7 +722,7 @@ async function sendMessage() {
   scrollToBottom();
 
   try {
-    const reply = await callOpenAI();
+    const reply = provider === 'puter' ? await callPuter() : await callOpenRouter();
     chatHistory.push({ role: 'assistant', content: reply });
     saveHistory();
     typingIndicator.classList.remove('visible');
@@ -643,22 +738,27 @@ async function sendMessage() {
   }
 }
 
-// ---- OpenAI API ----
-async function callOpenAI() {
-  const messages = [
+// ---- Build messages array ----
+function buildMessages() {
+  return [
     { role: 'system', content: SYSTEM_PROMPT },
     ...chatHistory.map(m => ({ role: m.role, content: m.content }))
   ];
+}
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+// ---- OpenRouter API ----
+async function callOpenRouter() {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer': window.location.href,
+      'X-Title': 'Moni-Talk'
     },
     body: JSON.stringify({
       model: selectedModel,
-      messages: messages,
+      messages: buildMessages(),
       max_tokens: 300,
       temperature: 0.85
     })
@@ -667,19 +767,37 @@ async function callOpenAI() {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     const errMsg = data?.error?.message || '';
-    if (res.status === 401) throw new Error('Invalid API key. Check your key in settings.');
+    if (res.status === 401) throw new Error('Invalid API key. Get a free one at openrouter.ai and update it in settings.');
     if (res.status === 429) throw new Error(
-      `Rate limited on ${selectedModel}. Your OpenAI account may have low usage limits for this model. ` +
-      `Try switching to a smaller model in settings, or wait a minute and try again.`
+      'Rate limited. You\'ve hit the free tier limit (~50 req/day). Switch to Puter in settings for unlimited use, or wait until tomorrow.'
     );
-    if (res.status === 404) throw new Error(
-      `Model "${selectedModel}" not available on your account. Try a different model in settings.`
+    if (res.status === 402) throw new Error(
+      'Out of credits on OpenRouter. Switch to Puter in settings for unlimited free use.'
     );
-    throw new Error(errMsg || `API error (${res.status})`);
+    throw new Error(errMsg || `OpenRouter error (${res.status})`);
   }
 
   const data = await res.json();
   return data.choices?.[0]?.message?.content?.trim() || 'Hmm, I lost my train of thought...';
+}
+
+// ---- Puter API ----
+async function callPuter() {
+  try {
+    const response = await puter.ai.chat(buildMessages(), {
+      model: puterModel,
+      stream: false
+    });
+    const text = typeof response === 'string'
+      ? response
+      : response?.message?.content || response?.text || response?.toString() || '';
+    return text.trim() || 'Hmm, I lost my train of thought...';
+  } catch (err) {
+    if (err?.message?.includes('auth') || err?.message?.includes('login')) {
+      throw new Error('Puter needs you to sign in. A popup should appear — allow it and try again.');
+    }
+    throw new Error(err?.message || 'Puter request failed. Try again or switch to OpenRouter in settings.');
+  }
 }
 
 // ---- Storage ----
@@ -687,17 +805,15 @@ function saveHistory() {
   localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(chatHistory));
 }
 
-// ---- Header status ----
-function updateHeaderStatus() {
-  headerStatus.textContent = `Using ${selectedModel}`;
-}
-
 // ---- Settings modal ----
 function openSettings() {
+  providerSelect.value = provider;
   apiKeyInput.value = apiKey;
-  modelSelect.value = selectedModel;
+  orModelSelect.value = selectedModel;
+  puterModelSelect.value = puterModel;
+  toggleProviderFields(provider);
   settingsModal.classList.add('open');
-  setTimeout(() => apiKeyInput.focus(), 100);
+  if (provider === 'openrouter') setTimeout(() => apiKeyInput.focus(), 100);
 }
 
 function closeSettings() {
@@ -705,18 +821,28 @@ function closeSettings() {
 }
 
 function saveSettings() {
-  const key = apiKeyInput.value.trim();
-  if (!key) {
-    showToast('Please enter an API key.');
-    return;
+  const prov = providerSelect.value;
+
+  if (prov === 'openrouter') {
+    const key = apiKeyInput.value.trim();
+    if (!key) {
+      showToast('Please enter an OpenRouter API key.');
+      return;
+    }
+    apiKey = key;
+    selectedModel = orModelSelect.value;
+    localStorage.setItem(STORAGE_KEY_API, apiKey);
+    localStorage.setItem(STORAGE_KEY_MODEL, selectedModel);
+  } else {
+    puterModel = puterModelSelect.value;
+    localStorage.setItem(STORAGE_KEY_PUTER_MODEL, puterModel);
   }
-  apiKey = key;
-  selectedModel = modelSelect.value;
-  localStorage.setItem(STORAGE_KEY_API, apiKey);
-  localStorage.setItem(STORAGE_KEY_MODEL, selectedModel);
+
+  provider = prov;
+  localStorage.setItem(STORAGE_KEY_PROVIDER, provider);
   updateHeaderStatus();
   closeSettings();
-  showToast('Settings saved!');
+  showToast('Settings saved!', 'success');
 }
 
 function clearKey() {
@@ -737,9 +863,9 @@ function clearChat() {
 
 // ---- Toast ----
 let toastTimer;
-function showToast(msg) {
+function showToast(msg, type) {
   toast.textContent = msg;
-  toast.classList.add('visible');
+  toast.className = 'toast visible' + (type === 'success' ? ' success' : '');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('visible'), 3500);
 }
