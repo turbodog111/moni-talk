@@ -18,11 +18,6 @@ function updateVnDay(day) {
   if (el) el.textContent = day;
 }
 
-function updateVnTime(minutes) {
-  const el = $('vnDayTime');
-  if (el) el.textContent = formatStoryTime(minutes);
-}
-
 function updateVnSprites(narrative) {
   const names = ['sayori', 'natsuki', 'yuri', 'monika'];
   const lower = narrative.toLowerCase();
@@ -155,12 +150,9 @@ function closeJournal() {
   $('journalOverlay').classList.remove('open');
   const chat = getChat();
   if (!chat) return;
-  chat.storyTime = 930;
   chat.storyDay = (chat.storyDay || 1) + 1;
-  chat.storyPhase = 'club';
   updateChatHeader(chat);
   updateVnDay(chat.storyDay);
-  updateVnTime(930);
   saveChats();
   generateStoryBeat(chat);
 }

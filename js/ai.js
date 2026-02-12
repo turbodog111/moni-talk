@@ -12,14 +12,9 @@ function parseMood(raw, fallback) {
 // ====== BUILD MESSAGES ======
 function buildMessages(chat) {
   if (chat.mode === 'story') {
-    const time = chat.storyTime || 930;
     const day = chat.storyDay || 1;
     const mcName = chat.mcName || 'MC';
-    const phase = chat.storyPhase || 'club';
-    let context = `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}\n[CURRENT TIME: ${formatStoryTime(time)}]`;
-    if (phase === 'walk_home') {
-      context += '\nPhase: MC is leaving school and walking home. Write a short, warm walk-home scene (2-3 paragraphs) with natural dialogue. Do NOT include [CHOICE] tags — just narrative and [AFFINITY:...] at the end.';
-    }
+    const context = `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}`;
     const msgs = [
       { role: 'system', content: STORY_PROMPT + context },
       ...chat.messages.map(m => ({ role: m.role, content: m.content }))

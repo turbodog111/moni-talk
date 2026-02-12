@@ -49,7 +49,6 @@ function createChat() {
   if (newChatMode === 'story') {
     chat.mode = 'story';
     chat.mcName = $('mcNameInput').value.trim() || 'MC';
-    chat.storyPhase = 'club';
   }
   chats.push(chat); saveChats(); openChat(chat.id);
 }
@@ -73,7 +72,6 @@ function openChat(id) {
   if (isStory) {
     if (chat.storyAffinity) updateAffinityPanel(chat.storyAffinity);
     updateVnDay(chat.storyDay || 1);
-    updateVnTime(chat.storyTime || 930);
   }
   hideAffinityPanel();
 
@@ -92,8 +90,7 @@ function getChat() { return chats.find(c => c.id === activeChatId) || null; }
 function updateChatHeader(chat) {
   if (chat.mode === 'story') {
     $('chatHeaderName').textContent = 'Literature Club';
-    const time = formatStoryTime(chat.storyTime || 930);
-    chatHeaderSub.textContent = `Day ${chat.storyDay || 1} \u00B7 ${time}`;
+    chatHeaderSub.textContent = `Day ${chat.storyDay || 1}`;
     return;
   }
   $('chatHeaderName').textContent = 'Monika';
@@ -156,12 +153,6 @@ function renderMessages() {
     // Update sprites for last narrative
     const lastAssistant = [...chat.messages].reverse().find(m => m.role === 'assistant');
     if (lastAssistant) updateVnSprites(parseStoryResponse(lastAssistant.content).narrative);
-    // Handle phase-based recovery (e.g., page refresh during journal)
-    if (chat.storyPhase === 'journal_pending') {
-      showEndOfDay(chat);
-      scrollToBottom();
-      return;
-    }
     const last = chat.messages[chat.messages.length - 1];
     if (last?.role === 'assistant') {
       const parsed = parseStoryResponse(last.content);
