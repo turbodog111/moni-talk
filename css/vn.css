@@ -129,14 +129,9 @@
 .vn-affinity-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .vn-affinity-portrait {
   width: 34px; height: 34px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 700; color: white; flex-shrink: 0;
+  object-fit: cover; flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
-.vn-affinity-portrait.sayori { background: #FF91A4; }
-.vn-affinity-portrait.natsuki { background: #FF69B4; }
-.vn-affinity-portrait.yuri { background: #9370DB; }
-.vn-affinity-portrait.monika { background: #3CB371; }
 .vn-affinity-info { flex: 1; min-width: 0; }
 .vn-affinity-name-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
 .vn-affinity-label { font-size: 13px; font-weight: 600; }
@@ -270,14 +265,9 @@
 .journal-entry-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .journal-portrait {
   width: 30px; height: 30px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; color: white;
+  object-fit: cover;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
-.journal-portrait.sayori { background: #FF91A4; }
-.journal-portrait.natsuki { background: #FF69B4; }
-.journal-portrait.yuri { background: #9370DB; }
-.journal-portrait.monika { background: #3CB371; }
 .journal-name { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.75); }
 .journal-text {
   font-size: 14px; line-height: 1.75;

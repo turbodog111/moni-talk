@@ -19,7 +19,7 @@ function buildMessages(chat) {
       { role: 'system', content: STORY_PROMPT + context },
       ...chat.messages.map(m => ({ role: m.role, content: m.content }))
     ];
-    if (chat.messages.length === 0) msgs.push({ role: 'user', content: `Begin the story. My name is ${mcName}. Sayori is dragging me to the Literature Club after school. I have no idea what to expect — she's been pestering me about this for weeks and I finally caved.` });
+    if (chat.messages.length === 0) msgs.push({ role: 'user', content: `Begin the story at the very start of Day 1. My name is ${mcName}. The final bell just rang in math class. Monika is nearby — we share this class and she's been mentioning her Literature Club lately. Sayori is about to ambush me in the hallway to guilt-trip me into finally coming to the club ("I told everyone I was bringing a new member! Natsuki made cupcakes and everything!"). I'll reluctantly agree and she'll lead me to the clubroom, where I'll see Yuri and Natsuki for the very first time — two complete strangers. Follow the Day 1 sequence from the instructions closely.` });
     return msgs;
   }
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];

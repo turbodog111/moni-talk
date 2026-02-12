@@ -131,14 +131,14 @@ function renderJournalEntries(entries) {
   container.innerHTML = '';
   const order = ['sayori', 'monika', 'natsuki', 'yuri'];
   const names = { sayori: "Sayori's Diary", monika: "Monika's Journal", natsuki: "Natsuki's Notes", yuri: "Yuri's Diary" };
-  const initials = { sayori: 'S', monika: 'M', natsuki: 'N', yuri: 'Y' };
+  const images = { sayori: 'Sayori PFP.png', monika: 'Monika PFP.png', natsuki: 'Natsuki PFP.png', yuri: 'Yuri PFP.png' };
   order.forEach(girl => {
     const text = entries[girl] || 'Nothing to write today...';
     const div = document.createElement('div');
     div.className = `journal-entry ${girl}`;
     div.innerHTML = `
       <div class="journal-entry-header">
-        <div class="journal-portrait ${girl}">${initials[girl]}</div>
+        <img class="journal-portrait" src="${images[girl]}" alt="${girl}">
         <span class="journal-name">${names[girl]}</span>
       </div>
       <div class="journal-text">${escapeHtml(text)}</div>`;
