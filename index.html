@@ -288,7 +288,7 @@
     justify-content: center;
     align-items: flex-end;
     gap: 12px;
-    padding: 10px 16px 6px;
+    padding: 8px 16px 20px;
     flex-shrink: 0;
     background: linear-gradient(180deg, #2a1f3d 0%, rgba(42,31,61,0.85) 100%);
   }
@@ -474,6 +474,64 @@
     background: rgba(60,179,113,0.15);
     color: #90EE90;
   }
+
+  /* VN Time Display */
+  .vn-day-time { font-size: 14px; color: rgba(255,255,255,0.55); margin-top: 4px; font-weight: 600; }
+
+  /* Journal Overlay */
+  .journal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(10, 8, 20, 0.96);
+    z-index: 60; flex-direction: column; align-items: center;
+    overflow-y: auto; padding: 24px 16px;
+  }
+  .journal-overlay.open { display: flex; }
+  .journal-container { max-width: 500px; width: 100%; }
+  .journal-header { text-align: center; margin-bottom: 28px; }
+  .journal-header h2 { font-size: 22px; color: #FFD700; font-weight: 800; }
+  .journal-header p { color: rgba(255,255,255,0.4); font-size: 13px; margin-top: 6px; font-style: italic; }
+  .journal-entry {
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px; padding: 16px 20px;
+    margin-bottom: 14px;
+    border-left: 3px solid;
+    animation: journalFade 0.5s ease both;
+  }
+  .journal-entry:nth-child(1) { animation-delay: 0.1s; }
+  .journal-entry:nth-child(2) { animation-delay: 0.25s; }
+  .journal-entry:nth-child(3) { animation-delay: 0.4s; }
+  .journal-entry:nth-child(4) { animation-delay: 0.55s; }
+  @keyframes journalFade { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .journal-entry.sayori { border-left-color: #FF91A4; }
+  .journal-entry.natsuki { border-left-color: #FF69B4; }
+  .journal-entry.yuri { border-left-color: #9370DB; }
+  .journal-entry.monika { border-left-color: #3CB371; }
+  .journal-entry-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .journal-portrait {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .journal-portrait.sayori { background: #FF91A4; }
+  .journal-portrait.natsuki { background: #FF69B4; }
+  .journal-portrait.yuri { background: #9370DB; }
+  .journal-portrait.monika { background: #3CB371; }
+  .journal-name { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.75); }
+  .journal-text {
+    font-size: 14px; line-height: 1.75;
+    color: rgba(255,255,255,0.6); font-style: italic;
+  }
+  .journal-continue-btn {
+    display: block; width: 100%; padding: 14px;
+    margin-top: 24px; margin-bottom: 16px;
+    background: rgba(60, 179, 113, 0.15);
+    border: 1px solid rgba(60, 179, 113, 0.35);
+    color: #90EE90; border-radius: 12px;
+    font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; font-family: inherit;
+  }
+  .journal-continue-btn:hover { background: rgba(60,179,113,0.25); border-color: rgba(60,179,113,0.5); }
 
   /* Hide old affinity panel in VN mode */
   .screen.vn-mode .affinity-panel { display: none !important; }
@@ -703,6 +761,7 @@
       <div class="vn-day-display">
         <div class="vn-day-number" id="vnDayNumber">1</div>
         <div class="vn-day-label">School Day</div>
+        <div class="vn-day-time" id="vnDayTime">3:30 PM</div>
       </div>
     </div>
     <div class="vn-panel-section">
@@ -745,6 +804,18 @@
         <strong>100</strong> &mdash; Soulmate
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Journal Overlay -->
+<div class="journal-overlay" id="journalOverlay">
+  <div class="journal-container">
+    <div class="journal-header">
+      <h2>End of Day <span id="journalDayNum">1</span></h2>
+      <p>What the girls wrote in their diaries tonight...</p>
+    </div>
+    <div class="journal-entries" id="journalEntries"></div>
+    <button class="journal-continue-btn" id="journalContinueBtn">Begin Next Day</button>
   </div>
 </div>
 
@@ -945,11 +1016,21 @@ The MC is NOT a blank slate. He has existing relationships that affect how he in
 
 The story MUST show MC gradually learning about Yuri and Natsuki from scratch, being comfortable but potentially developing new feelings for Sayori, and having a comfortable existing friendship with Monika that starts to feel different as romantic feelings develop. Early interactions should show their pre-existing rapport and ease, with MC getting flustered when he starts seeing her romantically.
 
-=== DAY SYSTEM ===
+=== DAY & TIME SYSTEM ===
 The story progresses through school days. At the START of every response, output the current day:
 [DAY:1]
 
-Advance to the next day ONLY when a full day's worth of events have happened (usually 4-6 story beats per day). Do NOT rush through days — let each day breathe. A single club meeting has multiple moments: arriving, activities, conversations, poem sharing, walking home. Each of these can be its own beat. Stay on the same day until it feels naturally complete.
+The system tracks the current time and provides it as [CURRENT TIME: X:XX PM] in the context. RESPECT THE TIME in your narration — mention time of day naturally ("the afternoon light," "the clock reads 4:15").
+
+CLUB MEETING SCHEDULE:
+- 3:30 PM: Club meeting starts. MC arrives at the Literature Club.
+- 3:30-4:20 PM: Club activities — reading, discussions, writing, sharing poems, conversations with the girls.
+- 4:20 PM: Start wrapping up the current activity naturally.
+- 4:30 PM: Monika MUST call an end to the club meeting. She cheerfully announces it's time to wrap up ("Okay everyone, that's all for today!"). This is NON-NEGOTIABLE — Monika always ends the meeting at 4:30.
+- After 4:30 PM: MC leaves school. By default, MC walks home with Sayori (they're neighbors, same direction). However, if MC has been spending significant time with another girl (high affinity), that girl might ask to walk together, or they might happen to be going the same way. The walk home is a key bonding moment.
+- When the walk home is complete and MC arrives home, output [END_OF_DAY] on its own line (before the choices/affinity). This triggers the diary system.
+
+Do NOT rush through days — each club meeting has multiple moments. Stay on the same day until [END_OF_DAY] is output.
 
 STORY PHASES (flexible, not rigid):
 - Days 1-5: INTRODUCTION. Meeting the girls, first club meetings, first poems, initial impressions, learning names and personalities.
@@ -992,18 +1073,25 @@ The highest-affinity girl becomes the romance target. Reaching 50+ means clear r
 Every response MUST follow this structure:
 1. [DAY:X] tag (first line)
 2. 2-4 paragraphs of narrative
-3. EXACTLY 3 [CHOICE_1/2/3] tags OR a [POETRY] tag (never both, NEVER omit — the player CANNOT continue without choices)
-4. [AFFINITY:...] tag (last line)
+3. [END_OF_DAY] tag ONLY if MC has arrived home and the day is over (this triggers diary entries)
+4. EXACTLY 3 [CHOICE_1/2/3] tags OR a [POETRY] tag (never both, NEVER omit — the player CANNOT continue without choices). Exception: if [END_OF_DAY] is present, choices are optional.
+5. [AFFINITY:...] tag (last line)
 
-CRITICAL: You MUST ALWAYS end with either 3 choices or [POETRY]. If you forget, the player gets permanently stuck. NEVER end a response with just narrative.
+CRITICAL: You MUST ALWAYS end with either 3 choices, [POETRY], or [END_OF_DAY]. If you forget, the player gets permanently stuck. NEVER end a response with just narrative.
 
-Example:
+Example (normal beat):
 [DAY:3]
 (narrative paragraphs here...)
 [CHOICE_1] Description of first option
 [CHOICE_2] Description of second option
 [CHOICE_3] Description of third option
 [AFFINITY:Sayori=17,Natsuki=3,Yuri=6,Monika=12]
+
+Example (end of day):
+[DAY:3]
+(narrative about arriving home...)
+[END_OF_DAY]
+[AFFINITY:Sayori=18,Natsuki=4,Yuri=7,Monika=13]
 
 WRITING STYLE:
 - Vivid, immersive prose — describe settings, emotions, body language.
@@ -1129,6 +1217,7 @@ function init() {
   $('vnPanelBtn').addEventListener('click', toggleVnPanel);
   $('vnPanelClose').addEventListener('click', closeVnPanel);
   $('vnPanelBackdrop').addEventListener('click', closeVnPanel);
+  $('journalContinueBtn').addEventListener('click', closeJournal);
   initVnTicks();
   $('profileBtn').addEventListener('click', () => { loadProfile(); showScreen('profile'); });
   $('profileBackBtn').addEventListener('click', () => showScreen('chatList'));
@@ -1269,6 +1358,7 @@ function openChat(id) {
   if (isStory) {
     if (chat.storyAffinity) updateAffinityPanel(chat.storyAffinity);
     updateVnDay(chat.storyDay || 1);
+    updateVnTime(chat.storyTime || 930);
   }
   hideAffinityPanel();
 
@@ -1287,7 +1377,8 @@ function getChat() { return chats.find(c => c.id === activeChatId) || null; }
 function updateChatHeader(chat) {
   if (chat.mode === 'story') {
     $('chatHeaderName').textContent = 'Literature Club';
-    chatHeaderSub.textContent = `Day ${chat.storyDay || 1}`;
+    const time = formatStoryTime(chat.storyTime || 930);
+    chatHeaderSub.textContent = `Day ${chat.storyDay || 1} \u00B7 ${time}`;
     return;
   }
   $('chatHeaderName').textContent = 'Monika';
@@ -1353,7 +1444,8 @@ function renderMessages() {
     const last = chat.messages[chat.messages.length - 1];
     if (last?.role === 'assistant') {
       const parsed = parseStoryResponse(last.content);
-      if (parsed.hasPoetry) showWordPicker();
+      if (parsed.isEndOfDay) renderStoryChoices(['Begin next day']);
+      else if (parsed.hasPoetry) showWordPicker();
       else if (parsed.choices.length > 0) renderStoryChoices(parsed.choices);
       else renderStoryChoices(['Continue']);
     }
@@ -1435,8 +1527,14 @@ function parseMood(raw, fallback) {
 // ====== BUILD MESSAGES ======
 function buildMessages(chat) {
   if (chat.mode === 'story') {
+    const time = chat.storyTime || 930;
+    const day = chat.storyDay || 1;
+    let context = `\n\n=== CURRENT STATE ===\nDay: ${day}\n[CURRENT TIME: ${formatStoryTime(time)}]`;
+    if (time >= 980 && time < 990) context += '\nClub meeting is almost over. Start wrapping up the current activity naturally.';
+    if (time >= 990 && time < 1020) context += '\nIt is 4:30 PM or later. Monika MUST end the club meeting if she hasn\'t already. Transition to leaving school / walking home.';
+    if (time >= 1020) context += '\nMC should be arriving home. Wrap up the walk-home scene and output [END_OF_DAY] to end this day.';
     const msgs = [
-      { role: 'system', content: STORY_PROMPT },
+      { role: 'system', content: STORY_PROMPT + context },
       ...chat.messages.map(m => ({ role: m.role, content: m.content }))
     ];
     if (chat.messages.length === 0) msgs.push({ role: 'user', content: 'Begin the story. Sayori is dragging me to the Literature Club after school. I have no idea what to expect — she\'s been pestering me about this for weeks and I finally caved.' });
@@ -1493,6 +1591,35 @@ async function callPuter(chat) {
       throw new Error('Puter needs you to sign in. Allow the popup and try again.');
     throw new Error(err?.message || 'Puter request failed.');
   }
+}
+
+// ====== TIME SYSTEM ======
+function formatStoryTime(minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+  return `${h12}:${m.toString().padStart(2, '0')} ${period}`;
+}
+
+// ====== RAW AI CALL (for journals etc.) ======
+async function callAI(messages, maxTokens = 600) {
+  if (provider === 'puter') {
+    try {
+      const r = await puter.ai.chat(messages, { model: puterModel, stream: false });
+      return extractPuterText(r).trim() || '';
+    } catch (err) {
+      throw new Error(err?.message || 'Puter request failed.');
+    }
+  }
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': window.location.href, 'X-Title': 'Moni-Talk' },
+    body: JSON.stringify({ model: selectedModel, messages, max_tokens: maxTokens, temperature: 0.9 })
+  });
+  if (!res.ok) throw new Error('API error');
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content?.trim() || '';
 }
 
 // ====== STORAGE ======
@@ -1736,6 +1863,7 @@ function parseStoryResponse(text) {
   const dayMatch = text.match(/\[DAY:(\d+)\]/);
   const day = dayMatch ? parseInt(dayMatch[1]) : null;
   const hasPoetry = /\[POETRY\]/i.test(text);
+  const isEndOfDay = /\[END_OF_DAY\]/i.test(text);
   const affinityMatch = text.match(/\[AFFINITY:([^\]]+)\]/);
   let affinity = null;
   if (affinityMatch) {
@@ -1748,10 +1876,11 @@ function parseStoryResponse(text) {
   const narrative = text
     .replace(/\[DAY:\d+\]\s*/g, '')
     .replace(/\[POETRY\]\s*/gi, '')
+    .replace(/\[END_OF_DAY\]\s*/gi, '')
     .replace(/\[AFFINITY:[^\]]+\]\s*/g, '')
     .replace(/\[CHOICE_\d\]\s*.+/g, '')
     .trim();
-  return { narrative, choices, day, hasPoetry, affinity };
+  return { narrative, choices, day, hasPoetry, isEndOfDay, affinity };
 }
 
 function insertStoryNarrative(text, animate = true) {
@@ -1801,6 +1930,11 @@ function updateVnDay(day) {
   if (el) el.textContent = day;
 }
 
+function updateVnTime(minutes) {
+  const el = $('vnDayTime');
+  if (el) el.textContent = formatStoryTime(minutes);
+}
+
 function updateVnSprites(narrative) {
   const names = ['sayori', 'natsuki', 'yuri', 'monika'];
   const lower = narrative.toLowerCase();
@@ -1841,6 +1975,105 @@ function initVnTicks() {
       container.appendChild(label);
     });
   });
+}
+
+// ====== JOURNAL SYSTEM ======
+async function showEndOfDay(chat) {
+  const dayNum = chat.storyDay || 1;
+  $('journalDayNum').textContent = dayNum;
+  $('journalEntries').innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.4);padding:40px;font-style:italic;">The girls are writing in their diaries...</div>';
+  $('journalOverlay').classList.add('open');
+  try {
+    const entries = await generateJournals(chat);
+    renderJournalEntries(entries);
+  } catch (err) {
+    console.error('Journal generation failed:', err);
+    $('journalEntries').innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.4);padding:40px;">Journal entries unavailable.</div>';
+  }
+}
+
+async function generateJournals(chat) {
+  const dayNum = chat.storyDay || 1;
+  const todayMsgs = chat.messages.slice(-12);
+  const summary = todayMsgs.map(m => {
+    if (m.role === 'assistant') return parseStoryResponse(m.content).narrative.slice(0, 200);
+    return 'Player chose: ' + m.content.slice(0, 80);
+  }).join('\n');
+  const aff = chat.storyAffinity || {};
+  const journalPrompt = `You are writing private diary/journal entries for each of the 4 Doki Doki Literature Club girls after Day ${dayNum} of the Literature Club.
+
+Based on today's events, write each girl's HONEST private thoughts. These should be raw, personal, and unfiltered — showing how they truly feel about MC and the day's events. Feelings and attraction should be MORE APPARENT here than in their public behavior. A girl with low affinity may barely mention MC; a girl with high affinity may be thinking about him constantly.
+
+Today's events:
+${summary}
+
+Current affinity levels (0-100): Sayori=${aff.sayori||15}, Natsuki=${aff.natsuki||1}, Yuri=${aff.yuri||1}, Monika=${aff.monika||10}
+
+CHARACTER WRITING STYLES:
+- Sayori: Casual, bubbly, uses "~" and "!!", emotionally honest but tries to stay positive
+- Natsuki: Tsundere even in private — deflects feelings with "it's not like I care" but her real emotions slip through
+- Yuri: Eloquent, introspective, uses metaphors, overthinks interactions
+- Monika: Self-aware, perceptive, reflects on the day with clarity and warmth
+
+Write in this EXACT format (2-3 sentences each):
+[JOURNAL:Sayori]
+(entry)
+[JOURNAL:Natsuki]
+(entry)
+[JOURNAL:Yuri]
+(entry)
+[JOURNAL:Monika]
+(entry)`;
+
+  const msgs = [
+    { role: 'system', content: journalPrompt },
+    { role: 'user', content: 'Write the journal entries for today.' }
+  ];
+  const raw = await callAI(msgs, 600);
+  return parseJournals(raw);
+}
+
+function parseJournals(text) {
+  const entries = {};
+  const regex = /\[JOURNAL:(\w+)\]\s*([\s\S]*?)(?=\[JOURNAL:|\s*$)/gi;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    entries[match[1].toLowerCase()] = match[2].trim();
+  }
+  return entries;
+}
+
+function renderJournalEntries(entries) {
+  const container = $('journalEntries');
+  container.innerHTML = '';
+  const order = ['sayori', 'monika', 'natsuki', 'yuri'];
+  const names = { sayori: "Sayori's Diary", monika: "Monika's Journal", natsuki: "Natsuki's Notes", yuri: "Yuri's Diary" };
+  const initials = { sayori: 'S', monika: 'M', natsuki: 'N', yuri: 'Y' };
+  order.forEach(girl => {
+    const text = entries[girl] || 'Nothing to write today...';
+    const div = document.createElement('div');
+    div.className = `journal-entry ${girl}`;
+    div.innerHTML = `
+      <div class="journal-entry-header">
+        <div class="journal-portrait ${girl}">${initials[girl]}</div>
+        <span class="journal-name">${names[girl]}</span>
+      </div>
+      <div class="journal-text">${escapeHtml(text)}</div>`;
+    container.appendChild(div);
+  });
+}
+
+function closeJournal() {
+  $('journalOverlay').classList.remove('open');
+  const chat = getChat();
+  if (!chat) return;
+  chat.storyTime = 930;
+  chat.storyDay = (chat.storyDay || 1) + 1;
+  updateChatHeader(chat);
+  updateVnDay(chat.storyDay);
+  updateVnTime(930);
+  saveChats();
+  generateStoryBeat(chat);
 }
 
 function showWordPicker() {
@@ -1894,6 +2127,11 @@ async function submitPoem() {
   const topName = topGirl.charAt(0).toUpperCase() + topGirl.slice(1);
   const message = `[Poem words: ${selectedWords.join(', ')}] My poem resonates most with ${topName}'s style.`;
   hideWordPicker();
+  if (chat.mode === 'story') {
+    chat.storyTime = (chat.storyTime || 930) + 10;
+    updateChatHeader(chat);
+    updateVnTime(chat.storyTime);
+  }
   chat.messages.push({ role: 'user', content: message });
   saveChats();
   insertMessageEl('user', `Wrote a poem with: ${selectedWords.join(', ')}`);
@@ -1906,6 +2144,11 @@ async function selectStoryChoice(choice) {
   const chat = getChat();
   if (!chat || isGenerating) return;
   hideStoryChoices();
+  if (chat.mode === 'story') {
+    chat.storyTime = (chat.storyTime || 930) + 10;
+    updateChatHeader(chat);
+    updateVnTime(chat.storyTime);
+  }
   chat.messages.push({ role: 'user', content: choice });
   saveChats();
   insertMessageEl('user', choice);
@@ -1922,7 +2165,7 @@ async function generateStoryBeat(chat) {
   scrollToBottom();
   try {
     const rawReply = provider === 'puter' ? await callPuter(chat) : await callOpenRouter(chat);
-    const { narrative, choices, day, hasPoetry, affinity } = parseStoryResponse(rawReply);
+    const { narrative, choices, day, hasPoetry, isEndOfDay, affinity } = parseStoryResponse(rawReply);
     if (day) { chat.storyDay = day; updateChatHeader(chat); updateVnDay(day); }
     if (affinity) { chat.storyAffinity = affinity; updateAffinityPanel(affinity); }
     chat.messages.push({ role: 'assistant', content: rawReply });
@@ -1932,7 +2175,9 @@ async function generateStoryBeat(chat) {
     updateVnSprites(narrative);
     scrollToBottom();
     updateContextBar();
-    if (hasPoetry) {
+    if (isEndOfDay) {
+      await showEndOfDay(chat);
+    } else if (hasPoetry) {
       showWordPicker();
     } else if (choices.length > 0) {
       renderStoryChoices(choices);
