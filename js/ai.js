@@ -15,10 +15,11 @@ function buildMessages(chat) {
     const time = chat.storyTime || 930;
     const day = chat.storyDay || 1;
     const mcName = chat.mcName || 'MC';
+    const phase = chat.storyPhase || 'club';
     let context = `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}\n[CURRENT TIME: ${formatStoryTime(time)}]`;
-    if (time >= 980 && time < 990) context += '\nClub meeting is almost over. Start wrapping up the current activity naturally.';
-    if (time >= 990 && time < 1020) context += '\nIt is 4:30 PM or later. Monika MUST end the club meeting if she hasn\'t already. Transition to leaving school / walking home.';
-    if (time >= 1020) context += '\nMC should be arriving home. Wrap up the walk-home scene and output [END_OF_DAY] to end this day.';
+    if (phase === 'walk_home') {
+      context += '\nPhase: MC is leaving school and walking home. Write a short, warm walk-home scene (2-3 paragraphs) with natural dialogue. Do NOT include [CHOICE] tags — just narrative and [AFFINITY:...] at the end.';
+    }
     const msgs = [
       { role: 'system', content: STORY_PROMPT + context },
       ...chat.messages.map(m => ({ role: m.role, content: m.content }))

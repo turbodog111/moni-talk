@@ -157,6 +157,7 @@ function closeJournal() {
   if (!chat) return;
   chat.storyTime = 930;
   chat.storyDay = (chat.storyDay || 1) + 1;
+  chat.storyPhase = 'club';
   updateChatHeader(chat);
   updateVnDay(chat.storyDay);
   updateVnTime(930);

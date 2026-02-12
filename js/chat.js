@@ -49,6 +49,7 @@ function createChat() {
   if (newChatMode === 'story') {
     chat.mode = 'story';
     chat.mcName = $('mcNameInput').value.trim() || 'MC';
+    chat.storyPhase = 'club';
   }
   chats.push(chat); saveChats(); openChat(chat.id);
 }
@@ -155,6 +156,12 @@ function renderMessages() {
     // Update sprites for last narrative
     const lastAssistant = [...chat.messages].reverse().find(m => m.role === 'assistant');
     if (lastAssistant) updateVnSprites(parseStoryResponse(lastAssistant.content).narrative);
+    // Handle phase-based recovery (e.g., page refresh during journal)
+    if (chat.storyPhase === 'journal_pending') {
+      showEndOfDay(chat);
+      scrollToBottom();
+      return;
+    }
     const last = chat.messages[chat.messages.length - 1];
     if (last?.role === 'assistant') {
       const parsed = parseStoryResponse(last.content);
