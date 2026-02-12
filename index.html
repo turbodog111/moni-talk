@@ -161,6 +161,7 @@
     <h2>Settings</h2>
     <label for="providerSelect">Provider</label>
     <select id="providerSelect">
+      <option value="ollama">Ollama (local, free, unlimited)</option>
       <option value="openrouter">OpenRouter (free, best roleplay quality)</option>
       <option value="puter">Puter (unlimited, no key needed)</option>
     </select>
@@ -178,6 +179,15 @@
       <label for="puterModelSelect">Model</label>
       <select id="puterModelSelect"></select>
       <div class="hint">No API key needed. You'll sign into Puter on first message.</div>
+    </div>
+    <div id="ollamaFields" style="display:none;">
+      <label for="ollamaModelSelect">Model</label>
+      <select id="ollamaModelSelect"></select>
+      <div class="hint">Models you've pulled with <strong>ollama pull</strong> appear here automatically.</div>
+      <div class="field-gap"></div>
+      <label for="ollamaEndpointInput">Endpoint</label>
+      <input type="text" id="ollamaEndpointInput" placeholder="http://localhost:11434" autocomplete="off">
+      <div class="hint">Default: http://localhost:11434. Change only if you moved the port.</div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-danger" id="clearKeyBtn">Clear Key</button>

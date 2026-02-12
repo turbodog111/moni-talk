@@ -197,7 +197,7 @@ async function sendMessage() {
   typingIndicator.classList.add('visible'); scrollToBottom();
 
   try {
-    const rawReply = provider === 'puter' ? await callPuter(chat) : await callOpenRouter(chat);
+    const rawReply = await callProvider(chat);
     const { mood, text: reply } = parseMood(rawReply, chat.mood || 'cheerful');
     chat.mood = mood;
     chat.messages.push({ role: 'assistant', content: reply });

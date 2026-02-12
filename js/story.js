@@ -153,7 +153,7 @@ async function generateStoryBeat(chat) {
   typingIndicator.classList.add('visible');
   scrollToBottom();
   try {
-    const rawReply = provider === 'puter' ? await callPuter(chat) : await callOpenRouter(chat);
+    const rawReply = await callProvider(chat);
     const { narrative, choices, day, hasPoetry, isEndOfDay, affinity } = parseStoryResponse(rawReply);
     if (day) { chat.storyDay = day; updateChatHeader(chat); updateVnDay(day); }
     if (affinity) { chat.storyAffinity = affinity; updateAffinityPanel(affinity); }

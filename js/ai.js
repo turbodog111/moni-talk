@@ -31,6 +31,13 @@ function buildMessages(chat) {
   ];
 }
 
+// ====== PROVIDER DISPATCH ======
+async function callProvider(chat) {
+  if (provider === 'ollama') return await callOllama(chat);
+  if (provider === 'puter') return await callPuter(chat);
+  return await callOpenRouter(chat);
+}
+
 // ====== API: OPENROUTER ======
 async function callOpenRouter(chat) {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -41,8 +48,8 @@ async function callOpenRouter(chat) {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     if (res.status === 401) throw new Error('Invalid API key. Get a free one at openrouter.ai.');
-    if (res.status === 429) throw new Error('Rate limited. Switch to Puter for unlimited use.');
-    if (res.status === 402) throw new Error('Out of credits. Switch to Puter for free.');
+    if (res.status === 429) throw new Error('Rate limited. Switch to Ollama for unlimited local use.');
+    if (res.status === 402) throw new Error('Out of credits. Switch to Ollama for free.');
     throw new Error(data?.error?.message || `OpenRouter error (${res.status})`);
   }
   const data = await res.json();
@@ -75,6 +82,37 @@ async function callPuter(chat) {
   }
 }
 
+// ====== API: OLLAMA (local) ======
+async function callOllama(chat) {
+  let res;
+  try {
+    res = await fetch(`${ollamaEndpoint}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: ollamaModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 800 : 300, temperature: chat.mode === 'story' ? 0.9 : 0.85 })
+    });
+  } catch (err) {
+    throw new Error('Cannot reach Ollama. Is it running? Check that Ollama is open and OLLAMA_ORIGINS is set.');
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error?.message || `Ollama error (${res.status})`);
+  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content?.trim() || 'Hmm, I lost my train of thought...';
+}
+
+async function fetchOllamaModels() {
+  try {
+    const res = await fetch(`${ollamaEndpoint}/v1/models`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.data || []).map(m => ({ id: m.id, label: m.id }));
+  } catch {
+    return [];
+  }
+}
+
 // ====== RAW AI CALL (for journals etc.) ======
 async function callAI(messages, maxTokens = 600) {
   if (provider === 'puter') {
@@ -83,6 +121,20 @@ async function callAI(messages, maxTokens = 600) {
       return extractPuterText(r).trim() || '';
     } catch (err) {
       throw new Error(err?.message || 'Puter request failed.');
+    }
+  }
+  if (provider === 'ollama') {
+    try {
+      const res = await fetch(`${ollamaEndpoint}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: ollamaModel, messages, max_tokens: maxTokens, temperature: 0.9 })
+      });
+      if (!res.ok) throw new Error('Ollama error');
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content?.trim() || '';
+    } catch (err) {
+      throw new Error(err?.message || 'Ollama request failed. Is it running?');
     }
   }
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {

@@ -2,6 +2,7 @@
 const STORAGE = {
   API: 'moni_talk_api_key', PROVIDER: 'moni_talk_provider',
   MODEL_OR: 'moni_talk_model', MODEL_PUTER: 'moni_talk_puter_model',
+  MODEL_OLLAMA: 'moni_talk_ollama_model', OLLAMA_ENDPOINT: 'moni_talk_ollama_endpoint',
   CHATS: 'moni_talk_chats_v2', PROFILE: 'moni_talk_profile'
 };
 
@@ -25,7 +26,8 @@ const PUTER_MODELS = [
 
 const PROVIDER_HINTS = {
   openrouter: 'Free tier: ~50 req/day. Needs a free API key from openrouter.ai.',
-  puter: 'No limits, no API key. Uses your Puter account.'
+  puter: 'No limits, no API key. Uses your Puter account.',
+  ollama: 'Runs locally on your computer. Free, unlimited, private. Requires Ollama installed (ollama.com).'
 };
 
 const MAX_CONTEXT_MSGS = 80; // soft cap for context bar display
