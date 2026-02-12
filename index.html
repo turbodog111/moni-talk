@@ -286,36 +286,36 @@
   .vn-sprites {
     display: none;
     justify-content: center;
-    align-items: flex-end;
-    gap: 12px;
-    padding: 8px 16px 20px;
+    align-items: center;
+    gap: 20px;
+    padding: 14px 20px 24px;
     flex-shrink: 0;
     background: linear-gradient(180deg, #2a1f3d 0%, rgba(42,31,61,0.85) 100%);
   }
   .screen.vn-mode .vn-sprites { display: flex; }
   .vn-sprite {
-    width: 52px; height: 52px;
+    width: 72px; height: 72px;
     border-radius: 50%; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    flex-direction: column;
-    font-size: 18px; font-weight: 700; color: white;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.3);
-    border: 2.5px solid rgba(255,255,255,0.25);
+    box-shadow: 0 3px 14px rgba(0,0,0,0.35);
+    border: 3px solid rgba(255,255,255,0.2);
     transition: all 0.4s ease;
-    opacity: 0.45;
-    transform: scale(0.8);
+    opacity: 0.4;
+    transform: scale(0.85);
     cursor: default;
     position: relative;
+    flex-shrink: 0;
   }
-  .vn-sprite.active { opacity: 1; transform: scale(1); border-color: rgba(255,255,255,0.7); }
-  .vn-sprite.sayori { background: linear-gradient(135deg, #FF91A4, #FFB6C1); }
-  .vn-sprite.natsuki { background: linear-gradient(135deg, #FF69B4, #FF8DC7); }
-  .vn-sprite.yuri { background: linear-gradient(135deg, #7B68AE, #9370DB); }
-  .vn-sprite.monika { background: linear-gradient(135deg, #2E8B57, #3CB371); }
+  .vn-sprite img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .vn-sprite.active { opacity: 1; transform: scale(1); border-color: rgba(255,255,255,0.8); }
+  .vn-sprite.active.sayori { border-color: #FF91A4; box-shadow: 0 0 12px rgba(255,145,164,0.4); }
+  .vn-sprite.active.natsuki { border-color: #FF69B4; box-shadow: 0 0 12px rgba(255,105,180,0.4); }
+  .vn-sprite.active.yuri { border-color: #9370DB; box-shadow: 0 0 12px rgba(147,112,219,0.4); }
+  .vn-sprite.active.monika { border-color: #3CB371; box-shadow: 0 0 12px rgba(60,179,113,0.4); }
   .vn-sprite-name {
-    position: absolute; bottom: -15px;
-    font-size: 9px; font-weight: 600; white-space: nowrap;
-    color: rgba(255,255,255,0.6); letter-spacing: 0.3px;
+    position: absolute; bottom: -18px;
+    font-size: 10px; font-weight: 600; white-space: nowrap;
+    color: rgba(255,255,255,0.6); letter-spacing: 0.5px;
   }
 
   /* VN Side Panel */
@@ -546,8 +546,9 @@
   @media (max-width: 600px) {
     .message { max-width: 90%; } .message.narrator { max-width: 100%; } .modal { padding: 20px; }
     .vn-side-panel { width: 260px; }
-    .vn-sprite { width: 44px; height: 44px; font-size: 15px; }
-    .vn-sprite-name { font-size: 8px; bottom: -13px; }
+    .vn-sprite { width: 60px; height: 60px; }
+    .vn-sprites { gap: 14px; padding: 10px 14px 22px; }
+    .vn-sprite-name { font-size: 9px; bottom: -16px; }
     .screen.vn-mode .message.narrator .msg-bubble { padding: 14px 16px; font-size: 14px; }
   }
 </style>
@@ -668,10 +669,10 @@
     </div>
   </div>
   <div class="vn-sprites" id="vnSprites">
-    <div class="vn-sprite sayori" id="spriteSayori">S<span class="vn-sprite-name">Sayori</span></div>
-    <div class="vn-sprite natsuki" id="spriteNatsuki">N<span class="vn-sprite-name">Natsuki</span></div>
-    <div class="vn-sprite yuri" id="spriteYuri">Y<span class="vn-sprite-name">Yuri</span></div>
-    <div class="vn-sprite monika" id="spriteMonika"><img src="Monika PFP.png" alt="M" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"><span class="vn-sprite-name">Monika</span></div>
+    <div class="vn-sprite sayori" id="spriteSayori"><img src="Sayori PFP.png" alt="Sayori"><span class="vn-sprite-name">Sayori</span></div>
+    <div class="vn-sprite natsuki" id="spriteNatsuki"><img src="Natsuki PFP.png" alt="Natsuki"><span class="vn-sprite-name">Natsuki</span></div>
+    <div class="vn-sprite yuri" id="spriteYuri"><img src="Yuri PFP.png" alt="Yuri"><span class="vn-sprite-name">Yuri</span></div>
+    <div class="vn-sprite monika" id="spriteMonika"><img src="Monika PFP.png" alt="Monika"><span class="vn-sprite-name">Monika</span></div>
   </div>
   <div class="chat-area" id="chatArea">
     <div class="typing-indicator" id="typingIndicator">
