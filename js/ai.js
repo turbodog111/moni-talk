@@ -43,7 +43,7 @@ async function callOpenRouter(chat) {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': window.location.href, 'X-Title': 'Moni-Talk' },
-    body: JSON.stringify({ model: selectedModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 800 : 300, temperature: chat.mode === 'story' ? 0.9 : 0.85 })
+    body: JSON.stringify({ model: selectedModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 1500 : 400, temperature: chat.mode === 'story' ? 0.85 : 0.8 })
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -82,14 +82,28 @@ async function callPuter(chat) {
   }
 }
 
-// ====== API: OLLAMA (local) ======
+// ====== API: OLLAMA (local, native API for full parameter control) ======
 async function callOllama(chat) {
+  const isStory = chat.mode === 'story';
   let res;
   try {
-    res = await fetch(`${ollamaEndpoint}/v1/chat/completions`, {
+    res = await fetch(`${ollamaEndpoint}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: ollamaModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 800 : 300, temperature: chat.mode === 'story' ? 0.9 : 0.85 })
+      body: JSON.stringify({
+        model: ollamaModel,
+        messages: buildMessages(chat),
+        stream: false,
+        options: {
+          num_predict: isStory ? 1500 : 500,
+          num_ctx: 8192,
+          temperature: isStory ? 0.8 : 0.75,
+          top_p: 0.92,
+          top_k: 60,
+          repeat_penalty: 1.18,
+          repeat_last_n: 256
+        }
+      })
     });
   } catch (err) {
     throw new Error('Cannot reach Ollama. Is it running? Check that Ollama is open and OLLAMA_ORIGINS is set.');
@@ -99,7 +113,7 @@ async function callOllama(chat) {
     throw new Error(data?.error?.message || `Ollama error (${res.status})`);
   }
   const data = await res.json();
-  return data.choices?.[0]?.message?.content?.trim() || 'Hmm, I lost my train of thought...';
+  return data.message?.content?.trim() || 'Hmm, I lost my train of thought...';
 }
 
 async function fetchOllamaModels() {
@@ -125,14 +139,27 @@ async function callAI(messages, maxTokens = 600) {
   }
   if (provider === 'ollama') {
     try {
-      const res = await fetch(`${ollamaEndpoint}/v1/chat/completions`, {
+      const res = await fetch(`${ollamaEndpoint}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: ollamaModel, messages, max_tokens: maxTokens, temperature: 0.9 })
+        body: JSON.stringify({
+          model: ollamaModel,
+          messages,
+          stream: false,
+          options: {
+            num_predict: maxTokens,
+            num_ctx: 8192,
+            temperature: 0.85,
+            top_p: 0.92,
+            top_k: 60,
+            repeat_penalty: 1.18,
+            repeat_last_n: 256
+          }
+        })
       });
       if (!res.ok) throw new Error('Ollama error');
       const data = await res.json();
-      return data.choices?.[0]?.message?.content?.trim() || '';
+      return data.message?.content?.trim() || '';
     } catch (err) {
       throw new Error(err?.message || 'Ollama request failed. Is it running?');
     }
