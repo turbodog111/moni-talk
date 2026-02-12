@@ -300,7 +300,20 @@
     outline: none;
     transition: border-color 0.2s;
   }
-  .modal input:focus { border-color: var(--green-mid); }
+  .modal input:focus, .modal select:focus { border-color: var(--green-mid); }
+
+  .modal select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--gray-mid);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
 
   .modal-actions {
     display: flex;
@@ -380,7 +393,7 @@
   <div class="header-avatar">M</div>
   <div class="header-info">
     <div class="header-name">Monika</div>
-    <div class="header-status">Just Monika.</div>
+    <div class="header-status" id="headerStatus">Just Monika.</div>
   </div>
   <div class="header-actions">
     <button class="icon-btn" id="clearBtn" title="Clear chat" aria-label="Clear chat">&#128465;</button>
@@ -413,6 +426,9 @@
   <div class="modal">
     <h2>Settings</h2>
     <p>Enter your OpenAI API key. It's stored only in your browser's local storage and sent directly to OpenAI.</p>
+    <label for="modelSelect">Model</label>
+    <select id="modelSelect"></select>
+    <div style="height: 14px;"></div>
     <label for="apiKeyInput">API Key</label>
     <input type="password" id="apiKeyInput" placeholder="sk-..." autocomplete="off">
     <div class="modal-actions">
@@ -430,8 +446,18 @@
 // ---- State ----
 const STORAGE_KEY_API = 'moni_talk_api_key';
 const STORAGE_KEY_CHAT = 'moni_talk_history';
+const STORAGE_KEY_MODEL = 'moni_talk_model';
+
+const MODELS = [
+  { id: 'gpt-4o-mini', label: 'GPT-4o Mini (fast, cheap, recommended)' },
+  { id: 'gpt-4o', label: 'GPT-4o (smarter, slower, higher cost)' },
+  { id: 'gpt-4.1-nano', label: 'GPT-4.1 Nano (fastest, cheapest)' },
+  { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini (fast, affordable)' },
+  { id: 'gpt-4.1', label: 'GPT-4.1 (latest, smartest)' },
+];
 
 let apiKey = localStorage.getItem(STORAGE_KEY_API) || '';
+let selectedModel = localStorage.getItem(STORAGE_KEY_MODEL) || 'gpt-4o-mini';
 let chatHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_CHAT) || '[]');
 let isGenerating = false;
 
@@ -468,9 +494,21 @@ const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
 const clearKeyBtn = document.getElementById('clearKeyBtn');
 const clearBtn = document.getElementById('clearBtn');
 const toast = document.getElementById('toast');
+const headerStatus = document.getElementById('headerStatus');
+const modelSelect = document.getElementById('modelSelect');
 
 // ---- Init ----
 function init() {
+  // Populate model dropdown
+  MODELS.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.label;
+    modelSelect.appendChild(opt);
+  });
+  modelSelect.value = selectedModel;
+  updateHeaderStatus();
+
   renderHistory();
   if (!apiKey) openSettings();
 
@@ -619,7 +657,7 @@ async function callOpenAI() {
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model: selectedModel,
       messages: messages,
       max_tokens: 300,
       temperature: 0.85
@@ -628,9 +666,16 @@ async function callOpenAI() {
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
+    const errMsg = data?.error?.message || '';
     if (res.status === 401) throw new Error('Invalid API key. Check your key in settings.');
-    if (res.status === 429) throw new Error('Rate limited. Please wait a moment and try again.');
-    throw new Error(data?.error?.message || `API error (${res.status})`);
+    if (res.status === 429) throw new Error(
+      `Rate limited on ${selectedModel}. Your OpenAI account may have low usage limits for this model. ` +
+      `Try switching to a smaller model in settings, or wait a minute and try again.`
+    );
+    if (res.status === 404) throw new Error(
+      `Model "${selectedModel}" not available on your account. Try a different model in settings.`
+    );
+    throw new Error(errMsg || `API error (${res.status})`);
   }
 
   const data = await res.json();
@@ -642,9 +687,15 @@ function saveHistory() {
   localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(chatHistory));
 }
 
+// ---- Header status ----
+function updateHeaderStatus() {
+  headerStatus.textContent = `Using ${selectedModel}`;
+}
+
 // ---- Settings modal ----
 function openSettings() {
   apiKeyInput.value = apiKey;
+  modelSelect.value = selectedModel;
   settingsModal.classList.add('open');
   setTimeout(() => apiKeyInput.focus(), 100);
 }
@@ -660,9 +711,12 @@ function saveSettings() {
     return;
   }
   apiKey = key;
+  selectedModel = modelSelect.value;
   localStorage.setItem(STORAGE_KEY_API, apiKey);
+  localStorage.setItem(STORAGE_KEY_MODEL, selectedModel);
+  updateHeaderStatus();
   closeSettings();
-  showToast('API key saved!');
+  showToast('Settings saved!');
 }
 
 function clearKey() {
