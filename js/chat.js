@@ -177,9 +177,12 @@ function renderMessages() {
     const last = chat.messages[chat.messages.length - 1];
     if (last?.role === 'assistant') {
       const parsed = parseStoryResponse(last.content);
-      if (parsed.isEndOfDay) {
+      const isWrapPhase = chat.storyPhase === 'wrap_up' || chat.storyPhase === 'd1_wrap_up';
+      const curPhase = STORY_PHASES[chat.storyPhase];
+      // Phase-aware: only honor END_OF_DAY in wrap phases, POETRY in poem_sharing
+      if (parsed.isEndOfDay && isWrapPhase) {
         renderStoryChoices(['Begin next day']);
-      } else if (parsed.hasPoetry) {
+      } else if (parsed.hasPoetry && curPhase && curPhase.triggerPoetry) {
         showWordPicker();
       } else if (chat.storyBeatInPhase === 0 && chat.messages.length > 1) {
         renderStoryChoices(['Continue']);

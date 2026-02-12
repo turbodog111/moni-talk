@@ -79,14 +79,15 @@ function parseStoryResponse(text) {
   while ((match = choiceRegex.exec(text)) !== null) {
     choices.push(match[2].trim());
   }
-  // Secondary: numbered/lettered options (e.g. "1. Talk to Yuri", "A) Ask about the book")
+  // Secondary: numbered/lettered/bulleted options the model might use instead of [CHOICE_X]
+  // Matches: "1. Option", "1) Option", "A. Option", "A) Option", "- Option", "* Option"
   if (choices.length === 0) {
-    const altRegex = /^(?:[1-4][.):\-]\s+|[A-D][.):\-]\s+)(.+)/gm;
+    const altRegex = /^(?:[1-4][.):\-]\s+|[A-D][.):\-]\s+|[-*]\s+)(.+)/gm;
     const altChoices = [];
     let altMatch;
     while ((altMatch = altRegex.exec(text)) !== null) {
       const c = altMatch[1].trim();
-      if (c.length > 5 && c.length < 200) altChoices.push(c);
+      if (c.length > 10 && c.length < 200) altChoices.push(c);
     }
     if (altChoices.length >= 2 && altChoices.length <= 4) {
       choices.push(...altChoices);
@@ -306,16 +307,19 @@ async function generateStoryBeat(chat) {
     // Increment beat counter
     chat.storyBeatInPhase = (chat.storyBeatInPhase || 0) + 1;
     const phase = STORY_PHASES[chat.storyPhase];
+    const isWrapPhase = chat.storyPhase === 'wrap_up' || chat.storyPhase === 'd1_wrap_up';
 
-    // 1. Handle end of day (model output or forced)
-    if (isEndOfDay || (phase && phase.forceEndOfDay && chat.storyBeatInPhase >= phase.maxBeats)) {
+    // 1. Handle end of day — ONLY honor [END_OF_DAY] during wrap-up phases
+    //    (models sometimes output stray [END_OF_DAY] during other phases, which would skip choices)
+    if ((isEndOfDay && isWrapPhase) || (phase && phase.forceEndOfDay && chat.storyBeatInPhase >= phase.maxBeats)) {
       saveChats();
       await showEndOfDay(chat);
       return;
     }
 
-    // 2. Handle poetry tag
-    if (hasPoetry) {
+    // 2. Handle poetry tag — ONLY during poem_sharing phase
+    //    (prevents stray [POETRY] tags from derailing the flow)
+    if (hasPoetry && (phase && phase.triggerPoetry)) {
       saveChats();
       showWordPicker();
       return;
