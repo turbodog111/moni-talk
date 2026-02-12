@@ -250,6 +250,12 @@ async function generateStoryBeat(chat) {
 
   try {
     const rawReply = await callProvider(chat);
+
+    // Guard: if the API returned empty/fallback, don't pollute message history — just retry
+    if (!rawReply || rawReply === 'Hmm, I lost my train of thought...') {
+      throw new Error('Got an empty response from the model. Try again.');
+    }
+
     const { narrative, choices, day, hasPoetry, isEndOfDay, affinity } = parseStoryResponse(rawReply);
 
     // Day is JS-authoritative — ignore model's day tag, use our tracked day
