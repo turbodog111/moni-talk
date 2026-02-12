@@ -179,6 +179,21 @@
   .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #c0392b; color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90vw; text-align: center; }
   .toast.visible { opacity: 1; } .toast.success { background: var(--green-dark); }
 
+  /* Sync */
+  .sync-btn { position: relative; }
+  .sync-dot {
+    position: absolute; top: 4px; right: 4px; width: 8px; height: 8px;
+    border-radius: 50%; border: 1.5px solid var(--green-dark);
+  }
+  .sync-dot.offline { background: #999; }
+  .sync-dot.synced { background: #2ecc71; }
+  .sync-dot.syncing { background: #f1c40f; animation: pulse 1s infinite; }
+  .sync-dot.error { background: #e74c3c; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .sync-info { text-align: center; margin-bottom: 16px; }
+  .sync-info .sync-user { font-size: 16px; font-weight: 600; color: var(--green-dark); margin-bottom: 4px; }
+  .sync-info .sync-state { font-size: 13px; color: var(--gray-text); }
+
   @media (max-width: 600px) { .message { max-width: 90%; } .modal { padding: 20px; } }
 </style>
 </head>
@@ -190,9 +205,10 @@
     <img class="header-avatar" src="Monika PFP.png" alt="Monika">
     <div class="header-info">
       <div class="header-name">Moni-Talk</div>
-      <div class="header-sub">Your conversations with Monika</div>
+      <div class="header-sub" id="chatListSub">Your conversations with Monika</div>
     </div>
     <div class="header-actions">
+      <button class="icon-btn sync-btn" id="syncBtn" title="Cloud Sync" aria-label="Cloud Sync">&#9729;<span class="sync-dot offline" id="syncDot"></span></button>
       <button class="icon-btn" id="profileBtn" title="Your Profile" aria-label="Profile">&#128100;</button>
       <button class="icon-btn" id="globalSettingsBtn" title="Settings" aria-label="Settings">&#9881;</button>
     </div>
@@ -321,6 +337,31 @@
   </div>
 </div>
 
+<!-- Sync Modal -->
+<div class="modal-overlay" id="syncModal">
+  <div class="modal">
+    <h2>&#9729; Cloud Sync</h2>
+    <div id="syncSignedOut">
+      <p>Sign in with a free Puter account to sync your chats and profile across all your devices. No setup needed.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="cancelSyncBtn">Cancel</button>
+        <button class="btn btn-primary" id="signInBtn">Sign In to Puter</button>
+      </div>
+    </div>
+    <div id="syncSignedIn" style="display:none">
+      <div class="sync-info">
+        <div class="sync-user" id="syncUsername"></div>
+        <div class="sync-state" id="syncStateText">Checking...</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="signOutBtn">Sign Out</button>
+        <button class="btn btn-secondary" id="closeSyncBtn">Close</button>
+        <button class="btn btn-primary" id="syncNowBtn">Sync Now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -429,6 +470,9 @@ let chats = JSON.parse(localStorage.getItem(STORAGE.CHATS) || '[]');
 let profile = JSON.parse(localStorage.getItem(STORAGE.PROFILE) || '{}');
 let activeChatId = null;
 let isGenerating = false;
+let syncStatus = 'offline'; // offline | syncing | synced | error
+let puterUser = null;
+let syncTimer = null;
 
 // ====== DOM ======
 const $ = id => document.getElementById(id);
@@ -439,6 +483,9 @@ const chatArea = $('chatArea'), typingIndicator = $('typingIndicator');
 const userInput = $('userInput'), sendBtn = $('sendBtn');
 const chatHeaderSub = $('chatHeaderSub');
 const contextLabel = $('contextLabel'), contextFill = $('contextFill');
+const syncModal = $('syncModal'), syncDot = $('syncDot');
+const syncSignedOut = $('syncSignedOut'), syncSignedIn = $('syncSignedIn');
+const syncUsername = $('syncUsername'), syncStateText = $('syncStateText');
 const settingsModal = $('settingsModal');
 const providerSelect = $('providerSelect'), providerHint = $('providerHint');
 const orModelSelect = $('orModelSelect'), puterModelSelect = $('puterModelSelect');
@@ -482,6 +529,16 @@ function init() {
   $('clearKeyBtn').addEventListener('click', clearKey);
   providerSelect.addEventListener('change', () => toggleProviderFields(providerSelect.value));
   settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) closeSettings(); });
+
+  // Sync
+  $('syncBtn').addEventListener('click', openSyncModal);
+  $('signInBtn').addEventListener('click', handleSignIn);
+  $('signOutBtn').addEventListener('click', handleSignOut);
+  $('syncNowBtn').addEventListener('click', () => { fullSync(); });
+  $('cancelSyncBtn').addEventListener('click', closeSyncModal);
+  $('closeSyncBtn').addEventListener('click', closeSyncModal);
+  syncModal.addEventListener('click', (e) => { if (e.target === syncModal) closeSyncModal(); });
+  initSync();
 }
 
 // ====== PROFILE ======
@@ -497,9 +554,11 @@ function saveProfile() {
     name: $('profileName').value.trim(),
     about: $('profileAbout').value.trim(),
     interests: $('profileInterests').value.trim(),
-    values: $('profileValues').value.trim()
+    values: $('profileValues').value.trim(),
+    lastModified: Date.now()
   };
   localStorage.setItem(STORAGE.PROFILE, JSON.stringify(profile));
+  queueSync();
   showScreen('chatList');
   showToast('Profile saved! Monika will remember.', 'success');
 }
@@ -549,7 +608,12 @@ function renderChatList() {
     item.addEventListener('click', (e) => { if (!e.target.closest('.chat-item-delete')) openChat(chat.id); });
     item.querySelector('.chat-item-delete').addEventListener('click', (e) => {
       e.stopPropagation();
-      if (confirm('Delete this conversation?')) { chats = chats.filter(c => c.id !== chat.id); saveChats(); renderChatList(); }
+      if (confirm('Delete this conversation?')) {
+        const delId = chat.id;
+        chats = chats.filter(c => c.id !== delId);
+        saveChats(); renderChatList();
+        deleteCloudChat(delId);
+      }
     });
     chatListBody.appendChild(item);
   });
@@ -557,7 +621,8 @@ function renderChatList() {
 
 // ====== CHAT CRUD ======
 function createChat() {
-  const chat = { id: crypto.randomUUID(), relationship: parseInt(relSlider.value), created: Date.now(), messages: [], mood: 'cheerful' };
+  const now = Date.now();
+  const chat = { id: crypto.randomUUID(), relationship: parseInt(relSlider.value), created: now, lastModified: now, messages: [], mood: 'cheerful' };
   chats.push(chat); saveChats(); openChat(chat.id);
 }
 
@@ -728,7 +793,13 @@ async function callPuter(chat) {
 }
 
 // ====== STORAGE ======
-function saveChats() { localStorage.setItem(STORAGE.CHATS, JSON.stringify(chats)); }
+function saveChats() {
+  const chat = getChat();
+  if (chat) chat.lastModified = Date.now();
+  localStorage.setItem(STORAGE.CHATS, JSON.stringify(chats));
+  queueSync();
+}
+function saveChatsLocal() { localStorage.setItem(STORAGE.CHATS, JSON.stringify(chats)); }
 
 // ====== SETTINGS ======
 function toggleProviderFields(p) {
@@ -762,6 +833,176 @@ function showToast(msg, type) {
   toast.className = 'toast visible' + (type === 'success' ? ' success' : '');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('visible'), 3500);
+}
+
+// ====== CLOUD SYNC (Puter.js KV) ======
+function hasPuter() { return typeof puter !== 'undefined' && puter.auth && puter.kv; }
+
+function setSyncStatus(s) {
+  syncStatus = s;
+  syncDot.className = 'sync-dot ' + s;
+  const sub = $('chatListSub');
+  if (s === 'offline') sub.textContent = 'Your conversations with Monika';
+  else if (s === 'syncing') sub.textContent = 'Syncing...';
+  else if (s === 'synced') sub.textContent = 'Synced \u2713';
+  else if (s === 'error') sub.textContent = 'Sync failed \u2014 tap cloud to retry';
+  // Update modal if open
+  if (syncStateText) {
+    const labels = { offline: 'Not signed in', syncing: 'Syncing...', synced: 'Synced \u2713', error: 'Sync error \u2014 try again' };
+    syncStateText.textContent = labels[s] || s;
+  }
+}
+
+function queueSync() {
+  if (!hasPuter() || !puter.auth.isSignedIn()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => syncToCloud(), 1000);
+}
+
+function parseKV(val) {
+  if (val == null) return null;
+  if (typeof val === 'object') return val;
+  try { return JSON.parse(val); } catch { return null; }
+}
+
+async function syncToCloud() {
+  if (!hasPuter() || !puter.auth.isSignedIn()) return;
+  setSyncStatus('syncing');
+  try {
+    const index = chats.map(c => ({ id: c.id, relationship: c.relationship, created: c.created, lastModified: c.lastModified || c.created }));
+    const promises = [
+      puter.kv.set('moni_chat_index', JSON.stringify(index)),
+      puter.kv.set('moni_profile', JSON.stringify(profile))
+    ];
+    for (const chat of chats) {
+      promises.push(puter.kv.set('moni_chat_' + chat.id, JSON.stringify(chat)));
+    }
+    await Promise.all(promises);
+    setSyncStatus('synced');
+  } catch (err) {
+    console.error('Sync to cloud failed:', err);
+    setSyncStatus('error');
+  }
+}
+
+async function syncFromCloud() {
+  if (!hasPuter() || !puter.auth.isSignedIn()) return;
+  setSyncStatus('syncing');
+  try {
+    // Pull chat index
+    const indexRaw = await puter.kv.get('moni_chat_index');
+    const cloudIndex = parseKV(indexRaw) || [];
+
+    // Pull all cloud chats in parallel
+    const chatPromises = cloudIndex.map(entry =>
+      puter.kv.get('moni_chat_' + entry.id).then(raw => parseKV(raw)).catch(() => null)
+    );
+    const cloudChats = (await Promise.all(chatPromises)).filter(Boolean);
+
+    // Merge chats
+    const merged = new Map();
+    for (const c of chats) merged.set(c.id, c);
+    for (const cc of cloudChats) {
+      const local = merged.get(cc.id);
+      if (!local) {
+        merged.set(cc.id, cc);
+      } else {
+        const lm = local.lastModified || local.created || 0;
+        const cm = cc.lastModified || cc.created || 0;
+        if (cm > lm) merged.set(cc.id, cc);
+      }
+    }
+    chats = Array.from(merged.values());
+    saveChatsLocal();
+
+    // Pull profile
+    const cloudProfile = parseKV(await puter.kv.get('moni_profile'));
+    if (cloudProfile) {
+      const localMod = profile.lastModified || 0;
+      const cloudMod = cloudProfile.lastModified || 0;
+      if (cloudMod > localMod) {
+        profile = cloudProfile;
+        localStorage.setItem(STORAGE.PROFILE, JSON.stringify(profile));
+      }
+    }
+
+    renderChatList();
+    setSyncStatus('synced');
+  } catch (err) {
+    console.error('Sync from cloud failed:', err);
+    setSyncStatus('error');
+  }
+}
+
+async function fullSync() {
+  await syncFromCloud();
+  await syncToCloud();
+}
+
+async function deleteCloudChat(id) {
+  if (!hasPuter() || !puter.auth.isSignedIn()) return;
+  try {
+    await puter.kv.del('moni_chat_' + id);
+    const index = chats.map(c => ({ id: c.id, relationship: c.relationship, created: c.created, lastModified: c.lastModified || c.created }));
+    await puter.kv.set('moni_chat_index', JSON.stringify(index));
+  } catch (err) { console.error('Cloud delete failed:', err); }
+}
+
+async function initSync() {
+  if (!hasPuter()) { setSyncStatus('offline'); return; }
+  try {
+    if (puter.auth.isSignedIn()) {
+      puterUser = await puter.auth.getUser();
+      updateSyncUI();
+      await fullSync();
+    } else {
+      setSyncStatus('offline');
+    }
+  } catch (err) {
+    console.error('Init sync error:', err);
+    setSyncStatus('offline');
+  }
+}
+
+// ====== SYNC UI ======
+function updateSyncUI() {
+  const signedIn = hasPuter() && puter.auth.isSignedIn();
+  syncSignedOut.style.display = signedIn ? 'none' : '';
+  syncSignedIn.style.display = signedIn ? '' : 'none';
+  if (signedIn && puterUser) {
+    syncUsername.textContent = puterUser.username || 'Puter User';
+  }
+}
+
+function openSyncModal() {
+  updateSyncUI();
+  syncModal.classList.add('open');
+}
+function closeSyncModal() { syncModal.classList.remove('open'); }
+
+async function handleSignIn() {
+  if (!hasPuter()) { showToast('Puter SDK not available.'); return; }
+  try {
+    await puter.auth.signIn();
+    puterUser = await puter.auth.getUser();
+    updateSyncUI();
+    showToast('Signed in as ' + (puterUser.username || 'Puter User') + '!', 'success');
+    await fullSync();
+    renderChatList();
+  } catch (err) {
+    console.error('Sign in failed:', err);
+    showToast('Sign in failed. Allow the popup and try again.');
+  }
+}
+
+function handleSignOut() {
+  if (!hasPuter()) return;
+  puter.auth.signOut();
+  puterUser = null;
+  setSyncStatus('offline');
+  updateSyncUI();
+  closeSyncModal();
+  showToast('Signed out. Data stays on this device.');
 }
 
 init();
