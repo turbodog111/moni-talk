@@ -615,17 +615,26 @@ CHARACTERS:
 - Yuri: Shy, elegant, deeply passionate about literature. Loves horror and fantasy novels with rich symbolism. Writes elaborate, metaphorical poetry. Grows more confident and warm as she opens up to people she trusts.
 - Monika: The club president. Charismatic, athletic (former debate club star), genuinely kind. Plays piano and writes poetry about big ideas — existence, identity, connection. Cares deeply about every club member. In this timeline, she is a real person with a real route.
 
+=== MC'S PRIOR KNOWLEDGE (CRITICAL — story must reflect this) ===
+The MC is NOT a blank slate. He has existing relationships that affect how he interacts:
+- SAYORI: MC's childhood best friend and next-door neighbor. They walk to school together every morning. She's been pestering MC to join the Literature Club for weeks and practically has to drag him there. MC knows her deeply — her cheerfulness, her clumsiness, her habit of oversleeping. He's comfortable around her but might start seeing her in a new light.
+- MONIKA: MC knows her from their shared math class. She's the class star — effortlessly smart, beautiful, athletic, popular. MC has admired her from a distance but considers her completely out of his league. He's genuinely shocked and nervous when he realizes she's the club president. The idea that someone like Monika would talk to him feels surreal.
+- YURI: A complete stranger. MC has never seen or heard of her before the club. Everything about her — her elegance, her shy intensity, her passion for literature — is entirely new. MC has to learn who she is from scratch.
+- NATSUKI: A complete stranger. MC doesn't know her at all. Her feisty personality, her love of manga, her tsundere nature — all surprises to discover.
+
+The story MUST show MC gradually learning about Yuri and Natsuki from scratch, being comfortable but potentially developing new feelings for Sayori, and being starstruck/intimidated by Monika's presence. Early interactions with Monika should feel nervous and awestruck from MC's perspective.
+
 === DAY SYSTEM ===
 The story progresses through school days. At the START of every response, output the current day:
 [DAY:1]
 
-Advance to the next day when a natural day's worth of events have happened (usually 2-4 story beats per day). The day counter keeps going — there is NO predetermined ending.
+Advance to the next day ONLY when a full day's worth of events have happened (usually 4-6 story beats per day). Do NOT rush through days — let each day breathe. A single club meeting has multiple moments: arriving, activities, conversations, poem sharing, walking home. Each of these can be its own beat. Stay on the same day until it feels naturally complete.
 
 STORY PHASES (flexible, not rigid):
-- Days 1-3: INTRODUCTION. Meeting the girls, first club meeting, first poem sharing, initial impressions.
-- Days 4-7: BONDING. Spending more time with preferred girl(s), club activities, deeper conversations.
-- Days 8-11: DEEPENING. Private moments, emotional vulnerability, festival preparation, feelings becoming clear.
-- Days 12+: CONFESSION & BEYOND. When the moment is right, the confession happens naturally.
+- Days 1-5: INTRODUCTION. Meeting the girls, first club meetings, first poems, initial impressions, learning names and personalities.
+- Days 6-12: BONDING. Spending more time with preferred girl(s), club activities, deeper conversations, walking home together.
+- Days 13-18: DEEPENING. Private moments, emotional vulnerability, festival preparation, feelings becoming clear.
+- Days 19+: CONFESSION & BEYOND. When the moment is right, the confession happens naturally.
 
 CRITICAL — POST-CONFESSION:
 The confession is a MIDPOINT, not an ending. The BEST part of the story is what comes AFTER:
@@ -645,15 +654,17 @@ Then narrate the setup ("Monika announces it's time to share poems...") but STOP
 
 === AFFINITY TRACKING ===
 At the END of every response, output current relationship levels (1-10 scale) in this exact format:
-[AFFINITY:Sayori=3,Natsuki=3,Yuri=3,Monika=3]
-Start everyone at 3 on Day 1. Adjust based on the player's choices — spending time with a girl, picking choices that favor her, writing poems in her style, etc. Increase slowly (1-2 points per significant interaction). The highest-affinity girl becomes the romance target.
+[AFFINITY:Sayori=5,Natsuki=1,Yuri=1,Monika=2]
+Start Sayori at 5 (childhood best friend), Monika at 2 (classmate MC admires from afar), and Natsuki/Yuri at 1 (complete strangers). Adjust based on the player's choices — spending time with a girl, picking choices that favor her, writing poems in her style, etc. Increase slowly (1-2 points per significant interaction). The highest-affinity girl becomes the romance target.
 
-=== RESPONSE FORMAT ===
+=== RESPONSE FORMAT (MANDATORY — never skip any part) ===
 Every response MUST follow this structure:
 1. [DAY:X] tag (first line)
 2. 2-4 paragraphs of narrative
-3. Either EXACTLY 3 [CHOICE] tags OR a [POETRY] tag (never both)
+3. EXACTLY 3 [CHOICE_1/2/3] tags OR a [POETRY] tag (never both, NEVER omit — the player CANNOT continue without choices)
 4. [AFFINITY:...] tag (last line)
+
+CRITICAL: You MUST ALWAYS end with either 3 choices or [POETRY]. If you forget, the player gets permanently stuck. NEVER end a response with just narrative.
 
 Example:
 [DAY:3]
@@ -998,6 +1009,7 @@ function renderMessages() {
       const parsed = parseStoryResponse(last.content);
       if (parsed.hasPoetry) showWordPicker();
       else if (parsed.choices.length > 0) renderStoryChoices(parsed.choices);
+      else renderStoryChoices(['Continue']);
     }
   } else {
     chat.messages.forEach(msg => insertMessageEl(msg.role, msg.content, false));
@@ -1081,7 +1093,7 @@ function buildMessages(chat) {
       { role: 'system', content: STORY_PROMPT },
       ...chat.messages.map(m => ({ role: m.role, content: m.content }))
     ];
-    if (chat.messages.length === 0) msgs.push({ role: 'user', content: 'Begin the story. I\'m walking to school with Sayori, about to visit the Literature Club for the first time.' });
+    if (chat.messages.length === 0) msgs.push({ role: 'user', content: 'Begin the story. Sayori is dragging me to the Literature Club after school. I have no idea what to expect — she\'s been pestering me about this for weeks and I finally caved.' });
     return msgs;
   }
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
@@ -1526,6 +1538,9 @@ async function generateStoryBeat(chat) {
       showWordPicker();
     } else if (choices.length > 0) {
       renderStoryChoices(choices);
+      scrollToBottom();
+    } else {
+      renderStoryChoices(['Continue']);
       scrollToBottom();
     }
   } catch (err) {
