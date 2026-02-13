@@ -141,39 +141,17 @@ function parseStoryResponse(text) {
 
 // ====== AI CHOICE GENERATION ======
 async function generateStoryChoices(narrative, phase, affinity) {
-  // Trim narrative to last ~500 chars for context
-  const excerpt = narrative.length > 500 ? '...' + narrative.slice(-500) : narrative;
+  // Use the full latest narrative — this is the scene the choices respond to
+  const excerpt = narrative.length > 1200 ? '...' + narrative.slice(-1200) : narrative;
   const phaseLabel = phase ? phase.label : 'Scene';
 
-  // Build affinity context for choice generation
-  let affinityContext = '';
-  if (affinity) {
-    const entries = AFFINITY_GIRL_NAMES.map(g => ({
-      name: g.charAt(0).toUpperCase() + g.slice(1),
-      val: affinity[g] || 0
-    })).sort((a, b) => b.val - a.val);
-    affinityContext = `\nRelationship levels: ${entries.map(e => `${e.name}=${e.val}`).join(', ')}`;
-    affinityContext += `\n\nAffinity-aware rules:`;
-    affinityContext += `\n- At least one choice MUST involve ${entries[0].name} (highest affinity)`;
-    const highGirls = entries.filter(e => e.val >= 40);
-    if (highGirls.length > 0) {
-      affinityContext += `\n- ${highGirls.map(e => e.name).join(', ')}: offer personal/intimate choice options (private conversation, shared activity)`;
-    }
-    const lowGirls = entries.filter(e => e.val < 20);
-    if (lowGirls.length > 0) {
-      affinityContext += `\n- ${lowGirls.map(e => e.name).join(', ')}: offer casual getting-to-know-you options`;
-    }
-  }
-
-  const prompt = `You are a choice generator for a Doki Doki Literature Club visual novel. Given the scene below, write exactly 3 choices for what the main character (MC) could do next.
+  const prompt = `Given this scene from a Doki Doki Literature Club visual novel, write exactly 4 choices for what MC could do or say NEXT. The choices must directly respond to what just happened in the scene — reference specific dialogue, actions, or moments from the text.
 
 Rules:
-- Each choice should be specific and interesting, not generic
-- Each choice should ideally involve a different character (Sayori, Natsuki, Yuri, or Monika)
-- Keep each choice to one sentence (under 80 characters)
-- Format: one choice per line, numbered 1. 2. 3.
-- Output ONLY the 3 numbered choices, nothing else
-${affinityContext}
+- Choices must be grounded in the scene above. If a character just said or did something, choices should react to THAT.
+- Each choice: one sentence, under 80 characters, written from MC's perspective.
+- Vary the tone: mix bold, cautious, funny, and sincere options.
+- Format: numbered 1. 2. 3. 4. — output ONLY the 4 choices, nothing else.
 
 Scene (${phaseLabel}):
 """
@@ -185,14 +163,14 @@ Choices:`;
   try {
     const result = await callAI([
       { role: 'user', content: prompt }
-    ], 150);
+    ], 200);
     const lines = result.split('\n').map(l => l.trim()).filter(Boolean);
     const choices = [];
     for (const line of lines) {
       const m = line.match(/^\d[.):\-]\s*(.+)/);
       if (m && m[1].length > 5) choices.push(m[1].trim());
     }
-    if (choices.length >= 2 && choices.length <= 4) return choices;
+    if (choices.length >= 3 && choices.length <= 5) return choices.slice(0, 4);
   } catch (e) {
     // Silent fail — fall back to static choices
   }

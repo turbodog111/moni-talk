@@ -389,7 +389,8 @@ const STORY_PHASES = {
     choices: [
       'Tell Monika you\'ll think about it — you don\'t want to commit yet',
       'Try to dodge Sayori\'s guilt trip — but she\'s relentless',
-      'Give in immediately — Sayori\'s puppy-dog eyes are too powerful'
+      'Give in immediately — Sayori\'s puppy-dog eyes are too powerful',
+      'Ask Monika what the club actually does — you\'re curious despite yourself'
     ]
   },
   d1_arriving: {
@@ -400,7 +401,8 @@ const STORY_PHASES = {
     choices: [
       'Wave awkwardly at everyone — this is more people than you expected',
       'Stick close to Sayori — at least you know her',
-      'Greet Monika first — a familiar face is reassuring'
+      'Greet Monika first — a familiar face is reassuring',
+      'Take in the room — check out the clubroom before talking to anyone'
     ]
   },
   d1_introductions: {
@@ -411,7 +413,8 @@ const STORY_PHASES = {
     choices: [
       'Introduce yourself to Yuri — she seems interesting',
       'Say something to Natsuki — she looks annoyed and you want to break the ice',
-      'Ask Monika to tell you more about what the club does'
+      'Ask Monika to tell you more about what the club does',
+      'Hang back and let them come to you — no need to force it'
     ]
   },
   d1_cupcakes: {
@@ -422,7 +425,8 @@ const STORY_PHASES = {
     choices: [
       'Tell Natsuki these are the cutest cupcakes you\'ve ever seen',
       'Tease her gently — "You sure put a lot of effort in for someone who doesn\'t care"',
-      'Take a bite and dramatically declare it the best thing you\'ve ever tasted'
+      'Take a bite and dramatically declare it the best thing you\'ve ever tasted',
+      'Ask her how she made the little cat faces — they\'re surprisingly detailed'
     ]
   },
   d1_settling: {
@@ -433,7 +437,8 @@ const STORY_PHASES = {
     choices: [
       'Ask Yuri what she\'s reading — the book looks thick and intriguing',
       'Ask Natsuki if manga counts as literature — you\'re genuinely curious',
-      'Chat with Monika about why she left the debate club'
+      'Chat with Monika about why she left the debate club',
+      'Ask Sayori how she ended up in a literature club — she doesn\'t seem the type'
     ]
   },
   d1_activity: {
@@ -444,7 +449,8 @@ const STORY_PHASES = {
     choices: [
       'Agree to write a poem — how hard can it be?',
       'Hesitate — you\'re really not a writer, what would you even write about?',
-      'Ask the girls what kind of poems they like to write'
+      'Ask the girls what kind of poems they like to write',
+      'Suggest a different activity — maybe something less intimidating for your first day'
     ]
   },
   d1_wrap_up: {
@@ -456,7 +462,8 @@ const STORY_PHASES = {
     choices: [
       'Tell Sayori you\'re actually glad she dragged you here',
       'Admit the club is way different from what you expected',
-      'Ask Sayori what she thinks of the other members'
+      'Ask Sayori what she thinks of the other members',
+      'Joke that she owes you for this — you expect cupcakes every meeting now'
     ]
   },
 
@@ -469,7 +476,8 @@ const STORY_PHASES = {
     choices: [
       'Tease Sayori about oversleeping again',
       'Ask Sayori if anything interesting happened yesterday',
-      'Walk in comfortable silence — enjoy the morning calm'
+      'Walk in comfortable silence — enjoy the morning calm',
+      'Bring up something from yesterday\'s club meeting'
     ]
   },
   club_arrival: {
@@ -480,7 +488,8 @@ const STORY_PHASES = {
     choices: [
       'Greet whoever catches your eye first',
       'Head to your usual spot and settle in',
-      'See what everyone is working on today'
+      'See what everyone is working on today',
+      'Drop your bag and ask if you missed anything'
     ]
   },
   poem_sharing: {
@@ -498,7 +507,8 @@ const STORY_PHASES = {
     choices: [
       'Discuss your poem with Yuri — her literary insight could be fascinating',
       'See what Natsuki thought — she seems to have strong opinions',
-      'Talk to Monika about the themes in your poem'
+      'Talk to Monika about the themes in your poem',
+      'Ask Sayori what she honestly thinks — she won\'t sugarcoat it... or will she?'
     ]
   },
   club_activity: {
@@ -509,7 +519,8 @@ const STORY_PHASES = {
     choices: [
       'Side with Yuri\'s deeper interpretation of the topic',
       'Back up Natsuki\'s argument — she makes a good point',
-      'Share your own take that surprises everyone'
+      'Share your own take that surprises everyone',
+      'Ask Monika to weigh in — she\'s been listening quietly'
     ]
   },
   free_time: {
@@ -520,7 +531,8 @@ const STORY_PHASES = {
     choices: [
       'Sit with Sayori — she\'s waving you over with that big grin',
       'Join Yuri by the window — she seems absorbed in her book',
-      'Check on Natsuki — she\'s in the corner with her manga collection'
+      'Check on Natsuki — she\'s in the corner with her manga collection',
+      'See what Monika is up to — she\'s at the front desk writing something'
     ]
   },
   wrap_up: {
@@ -532,7 +544,8 @@ const STORY_PHASES = {
     choices: [
       'Chat about something lighthearted on the walk home',
       'Bring up something that happened in the club today',
-      'Enjoy the quiet moment together'
+      'Enjoy the quiet moment together',
+      'Ask what they\'re looking forward to at the next meeting'
     ]
   }
 };
