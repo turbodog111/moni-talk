@@ -93,6 +93,44 @@ function parseStoryResponse(text) {
   return { narrative, hasPoetry, isEndOfDay, affinity };
 }
 
+// ====== AI CHOICE GENERATION ======
+async function generateStoryChoices(narrative, phase) {
+  // Trim narrative to last ~500 chars for context
+  const excerpt = narrative.length > 500 ? '...' + narrative.slice(-500) : narrative;
+  const phaseLabel = phase ? phase.label : 'Scene';
+  const prompt = `You are a choice generator for a Doki Doki Literature Club visual novel. Given the scene below, write exactly 3 choices for what the main character (MC) could do next.
+
+Rules:
+- Each choice should be specific and interesting, not generic
+- Each choice should ideally involve a different character (Sayori, Natsuki, Yuri, or Monika)
+- Keep each choice to one sentence (under 80 characters)
+- Format: one choice per line, numbered 1. 2. 3.
+- Output ONLY the 3 numbered choices, nothing else
+
+Scene (${phaseLabel}):
+"""
+${excerpt}
+"""
+
+Choices:`;
+
+  try {
+    const result = await callAI([
+      { role: 'user', content: prompt }
+    ], 150);
+    const lines = result.split('\n').map(l => l.trim()).filter(Boolean);
+    const choices = [];
+    for (const line of lines) {
+      const m = line.match(/^\d[.):\-]\s*(.+)/);
+      if (m && m[1].length > 5) choices.push(m[1].trim());
+    }
+    if (choices.length >= 2 && choices.length <= 4) return choices;
+  } catch (e) {
+    // Silent fail — fall back to static choices
+  }
+  return null; // Signal to use fallback
+}
+
 // ====== UI HELPERS ======
 function insertStoryNarrative(text, animate = true) {
   const div = document.createElement('div');
@@ -297,10 +335,18 @@ async function generateStoryBeat(chat) {
 
     const { narrative, hasPoetry, isEndOfDay, affinity } = parseStoryResponse(rawReply);
 
-    // Guard: garbled response
+    // Guard: garbled response — too short or degenerated word salad
     if (narrative.length < 20) {
       if (streamDiv) streamDiv.remove();
       throw new Error('Model returned a garbled response. Try again.');
+    }
+    // Detect degeneration: if any single sentence (split by period) is over 500 chars,
+    // the model likely fell into a word-association loop
+    const sentences = narrative.split(/[.!?]+/);
+    const hasDegeneration = sentences.some(s => s.trim().length > 500);
+    if (hasDegeneration) {
+      if (streamDiv) streamDiv.remove();
+      throw new Error('Model output degenerated into nonsense. Try again or switch to a different model.');
     }
 
     // Final clean render (replaces streamed text with properly parsed narrative)
@@ -353,12 +399,17 @@ async function generateStoryBeat(chat) {
     if (phase && chat.storyBeatInPhase >= phase.maxBeats) {
       advancePhase(chat);
       updatePhaseDisplay(chat);
-      saveChats();
-      // Show next phase's choices, or Continue
       const nextPhase = STORY_PHASES[chat.storyPhase];
-      if (nextPhase && nextPhase.choices) {
-        renderStoryChoices(nextPhase.choices);
+      if (nextPhase && !nextPhase.noChoices) {
+        // Generate contextual choices for the next phase
+        const aiChoices = await generateStoryChoices(narrative, nextPhase);
+        const choices = aiChoices || nextPhase.choices || ['Continue'];
+        chat.lastChoices = choices;
+        saveChats();
+        renderStoryChoices(choices);
       } else {
+        chat.lastChoices = null;
+        saveChats();
         renderStoryChoices(['Continue']);
       }
       scrollToBottom();
@@ -367,19 +418,19 @@ async function generateStoryBeat(chat) {
 
     // 4. noChoices enforcement — show Continue
     if (phase && phase.noChoices) {
+      chat.lastChoices = null;
       saveChats();
       renderStoryChoices(['Continue']);
       scrollToBottom();
       return;
     }
 
-    // 5. Normal: show phase choices or Continue
+    // 5. Normal: generate contextual choices via second AI call
+    const aiChoices = await generateStoryChoices(narrative, phase);
+    const choices = aiChoices || (phase && phase.choices) || ['Continue'];
+    chat.lastChoices = choices;
     saveChats();
-    if (phase && phase.choices) {
-      renderStoryChoices(phase.choices);
-    } else {
-      renderStoryChoices(['Continue']);
-    }
+    renderStoryChoices(choices);
     scrollToBottom();
     updatePhaseDisplay(chat);
 
