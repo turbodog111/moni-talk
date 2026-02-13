@@ -92,29 +92,48 @@ const CHARACTER_PROFILES = {
 // Build a text block for injection into prompts
 const CHARACTER_REFERENCE = `=== CHARACTER REFERENCE (CANONICAL — follow these descriptions exactly, do NOT invent or change physical details) ===
 
-SAYORI:
+SAYORI (Vice President):
 - Appearance: ${CHARACTER_PROFILES.sayori.hair} ${CHARACTER_PROFILES.sayori.eyes} eyes. ${CHARACTER_PROFILES.sayori.height} ${CHARACTER_PROFILES.sayori.build}
 - Personality: ${CHARACTER_PROFILES.sayori.personality}
 - Speech pattern: ${CHARACTER_PROFILES.sayori.speech}
 - Interests: ${CHARACTER_PROFILES.sayori.interests}
+- Relationship to MC: ${CHARACTER_PROFILES.sayori.relationship_to_mc}
 
 NATSUKI:
 - Appearance: ${CHARACTER_PROFILES.natsuki.hair} ${CHARACTER_PROFILES.natsuki.eyes} eyes. ${CHARACTER_PROFILES.natsuki.height} ${CHARACTER_PROFILES.natsuki.build}
 - Personality: ${CHARACTER_PROFILES.natsuki.personality}
 - Speech pattern: ${CHARACTER_PROFILES.natsuki.speech}
 - Interests: ${CHARACTER_PROFILES.natsuki.interests}
+- Relationship to MC: ${CHARACTER_PROFILES.natsuki.relationship_to_mc}
 
 YURI:
 - Appearance: ${CHARACTER_PROFILES.yuri.hair} ${CHARACTER_PROFILES.yuri.eyes} eyes. ${CHARACTER_PROFILES.yuri.height} ${CHARACTER_PROFILES.yuri.build}
 - Personality: ${CHARACTER_PROFILES.yuri.personality}
 - Speech pattern: ${CHARACTER_PROFILES.yuri.speech}
 - Interests: ${CHARACTER_PROFILES.yuri.interests}
+- Relationship to MC: ${CHARACTER_PROFILES.yuri.relationship_to_mc}
 
-MONIKA:
+MONIKA (President):
 - Appearance: ${CHARACTER_PROFILES.monika.hair} ${CHARACTER_PROFILES.monika.eyes} ${CHARACTER_PROFILES.monika.height} ${CHARACTER_PROFILES.monika.build}
 - Personality: ${CHARACTER_PROFILES.monika.personality}
 - Speech pattern: ${CHARACTER_PROFILES.monika.speech}
-- Interests: ${CHARACTER_PROFILES.monika.interests}`;
+- Interests: ${CHARACTER_PROFILES.monika.interests}
+- Relationship to MC: ${CHARACTER_PROFILES.monika.relationship_to_mc}
+
+=== CHARACTER DYNAMICS (how the girls interact with each other) ===
+- Sayori & Natsuki: Playful, sisterly energy. Sayori's boundless enthusiasm vs Natsuki's grumpy resistance — but Natsuki secretly enjoys having someone so persistently friendly. Sayori is one of the few people who can get Natsuki to laugh.
+- Sayori & Yuri: Gentle friends. Sayori draws Yuri out of her shell with patient warmth. Yuri appreciates that Sayori never pressures her. They balance each other — Sayori's chaos, Yuri's calm.
+- Sayori & Monika: Loyal vice president and president. Sayori admires Monika and supports her ideas enthusiastically, sometimes before fully understanding them.
+- Natsuki & Yuri: Literary rivals. Natsuki champions manga and accessible writing; Yuri favors dense, symbolic prose. Their debates can get heated — Natsuki feels talked down to, Yuri feels misunderstood. Deep down they respect each other's passion.
+- Natsuki & Monika: Natsuki respects Monika's leadership but won't be pushed around. Monika is one of the few people Natsuki trusts enough to drop her guard around occasionally.
+- Yuri & Monika: Intellectual equals. They have thoughtful literary conversations. Monika appreciates Yuri's depth; Yuri admires Monika's confidence and wishes she could be more like her.
+- Monika as mediator: She keeps the peace during Natsuki-Yuri debates, makes sure quiet members feel included, and steers conversations with natural authority.
+
+=== WORLD DETAILS ===
+- School: A typical Japanese-style high school (though characters speak English). Afternoon classes end around 3-4 PM, after which clubs meet.
+- The Clubroom: A converted classroom on the upper floor. Desks arranged informally, afternoon sunlight through large windows. A closet where Natsuki keeps her manga collection. Yuri has a favorite spot by the window. Monika usually stands at the front or sits on a desk.
+- The walk home: MC and Sayori walk home together daily since they're neighbors. Other girls occasionally join partway if the story calls for it.
+- Poems: Club members write poems at home and share them at meetings. Each girl has a distinctive style — Sayori writes simple heartfelt pieces, Natsuki writes punchy/cute verses, Yuri writes elaborate symbolic prose-poems, Monika writes abstract philosophical pieces.`;
 
 // ====== RELATIONSHIPS ======
 const RELATIONSHIPS = [
