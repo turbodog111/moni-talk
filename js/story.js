@@ -195,14 +195,29 @@ function renderStoryChoices(choices) {
     container.appendChild(btn);
   });
   chatArea.insertBefore(container, typingIndicator);
-  console.log('[STORY] choices container inserted', {
-    parent: container.parentElement?.id,
-    childCount: container.children.length,
-    height: container.offsetHeight,
-    chatAreaId: chatArea?.id,
-    typingIndicatorExists: !!typingIndicator
-  });
+  // Force reflow then log flat values (no expandable Object)
+  const h = container.offsetHeight;
+  const rect = container.getBoundingClientRect();
+  const aRect = chatArea.getBoundingClientRect();
+  console.log('[STORY] choices inserted — height:', h, 'top:', rect.top, 'bottom:', rect.bottom,
+    'chatArea bottom:', aRect.bottom, 'scroll:', chatArea.scrollTop, '/', chatArea.scrollHeight, 'client:', chatArea.clientHeight);
+  // Scroll the choices into view directly (belt-and-suspenders with scrollToBottom)
+  container.scrollIntoView({ block: 'end', behavior: 'smooth' });
   scrollToBottom();
+  // Delayed verification — is the element still visible after 2 seconds?
+  setTimeout(() => {
+    const el = chatArea.querySelector('.story-choices-inline');
+    if (el) {
+      const r = el.getBoundingClientRect();
+      const a = chatArea.getBoundingClientRect();
+      const s = getComputedStyle(el);
+      console.log('[STORY] 2s check — IN DOM, display:', s.display, 'visibility:', s.visibility,
+        'opacity:', s.opacity, 'height:', el.offsetHeight, 'rect:', Math.round(r.top), '-', Math.round(r.bottom),
+        'chatArea:', Math.round(a.top), '-', Math.round(a.bottom), 'scroll:', chatArea.scrollTop, '/', chatArea.scrollHeight);
+    } else {
+      console.log('[STORY] 2s check — GONE from DOM!');
+    }
+  }, 2000);
 }
 
 function hideStoryChoices() {
