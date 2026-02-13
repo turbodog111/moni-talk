@@ -71,24 +71,44 @@ function ensurePhase(chat) {
 }
 
 // ====== PARSING ======
+const AFFINITY_NAMES = /(?:Sayori|Natsuki|Yuri|Monika)/i;
+const BARE_AFFINITY_RE = /(?:^|\n)\s*(?:(?:Sayori|Natsuki|Yuri|Monika)\s*[:=]\s*-?\d+[\s,]*){2,}\s*$/i;
+
+function parseAffinityPairs(str) {
+  const affinity = {};
+  str.split(/[,;\n]+/).forEach(pair => {
+    const m = pair.match(/(Sayori|Natsuki|Yuri|Monika)\s*[:=]\s*(-?\d+)/i);
+    if (m) affinity[m[1].trim().toLowerCase()] = Math.min(100, Math.max(0, parseInt(m[2]) || 0));
+  });
+  return Object.keys(affinity).length >= 2 ? affinity : null;
+}
+
 function parseStoryResponse(text) {
   const hasPoetry = /\[POETRY\]/i.test(text);
   const isEndOfDay = /\[END_OF_DAY\]/i.test(text);
-  const affinityMatch = text.match(/\[AFFINITY:([^\]]+)\]/i);
+
+  // Try tagged format first: [AFFINITY:Sayori=X,...] or [ASSIMILATION:...] (common model typo)
   let affinity = null;
-  if (affinityMatch) {
-    affinity = {};
-    affinityMatch[1].split(',').forEach(pair => {
-      const [name, val] = pair.split('=');
-      if (name && val) affinity[name.trim().toLowerCase()] = Math.min(100, Math.max(0, parseInt(val) || 0));
-    });
+  const taggedMatch = text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s]([^\]]+)\]/i);
+  if (taggedMatch) {
+    affinity = parseAffinityPairs(taggedMatch[1]);
   }
+  // Fallback: bare "Sayori=2, Natsuki=1, ..." at end of text
+  if (!affinity) {
+    const bareMatch = text.match(BARE_AFFINITY_RE);
+    if (bareMatch) {
+      affinity = parseAffinityPairs(bareMatch[0]);
+    }
+  }
+
   const narrative = text
     .replace(/\[DAY:\d+\]\s*/g, '')
     .replace(/\[POETRY\]\s*/gi, '')
     .replace(/\[END_OF_DAY\]\s*/gi, '')
-    .replace(/\[AFFINITY:[^\]]+\]\s*/gi, '')
+    .replace(/\[(?:AFFINITY|ASSIMILATION)[:\s][^\]]*\]\s*/gi, '')
     .replace(/\[CHOICE[_ ]?\d?\]\s*.+/gi, '')
+    // Strip bare affinity lines (Name=X, Name=X pattern at end)
+    .replace(/(?:^|\n)\s*(?:(?:Sayori|Natsuki|Yuri|Monika)\s*[:=]\s*-?\d+[\s,]*){2,}\s*$/gi, '')
     .trim();
   return { narrative, hasPoetry, isEndOfDay, affinity };
 }
@@ -129,6 +149,23 @@ Choices:`;
     // Silent fail — fall back to static choices
   }
   return null; // Signal to use fallback
+}
+
+// Try AI choice generation in the background; swap in if successful before user clicks
+function tryAIChoices(narrative, phase, chat) {
+  // Race the AI call against a 12-second timeout
+  const timeout = new Promise(resolve => setTimeout(() => resolve(null), 12000));
+  Promise.race([generateStoryChoices(narrative, phase), timeout]).then(aiChoices => {
+    if (aiChoices && aiChoices.length >= 2) {
+      // Only swap if the inline choices are still showing (user hasn't clicked yet)
+      const existing = chatArea.querySelector('.story-choices-inline');
+      if (existing && !isGenerating) {
+        chat.lastChoices = aiChoices;
+        saveChats();
+        renderStoryChoices(aiChoices);
+      }
+    }
+  }).catch(() => {}); // Silent fail — keep static choices
 }
 
 // ====== UI HELPERS ======
@@ -274,10 +311,12 @@ async function selectStoryChoice(choice) {
 function liveStripTags(text) {
   return text
     .replace(/\[DAY:\d+\]\s*/g, '')
-    .replace(/\[AFFINITY:[^\]]+\]\s*/gi, '')
+    .replace(/\[(?:AFFINITY|ASSIMILATION)[:\s][^\]]*\]\s*/gi, '')
     .replace(/\[CHOICE[_ ]?\d?\]\s*.+/gi, '')
     .replace(/\[END_OF_DAY\]\s*/gi, '')
     .replace(/\[POETRY\]\s*/gi, '')
+    // Strip bare affinity lines during streaming
+    .replace(/(?:^|\n)\s*(?:(?:Sayori|Natsuki|Yuri|Monika)\s*[:=]\s*-?\d+[\s,]*){2,}\s*$/gi, '')
     .trim();
 }
 
@@ -400,13 +439,11 @@ async function generateStoryBeat(chat) {
       advancePhase(chat);
       updatePhaseDisplay(chat);
       const nextPhase = STORY_PHASES[chat.storyPhase];
-      if (nextPhase && !nextPhase.noChoices) {
-        // Generate contextual choices for the next phase
-        const aiChoices = await generateStoryChoices(narrative, nextPhase);
-        const choices = aiChoices || nextPhase.choices || ['Continue'];
-        chat.lastChoices = choices;
+      if (nextPhase && !nextPhase.noChoices && nextPhase.choices) {
+        chat.lastChoices = nextPhase.choices;
         saveChats();
-        renderStoryChoices(choices);
+        renderStoryChoices(nextPhase.choices);
+        tryAIChoices(narrative, nextPhase, chat);
       } else {
         chat.lastChoices = null;
         saveChats();
@@ -425,14 +462,16 @@ async function generateStoryBeat(chat) {
       return;
     }
 
-    // 5. Normal: generate contextual choices via second AI call
-    const aiChoices = await generateStoryChoices(narrative, phase);
-    const choices = aiChoices || (phase && phase.choices) || ['Continue'];
-    chat.lastChoices = choices;
+    // 5. Normal: show static choices instantly, try AI enhancement in background
+    const staticChoices = (phase && phase.choices) || ['Continue'];
+    chat.lastChoices = staticChoices;
     saveChats();
-    renderStoryChoices(choices);
+    renderStoryChoices(staticChoices);
     scrollToBottom();
     updatePhaseDisplay(chat);
+    if (phase && phase.choices) {
+      tryAIChoices(narrative, phase, chat);
+    }
 
   } catch (err) {
     if (streamDiv) streamDiv.remove();
