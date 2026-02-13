@@ -21,6 +21,13 @@ function init() {
   $('vnPanelBtn').addEventListener('click', toggleVnPanel);
   $('vnPanelClose').addEventListener('click', closeVnPanel);
   $('vnPanelBackdrop').addEventListener('click', closeVnPanel);
+  $('cpSaveBtn').addEventListener('click', () => {
+    const chat = getChat();
+    if (!chat || chat.mode !== 'story') return;
+    createCheckpoint(chat, false);
+    renderCheckpointList(chat);
+    showToast('Checkpoint saved!', 'success');
+  });
   $('journalContinueBtn').addEventListener('click', closeJournal);
   initVnTicks();
   $('profileBtn').addEventListener('click', () => { loadProfile(); showScreen('profile'); });

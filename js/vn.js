@@ -70,8 +70,46 @@ function initVnTicks() {
   });
 }
 
+// ====== ROUTE INDICATOR ======
+function updateRouteIndicator(chat) {
+  const el = $('routeIndicator');
+  if (!el) return;
+
+  if (!chat || chat.mode !== 'story') {
+    el.style.display = 'none';
+    return;
+  }
+
+  const day = chat.storyDay || 1;
+  const aff = chat.storyAffinity || {};
+  // Only show after Day 1
+  if (day < 2) {
+    el.style.display = 'none';
+    return;
+  }
+
+  const girls = AFFINITY_GIRL_NAMES.map(g => ({ name: g, val: aff[g] || 0 })).sort((a, b) => b.val - a.val);
+  const leader = girls[0];
+  const second = girls[1];
+
+  // Only show if leader has 5+ point lead
+  if (leader.val - second.val < 5) {
+    el.style.display = 'none';
+    return;
+  }
+
+  const colors = { sayori: '#FF91A4', natsuki: '#FF69B4', yuri: '#9370DB', monika: '#3CB371' };
+  const capName = leader.name.charAt(0).toUpperCase() + leader.name.slice(1);
+
+  el.style.display = '';
+  el.innerHTML = `<span class="route-dot" style="background:${colors[leader.name]};box-shadow:0 0 8px ${colors[leader.name]}"></span>${capName}'s Route`;
+  el.style.borderColor = colors[leader.name] + '66';
+}
+
 // ====== JOURNAL SYSTEM ======
 async function showEndOfDay(chat) {
+  // Auto-save checkpoint before journal
+  createCheckpoint(chat, true);
   const dayNum = chat.storyDay || 1;
   $('journalDayNum').textContent = dayNum;
   $('journalEntries').innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.4);padding:40px;font-style:italic;">The girls are writing in their diaries...</div>';

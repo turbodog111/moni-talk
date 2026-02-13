@@ -44,6 +44,32 @@ function buildPhaseInstruction(chat) {
 
   let instruction = phase.instruction;
 
+  // Dynamic free_time instruction based on affinity
+  if (!instruction && phaseKey === 'free_time') {
+    const aff = chat.storyAffinity || {};
+    const girls = ['sayori', 'natsuki', 'yuri', 'monika'];
+    const sorted = girls.map(g => ({ name: g, val: aff[g] || 0 })).sort((a, b) => b.val - a.val);
+    const highest = sorted[0];
+    const second = sorted[1];
+    const capName = n => n.charAt(0).toUpperCase() + n.slice(1);
+
+    let freeTimeHint = 'Scene: Free time in the club! MC can choose who to spend time with. This is the key bonding phase — meaningful one-on-one conversation happens here.';
+
+    if (highest.val > 30) {
+      freeTimeHint += ` ${capName(highest.name)} actively seeks MC out — she finds an excuse to be near him or starts a conversation.`;
+    }
+    if (second.val > 30 && highest.val > 30 && highest.val - second.val <= 5) {
+      freeTimeHint += ` ${capName(highest.name)} and ${capName(second.name)} are both competing for MC's attention — write a subtle tension/jealousy moment between them.`;
+    }
+    const lowGirls = sorted.filter(g => g.val < 15);
+    if (lowGirls.length > 0) {
+      const lowNames = lowGirls.map(g => capName(g.name)).join(' and ');
+      freeTimeHint += ` ${lowNames} ${lowGirls.length === 1 ? 'stays' : 'stay'} in the background doing ${lowGirls.length === 1 ? 'her' : 'their'} own thing — not ignoring MC, just not seeking him out.`;
+    }
+    freeTimeHint += ' Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.';
+    instruction = freeTimeHint;
+  }
+
   // Dynamic wrap_up instruction based on highest affinity
   if (!instruction && phaseKey === 'wrap_up') {
     const aff = chat.storyAffinity || {};
@@ -114,10 +140,31 @@ function parseStoryResponse(text) {
 }
 
 // ====== AI CHOICE GENERATION ======
-async function generateStoryChoices(narrative, phase) {
+async function generateStoryChoices(narrative, phase, affinity) {
   // Trim narrative to last ~500 chars for context
   const excerpt = narrative.length > 500 ? '...' + narrative.slice(-500) : narrative;
   const phaseLabel = phase ? phase.label : 'Scene';
+
+  // Build affinity context for choice generation
+  let affinityContext = '';
+  if (affinity) {
+    const entries = AFFINITY_GIRL_NAMES.map(g => ({
+      name: g.charAt(0).toUpperCase() + g.slice(1),
+      val: affinity[g] || 0
+    })).sort((a, b) => b.val - a.val);
+    affinityContext = `\nRelationship levels: ${entries.map(e => `${e.name}=${e.val}`).join(', ')}`;
+    affinityContext += `\n\nAffinity-aware rules:`;
+    affinityContext += `\n- At least one choice MUST involve ${entries[0].name} (highest affinity)`;
+    const highGirls = entries.filter(e => e.val >= 40);
+    if (highGirls.length > 0) {
+      affinityContext += `\n- ${highGirls.map(e => e.name).join(', ')}: offer personal/intimate choice options (private conversation, shared activity)`;
+    }
+    const lowGirls = entries.filter(e => e.val < 20);
+    if (lowGirls.length > 0) {
+      affinityContext += `\n- ${lowGirls.map(e => e.name).join(', ')}: offer casual getting-to-know-you options`;
+    }
+  }
+
   const prompt = `You are a choice generator for a Doki Doki Literature Club visual novel. Given the scene below, write exactly 3 choices for what the main character (MC) could do next.
 
 Rules:
@@ -126,6 +173,7 @@ Rules:
 - Keep each choice to one sentence (under 80 characters)
 - Format: one choice per line, numbered 1. 2. 3.
 - Output ONLY the 3 numbered choices, nothing else
+${affinityContext}
 
 Scene (${phaseLabel}):
 """
@@ -155,7 +203,7 @@ Choices:`;
 function tryAIChoices(narrative, phase, chat) {
   // Race the AI call against a 12-second timeout
   const timeout = new Promise(resolve => setTimeout(() => resolve(null), 12000));
-  Promise.race([generateStoryChoices(narrative, phase), timeout]).then(aiChoices => {
+  Promise.race([generateStoryChoices(narrative, phase, chat.storyAffinity), timeout]).then(aiChoices => {
     if (aiChoices && aiChoices.length >= 2) {
       // Only swap if the inline choices are still showing (user hasn't clicked yet)
       const existing = chatArea.querySelector('.story-choices-inline');
@@ -423,7 +471,7 @@ async function generateStoryBeat(chat) {
     updateVnDay(chat.storyDay || 1);
 
     // Affinity fallback — merge with existing, never lose values
-    const prev = chat.storyAffinity || { sayori: 15, natsuki: 1, yuri: 1, monika: 10 };
+    const prev = { ...(chat.storyAffinity || { sayori: 15, natsuki: 1, yuri: 1, monika: 10 }) };
     if (affinity) {
       chat.storyAffinity = {
         sayori: affinity.sayori ?? prev.sayori,
@@ -434,7 +482,10 @@ async function generateStoryBeat(chat) {
     } else {
       chat.storyAffinity = prev;
     }
+    // Detect milestone crossings and fire toasts
+    detectMilestones(chat, prev, chat.storyAffinity);
     updateAffinityPanel(chat.storyAffinity);
+    updateRouteIndicator(chat);
 
     chat.messages.push({ role: 'assistant', content: rawReply });
     updateVnSprites(narrative);
@@ -528,4 +579,185 @@ function forceStoryRetry() {
   hideStoryChoices();
   hideWordPicker();
   generateStoryBeat(chat);
+}
+
+// ====== MILESTONE DETECTION ======
+function detectMilestones(chat, prevAffinity, newAffinity) {
+  if (!prevAffinity || !newAffinity) return;
+  const thresholds = [25, 50, 75];
+  const crossed = chat.milestonesCrossed || {};
+  const pending = [];
+
+  for (const girl of AFFINITY_GIRL_NAMES) {
+    const prev = prevAffinity[girl] || 0;
+    const curr = newAffinity[girl] || 0;
+    for (const t of thresholds) {
+      const key = `${girl}_${t}`;
+      if (prev < t && curr >= t && !crossed[key]) {
+        crossed[key] = true;
+        const milestoneData = AFFINITY_MILESTONES[girl]?.[t];
+        if (milestoneData) {
+          pending.push({ girl, threshold: t, description: milestoneData });
+          const capName = girl.charAt(0).toUpperCase() + girl.slice(1);
+          showToast(`${capName} reached ${t} affinity!`, 'success');
+        }
+      }
+    }
+  }
+
+  chat.milestonesCrossed = crossed;
+  if (pending.length > 0) {
+    chat._pendingMilestones = pending;
+  }
+}
+
+function buildMilestoneNote(chat) {
+  const pending = chat._pendingMilestones;
+  if (!pending || pending.length === 0) return '';
+
+  const notes = pending.map(m => {
+    const capName = m.girl.charAt(0).toUpperCase() + m.girl.slice(1);
+    return `MILESTONE EVENT — ${capName} reached ${m.threshold} affinity. Work this into the scene naturally: ${m.description}`;
+  });
+
+  // Clear pending after building the note (consumed once)
+  delete chat._pendingMilestones;
+
+  return '=== MILESTONE EVENTS (weave these into the narrative) ===\n' + notes.join('\n');
+}
+
+// ====== CHECKPOINT SYSTEM ======
+function getCheckpoints() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE.CHECKPOINTS) || '{}');
+  } catch { return {}; }
+}
+
+function saveCheckpoints(data) {
+  localStorage.setItem(STORAGE.CHECKPOINTS, JSON.stringify(data));
+}
+
+function createCheckpoint(chat, isAuto = false) {
+  if (!chat || chat.mode !== 'story') return;
+
+  const all = getCheckpoints();
+  const chatCPs = all[chat.id] || [];
+
+  const cp = {
+    id: crypto.randomUUID(),
+    auto: isAuto,
+    timestamp: Date.now(),
+    day: chat.storyDay || 1,
+    phase: chat.storyPhase,
+    beat: chat.storyBeatInPhase || 0,
+    affinity: { ...chat.storyAffinity },
+    mcName: chat.mcName || 'MC',
+    messages: chat.messages.map(m => ({ role: m.role, content: m.content })),
+    milestonesCrossed: { ...(chat.milestonesCrossed || {}) }
+  };
+
+  chatCPs.push(cp);
+
+  // Enforce limits: 5 auto + 5 manual per chat
+  const autos = chatCPs.filter(c => c.auto);
+  const manuals = chatCPs.filter(c => !c.auto);
+  while (autos.length > 5) autos.shift();
+  while (manuals.length > 5) manuals.shift();
+
+  all[chat.id] = [...autos, ...manuals].sort((a, b) => a.timestamp - b.timestamp);
+  saveCheckpoints(all);
+  return cp;
+}
+
+function loadCheckpoint(chat, cpId) {
+  if (!chat) return false;
+  const all = getCheckpoints();
+  const chatCPs = all[chat.id] || [];
+  const cp = chatCPs.find(c => c.id === cpId);
+  if (!cp) return false;
+
+  chat.storyDay = cp.day;
+  chat.storyPhase = cp.phase;
+  chat.storyBeatInPhase = cp.beat;
+  chat.storyAffinity = { ...cp.affinity };
+  chat.mcName = cp.mcName;
+  chat.messages = cp.messages.map(m => ({ role: m.role, content: m.content }));
+  chat.milestonesCrossed = { ...(cp.milestonesCrossed || {}) };
+  chat.lastChoices = null;
+
+  saveChats();
+  return true;
+}
+
+function deleteCheckpoint(chatId, cpId) {
+  const all = getCheckpoints();
+  const chatCPs = all[chatId] || [];
+  all[chatId] = chatCPs.filter(c => c.id !== cpId);
+  saveCheckpoints(all);
+}
+
+function renderCheckpointList(chat) {
+  const container = $('checkpointList');
+  if (!container || !chat) return;
+  const all = getCheckpoints();
+  const chatCPs = (all[chat.id] || []).sort((a, b) => b.timestamp - a.timestamp);
+
+  if (chatCPs.length === 0) {
+    container.innerHTML = '<div class="cp-empty">No checkpoints yet</div>';
+    return;
+  }
+
+  const girlColors = { sayori: '#FF91A4', natsuki: '#FF69B4', yuri: '#9370DB', monika: '#3CB371' };
+
+  container.innerHTML = chatCPs.map(cp => {
+    const time = new Date(cp.timestamp);
+    const timeStr = time.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const dots = AFFINITY_GIRL_NAMES.map(g => {
+      const val = cp.affinity[g] || 0;
+      return `<span class="cp-dot" style="background:${girlColors[g]};opacity:${0.3 + (val / 100) * 0.7}" title="${g.charAt(0).toUpperCase() + g.slice(1)}: ${val}"></span>`;
+    }).join('');
+
+    return `<div class="cp-item" data-cpid="${cp.id}">
+      <div class="cp-info">
+        <div class="cp-label">${cp.auto ? 'Auto' : 'Manual'} — Day ${cp.day}</div>
+        <div class="cp-time">${timeStr}</div>
+        <div class="cp-dots">${dots}</div>
+      </div>
+      <div class="cp-actions">
+        <button class="cp-load-btn" title="Load checkpoint">&#9654;</button>
+        <button class="cp-delete-btn" title="Delete checkpoint">&times;</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Bind events
+  container.querySelectorAll('.cp-load-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cpId = btn.closest('.cp-item').dataset.cpid;
+      if (!confirm('Load this checkpoint? Your current progress will be lost unless you save first.')) return;
+      if (loadCheckpoint(chat, cpId)) {
+        closeVnPanel();
+        updateChatHeader(chat);
+        updateVnDay(chat.storyDay);
+        updatePhaseDisplay(chat);
+        updateAffinityPanel(chat.storyAffinity);
+        updateRouteIndicator(chat);
+        renderMessages();
+        updateContextBar();
+        showToast('Checkpoint loaded!', 'success');
+      }
+    });
+  });
+
+  container.querySelectorAll('.cp-delete-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cpId = btn.closest('.cp-item').dataset.cpid;
+      if (!confirm('Delete this checkpoint?')) return;
+      deleteCheckpoint(chat.id, cpId);
+      renderCheckpointList(chat);
+      showToast('Checkpoint deleted.');
+    });
+  });
 }

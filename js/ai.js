@@ -22,9 +22,12 @@ function buildMessages(chat) {
     const aff = chat.storyAffinity || { sayori: 15, natsuki: 1, yuri: 1, monika: 10 };
     const phaseInstruction = buildPhaseInstruction(chat);
 
+    const milestoneNote = buildMilestoneNote(chat);
     const systemPrompt = STORY_PROMPT_BASE
+      + `\n\n${AFFINITY_BEHAVIOR_TIERS}`
       + (phaseInstruction ? `\n\n${phaseInstruction}` : '')
-      + `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}\nAffinity: Sayori=${aff.sayori}, Natsuki=${aff.natsuki}, Yuri=${aff.yuri}, Monika=${aff.monika}`;
+      + (milestoneNote ? `\n\n${milestoneNote}` : '')
+      + `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}\n${buildAffinityDirective(aff)}`;
 
     // Trim to last N messages to prevent context overflow
     let recentMessages = chat.messages;

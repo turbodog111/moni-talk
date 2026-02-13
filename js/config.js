@@ -4,7 +4,8 @@ const STORAGE = {
   MODEL_OR: 'moni_talk_model', MODEL_PUTER: 'moni_talk_puter_model',
   MODEL_OLLAMA: 'moni_talk_ollama_model', OLLAMA_ENDPOINT: 'moni_talk_ollama_endpoint',
   GEMINI_API: 'moni_talk_gemini_key', MODEL_GEMINI: 'moni_talk_gemini_model',
-  CHATS: 'moni_talk_chats_v2', PROFILE: 'moni_talk_profile'
+  CHATS: 'moni_talk_chats_v2', PROFILE: 'moni_talk_profile',
+  CHECKPOINTS: 'moni_talk_checkpoints'
 };
 
 const OPENROUTER_MODELS = [
@@ -276,6 +277,107 @@ const POEM_WORDS = {
   monika: ['reality','heartbeat','existence','piano','eternity','honest','passion','extraordinary','awareness','literature','connection','special','genuine','epiphany','truth']
 };
 
+// ====== AFFINITY BEHAVIOR TIERS ======
+const AFFINITY_BEHAVIOR_TIERS = `=== AFFINITY BEHAVIOR TIERS — Characters MUST behave according to their affinity level ===
+
+Each girl's behavior toward MC is governed by her affinity score. Follow these tiers strictly:
+
+TIER 1 — STRANGER (0-15):
+- Polite but clearly distant. Minimal eye contact with MC.
+- Short, surface-level responses. Doesn't seek MC out.
+- Body language is closed or neutral — arms crossed, looking away, staying busy with own things.
+- Won't share personal details or initiate conversation beyond pleasantries.
+
+TIER 2 — WARMING UP (16-30):
+- More relaxed around MC. Initiates brief chats occasionally.
+- Remembers small details MC has shared ("Oh, you mentioned that yesterday...").
+- Smiles more naturally, makes eye contact. Still keeps some distance.
+- Might save MC a seat or include him in group conversation.
+
+TIER 3 — FRIENDS (31-50):
+- Actively seeks MC out during free moments. Comfortable being alone together.
+- Shares personal things — worries, dreams, embarrassing stories.
+- Comfortable teasing and being teased. Inside jokes start forming.
+- Physical proximity is natural — sits close, playful shoulder bumps.
+- Gets mildly disappointed if MC spends time with someone else instead.
+
+TIER 4 — ROMANTIC INTEREST (51-75):
+- Blushes around MC. Finds excuses to be near him.
+- Gives MC special treatment — saves the best cupcake, recommends a personal favorite book.
+- Subtle jealousy when MC pays attention to other girls.
+- Lingering eye contact, playing with hair, stammering when caught staring.
+- Conversations get deeper — "Do you ever think about..." late-night-talk energy.
+
+TIER 5 — DEEP FEELINGS (76-100):
+- Confessions become possible. Emotionally invested in MC's happiness.
+- Very physically aware — touches linger, proximity makes her heart race.
+- Protectiveness and vulnerability in equal measure.
+- Other girls can sense it — the room shifts when these two interact.
+- Private moments feel electric. She might write poems about MC.`;
+
+const AFFINITY_GIRL_NAMES = ['sayori', 'natsuki', 'yuri', 'monika'];
+
+function buildAffinityDirective(aff) {
+  if (!aff) return 'Affinity: Sayori=15, Natsuki=1, Yuri=1, Monika=10';
+
+  function tierLabel(val) {
+    if (val >= 76) return 'Deep Feelings';
+    if (val >= 51) return 'Romantic Interest';
+    if (val >= 31) return 'Friends';
+    if (val >= 16) return 'Warming Up';
+    return 'Stranger';
+  }
+
+  const entries = AFFINITY_GIRL_NAMES.map(g => ({
+    name: g.charAt(0).toUpperCase() + g.slice(1),
+    key: g,
+    val: aff[g] || 0
+  }));
+
+  let lines = entries.map(e => `${e.name}: ${e.val} (${tierLabel(e.val)})`);
+  let directive = 'Affinity & Behavior:\n' + lines.join('\n');
+
+  // Sort to find leader
+  const sorted = [...entries].sort((a, b) => b.val - a.val);
+  const leader = sorted[0];
+  const second = sorted[1];
+
+  if (leader.val >= 15 && leader.val - second.val >= 15) {
+    directive += `\n\nDOMINANT ROUTE: ${leader.name} has a strong lead. She should be the emotional center of this scene — more dialogue, more presence, more moments with MC.`;
+  }
+
+  // Rivalry detection
+  if (second.val > 30 && leader.val > 30 && leader.val - second.val <= 5) {
+    directive += `\n\nRIVALRY TENSION: ${leader.name} and ${second.name} are very close in affinity. Write subtle jealousy or competition between them — vying for MC's attention, exchanging loaded glances, or passive-aggressive comments.`;
+  }
+
+  return directive;
+}
+
+// ====== AFFINITY MILESTONES ======
+const AFFINITY_MILESTONES = {
+  sayori: {
+    25: 'Sayori brings MC a homemade cookie wrapped in a napkin with a smiley face drawn on it. She says she made extras "by accident" but clearly baked it just for him.',
+    50: 'Sayori waits for MC after club, looking nervous. She asks if they can walk home the long way today — she has something she wants to talk about. She opens up about how much their friendship means to her.',
+    75: 'Sayori slips a folded note into MC\'s hand during club. It\'s a short poem about sunshine and someone who makes rainy days brighter. She can\'t make eye contact when he reads it.'
+  },
+  natsuki: {
+    25: 'Natsuki "accidentally" saves MC the best cupcake — the one with the most icing. She shoves it toward him with a huff: "Don\'t read into it, I just made too many."',
+    50: 'Natsuki asks MC to stay after club to help her organize the manga shelf. Once alone, she quietly admits she\'s glad he joined the club. She immediately threatens him if he tells anyone.',
+    75: 'Natsuki brings a manga she\'s been meaning to lend MC — it\'s her absolute favorite, dog-eared and annotated in the margins. She makes him promise to take care of it. Her hands are shaking.'
+  },
+  yuri: {
+    25: 'Yuri offers MC a cup of jasmine tea she brewed herself. Her hands tremble slightly as she passes it. "I-I noticed you seemed to enjoy it last time..."',
+    50: 'Yuri asks MC to read alongside her by the window. She picks a book with two protagonists and keeps glancing over to see if he\'s reached "the good part." Their shoulders almost touch.',
+    75: 'Yuri gives MC a handwritten analysis of his poems — three pages, elegant handwriting, deeply personal observations. At the bottom she\'s written and crossed out something several times. The last legible word is "special."'
+  },
+  monika: {
+    25: 'Monika asks MC to stay a few minutes after club to help with "planning." She mostly just wants to talk — she asks about his real thoughts on the club and listens intently.',
+    50: 'Monika plays a new piano piece she\'s been working on — just for MC. She says she needed "an honest audience." Her playing is beautiful and slightly melancholic.',
+    75: 'Monika writes MC a poem and slips it under his desk. It\'s about two people who keep finding each other across different versions of the same story. She watches his reaction from across the room.'
+  }
+};
+
 // ====== STORY PHASES ======
 const STORY_PHASES = {
   // === Day 1 — Scripted Sequence (consolidated) ===
@@ -414,7 +516,7 @@ const STORY_PHASES = {
     label: 'Free Time',
     maxBeats: 4,
     noChoices: false,
-    instruction: `Scene: Free time in the club! MC can choose who to spend time with. This is the key bonding phase — meaningful one-on-one conversation happens here. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+    instruction: null, // Built dynamically based on affinity in buildPhaseInstruction()
     choices: [
       'Sit with Sayori — she\'s waving you over with that big grin',
       'Join Yuri by the window — she seems absorbed in her book',

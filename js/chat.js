@@ -53,6 +53,7 @@ function createChat() {
     chat.storyPhase = 'd1_before_club';
     chat.storyBeatInPhase = 0;
     chat.storyAffinity = { sayori: 15, natsuki: 1, yuri: 1, monika: 10 };
+    chat.milestonesCrossed = {};
   }
   chats.push(chat); saveChats(); openChat(chat.id);
 }
@@ -73,6 +74,19 @@ function openChat(id) {
     saveChats();
   }
 
+  // Migration: milestonesCrossed — retroactively mark passed thresholds
+  if (isStory && !chat.milestonesCrossed) {
+    const crossed = {};
+    const aff = chat.storyAffinity || {};
+    for (const girl of AFFINITY_GIRL_NAMES) {
+      for (const t of [25, 50, 75]) {
+        if ((aff[girl] || 0) >= t) crossed[`${girl}_${t}`] = true;
+      }
+    }
+    chat.milestonesCrossed = crossed;
+    saveChats();
+  }
+
   updateChatHeader(chat);
 
   screens.chat.classList.toggle('vn-mode', isStory);
@@ -89,6 +103,8 @@ function openChat(id) {
     if (chat.storyAffinity) updateAffinityPanel(chat.storyAffinity);
     updateVnDay(chat.storyDay || 1);
     updatePhaseDisplay(chat);
+    updateRouteIndicator(chat);
+    renderCheckpointList(chat);
   }
   hideAffinityPanel();
 
