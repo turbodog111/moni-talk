@@ -185,6 +185,14 @@
 .vn-scene-info strong { color: rgba(255,255,255,0.7); }
 
 /* VN Choice Styling */
+.screen.vn-mode .story-choices-inline {
+  background: rgba(20, 15, 30, 0.92);
+  border-radius: 6px;
+  padding: 10px 16px 14px;
+  backdrop-filter: blur(4px);
+  position: relative;
+  z-index: 1;
+}
 .screen.vn-mode .story-choices {
   background: rgba(20, 15, 30, 0.92);
   border-top: 1px solid rgba(255,255,255,0.08);

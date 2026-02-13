@@ -51,7 +51,7 @@ function buildPhaseInstruction(chat) {
     const highest = girls.reduce((a, b) => (aff[a] || 0) >= (aff[b] || 0) ? a : b);
     const name = highest.charAt(0).toUpperCase() + highest.slice(1);
     const isSayori = highest === 'sayori';
-    instruction = `Scene: Monika announces the meeting is over for today. MC walks home with ${name}${isSayori ? ' (they always walk together as neighbors)' : ' (she offered to walk together)'}. A nice bonding moment on the walk. End your response with [END_OF_DAY] on its own line. Do NOT include [CHOICE] tags after [END_OF_DAY].`;
+    instruction = `Scene: Monika announces the meeting is over for today. MC walks home with ${name}${isSayori ? ' (they always walk together as neighbors)' : ' (she offered to walk together)'}. A nice bonding moment on the walk. End your response with [END_OF_DAY] on its own line.`;
   }
 
   if (!instruction) return '';
@@ -72,29 +72,6 @@ function ensurePhase(chat) {
 
 // ====== PARSING ======
 function parseStoryResponse(text) {
-  const choices = [];
-  // Primary: [CHOICE_1], [CHOICE 1], [CHOICE1], [Choice_1], etc.
-  const choiceRegex = /\[CHOICE[_ ]?(\d)\]\s*(.+)/gi;
-  let match;
-  while ((match = choiceRegex.exec(text)) !== null) {
-    choices.push(match[2].trim());
-  }
-  // Secondary: numbered/lettered/bulleted options the model might use instead of [CHOICE_X]
-  // Matches: "1. Option", "1) Option", "A. Option", "A) Option", "- Option", "* Option"
-  if (choices.length === 0) {
-    const altRegex = /^(?:[1-4][.):\-]\s+|[A-D][.):\-]\s+|[-*]\s+)(.+)/gm;
-    const altChoices = [];
-    let altMatch;
-    while ((altMatch = altRegex.exec(text)) !== null) {
-      const c = altMatch[1].trim();
-      if (c.length > 10 && c.length < 200) altChoices.push(c);
-    }
-    if (altChoices.length >= 2 && altChoices.length <= 4) {
-      choices.push(...altChoices);
-    }
-  }
-  const dayMatch = text.match(/\[DAY:(\d+)\]/);
-  const day = dayMatch ? parseInt(dayMatch[1]) : null;
   const hasPoetry = /\[POETRY\]/i.test(text);
   const isEndOfDay = /\[END_OF_DAY\]/i.test(text);
   const affinityMatch = text.match(/\[AFFINITY:([^\]]+)\]/i);
@@ -112,10 +89,8 @@ function parseStoryResponse(text) {
     .replace(/\[END_OF_DAY\]\s*/gi, '')
     .replace(/\[AFFINITY:[^\]]+\]\s*/gi, '')
     .replace(/\[CHOICE[_ ]?\d?\]\s*.+/gi, '')
-    // Strip secondary choice patterns (numbered/lettered) if they were parsed as choices
-    .replace(choices.length > 0 ? /^(?:[1-4][.):\-]\s+|[A-D][.):\-]\s+).+$/gm : /(?!x)x/, '')
     .trim();
-  return { narrative, choices, day, hasPoetry, isEndOfDay, affinity };
+  return { narrative, hasPoetry, isEndOfDay, affinity };
 }
 
 // ====== UI HELPERS ======
@@ -128,8 +103,14 @@ function insertStoryNarrative(text, animate = true) {
 }
 
 function renderStoryChoices(choices) {
-  const container = $('storyChoices');
-  container.innerHTML = '';
+  // Remove any existing inline choice container
+  const existing = chatArea.querySelector('.story-choices-inline');
+  if (existing) existing.remove();
+  // Also hide the old external container just in case
+  $('storyChoices').style.display = 'none';
+
+  const container = document.createElement('div');
+  container.className = 'story-choices-inline';
   choices.forEach(choice => {
     const btn = document.createElement('button');
     btn.className = 'story-choice-btn';
@@ -137,13 +118,14 @@ function renderStoryChoices(choices) {
     btn.addEventListener('click', () => selectStoryChoice(choice));
     container.appendChild(btn);
   });
-  container.style.display = '';
+  chatArea.insertBefore(container, typingIndicator);
+  scrollToBottom();
 }
 
 function hideStoryChoices() {
-  const el = $('storyChoices');
-  el.innerHTML = '';
-  el.style.display = 'none';
+  const existing = chatArea.querySelector('.story-choices-inline');
+  if (existing) existing.remove();
+  $('storyChoices').style.display = 'none';
 }
 
 function showWordPicker() {
@@ -258,7 +240,6 @@ function liveStripTags(text) {
     .replace(/\[CHOICE[_ ]?\d?\]\s*.+/gi, '')
     .replace(/\[END_OF_DAY\]\s*/gi, '')
     .replace(/\[POETRY\]\s*/gi, '')
-    .replace(/^(?:[1-4][.):\-]\s+|[A-D][.):\-]\s+|[-*]\s+).{10,}$/gm, '')
     .trim();
 }
 
@@ -314,7 +295,7 @@ async function generateStoryBeat(chat) {
       throw new Error('Got an empty response from the model. Try again.');
     }
 
-    const { narrative, choices, day, hasPoetry, isEndOfDay, affinity } = parseStoryResponse(rawReply);
+    const { narrative, hasPoetry, isEndOfDay, affinity } = parseStoryResponse(rawReply);
 
     // Guard: garbled response
     if (narrative.length < 20) {
@@ -373,12 +354,18 @@ async function generateStoryBeat(chat) {
       advancePhase(chat);
       updatePhaseDisplay(chat);
       saveChats();
-      renderStoryChoices(['Continue']);
+      // Show next phase's choices, or Continue
+      const nextPhase = STORY_PHASES[chat.storyPhase];
+      if (nextPhase && nextPhase.choices) {
+        renderStoryChoices(nextPhase.choices);
+      } else {
+        renderStoryChoices(['Continue']);
+      }
       scrollToBottom();
       return;
     }
 
-    // 4. noChoices enforcement — show Continue instead of model's choices
+    // 4. noChoices enforcement — show Continue
     if (phase && phase.noChoices) {
       saveChats();
       renderStoryChoices(['Continue']);
@@ -386,12 +373,10 @@ async function generateStoryBeat(chat) {
       return;
     }
 
-    // 5. Normal: show model's choices, phase fallbacks, or Continue
+    // 5. Normal: show phase choices or Continue
     saveChats();
-    if (choices.length >= 2) {
-      renderStoryChoices(choices);
-    } else if (phase && phase.fallbackChoices) {
-      renderStoryChoices(phase.fallbackChoices);
+    if (phase && phase.choices) {
+      renderStoryChoices(phase.choices);
     } else {
       renderStoryChoices(['Continue']);
     }

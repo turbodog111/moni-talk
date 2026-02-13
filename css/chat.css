@@ -75,6 +75,9 @@
 .story-choice-btn:hover { background: var(--green-pale); border-color: var(--green-dark); }
 .story-choice-btn:active { transform: scale(0.98); }
 .story-choice-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* === Inline Story Choices (inside chat area) === */
+.story-choices-inline { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; align-self: stretch; max-width: 100%; }
+
 .message.narrator { align-self: stretch; max-width: 100%; }
 .message.narrator .msg-bubble { background: transparent; box-shadow: none; padding: 4px 8px; line-height: 1.7; border-radius: 0; }
 .message.narrator .msg-content { width: 100%; }

@@ -50,7 +50,7 @@ function createChat() {
     chat.mode = 'story';
     chat.mcName = $('mcNameInput').value.trim() || 'MC';
     chat.storyDay = 1;
-    chat.storyPhase = 'd1_classroom';
+    chat.storyPhase = 'd1_before_club';
     chat.storyBeatInPhase = 0;
     chat.storyAffinity = { sayori: 15, natsuki: 1, yuri: 1, monika: 10 };
   }
@@ -145,18 +145,17 @@ function trimContext() {
 
 // ====== RENDER MESSAGES ======
 function renderMessages() {
-  chatArea.querySelectorAll('.message').forEach(el => el.remove());
+  chatArea.querySelectorAll('.message, .story-choices-inline').forEach(el => el.remove());
   const chat = getChat();
   if (!chat) return;
   hideStoryChoices();
 
   if (chat.mode === 'story') {
     hideWordPicker();
-    let lastDay = null, lastAffinity = null;
+    let lastAffinity = null;
     chat.messages.forEach(msg => {
       if (msg.role === 'assistant') {
         const parsed = parseStoryResponse(msg.content);
-        if (parsed.day) lastDay = parsed.day;
         if (parsed.affinity) lastAffinity = parsed.affinity;
         insertStoryNarrative(parsed.narrative, false);
       } else {
@@ -168,7 +167,6 @@ function renderMessages() {
         insertMessageEl('user', display, false);
       }
     });
-    if (lastDay) { chat.storyDay = lastDay; updateChatHeader(chat); updateVnDay(lastDay); }
     if (lastAffinity) { chat.storyAffinity = lastAffinity; updateAffinityPanel(lastAffinity); }
     // Update sprites for last narrative
     const lastAssistant = [...chat.messages].reverse().find(m => m.role === 'assistant');
@@ -190,10 +188,8 @@ function renderMessages() {
         const phase = STORY_PHASES[chat.storyPhase];
         if (phase && phase.noChoices) {
           renderStoryChoices(['Continue']);
-        } else if (parsed.choices.length >= 2) {
-          renderStoryChoices(parsed.choices);
-        } else if (phase && phase.fallbackChoices) {
-          renderStoryChoices(phase.fallbackChoices);
+        } else if (phase && phase.choices) {
+          renderStoryChoices(phase.choices);
         } else {
           renderStoryChoices(['Continue']);
         }
