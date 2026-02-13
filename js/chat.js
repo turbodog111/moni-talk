@@ -58,6 +58,7 @@ function createChat() {
 }
 
 function openChat(id) {
+  isGenerating = false;
   activeChatId = id;
   const chat = getChat();
   if (!chat) return;

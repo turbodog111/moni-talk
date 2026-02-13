@@ -178,6 +178,7 @@ function insertStoryNarrative(text, animate = true) {
 }
 
 function renderStoryChoices(choices) {
+  console.log('[STORY] renderStoryChoices called with:', choices);
   // Remove any existing inline choice container
   const existing = chatArea.querySelector('.story-choices-inline');
   if (existing) existing.remove();
@@ -194,10 +195,18 @@ function renderStoryChoices(choices) {
     container.appendChild(btn);
   });
   chatArea.insertBefore(container, typingIndicator);
+  console.log('[STORY] choices container inserted', {
+    parent: container.parentElement?.id,
+    childCount: container.children.length,
+    height: container.offsetHeight,
+    chatAreaId: chatArea?.id,
+    typingIndicatorExists: !!typingIndicator
+  });
   scrollToBottom();
 }
 
 function hideStoryChoices() {
+  console.log('[STORY] hideStoryChoices called', new Error().stack?.split('\n')[2]?.trim());
   const existing = chatArea.querySelector('.story-choices-inline');
   if (existing) existing.remove();
   $('storyChoices').style.display = 'none';
@@ -322,7 +331,8 @@ function liveStripTags(text) {
 
 // ====== GENERATE STORY BEAT (phase-aware, streaming) ======
 async function generateStoryBeat(chat) {
-  if (isGenerating) return;
+  console.log('[STORY] generateStoryBeat called', { phase: chat.storyPhase, beat: chat.storyBeatInPhase, isGenerating, msgCount: chat.messages.length });
+  if (isGenerating) { console.log('[STORY] BLOCKED — isGenerating is true, returning early'); return; }
   if (provider === 'openrouter' && !apiKey) { openSettings(); showToast('Enter your OpenRouter API key first.'); return; }
   if (provider === 'gemini' && !geminiKey) { openSettings(); showToast('Enter your Gemini API key first.'); return; }
 
@@ -373,6 +383,7 @@ async function generateStoryBeat(chat) {
     }
 
     const { narrative, hasPoetry, isEndOfDay, affinity } = parseStoryResponse(rawReply);
+    console.log('[STORY] parsed response', { narrativeLen: narrative.length, hasPoetry, isEndOfDay, hasAffinity: !!affinity });
 
     // Guard: garbled response — too short or degenerated word salad
     if (narrative.length < 20) {
@@ -422,6 +433,7 @@ async function generateStoryBeat(chat) {
 
     // 1. Handle end of day — ONLY honor [END_OF_DAY] during wrap-up phases
     if ((isEndOfDay && isWrapPhase) || (phase && phase.forceEndOfDay && chat.storyBeatInPhase >= phase.maxBeats)) {
+      console.log('[STORY] → path 1: end of day');
       saveChats();
       await showEndOfDay(chat);
       return;
@@ -429,6 +441,7 @@ async function generateStoryBeat(chat) {
 
     // 2. Handle poetry tag — ONLY during poem_sharing phase
     if (hasPoetry && (phase && phase.triggerPoetry)) {
+      console.log('[STORY] → path 2: poetry trigger');
       saveChats();
       showWordPicker();
       return;
@@ -440,11 +453,13 @@ async function generateStoryBeat(chat) {
       updatePhaseDisplay(chat);
       const nextPhase = STORY_PHASES[chat.storyPhase];
       if (nextPhase && !nextPhase.noChoices && nextPhase.choices) {
+        console.log('[STORY] → path 3a: maxBeats, advancing with next phase choices', nextPhase.choices);
         chat.lastChoices = nextPhase.choices;
         saveChats();
         renderStoryChoices(nextPhase.choices);
         tryAIChoices(narrative, nextPhase, chat);
       } else {
+        console.log('[STORY] → path 3b: maxBeats, advancing with Continue');
         chat.lastChoices = null;
         saveChats();
         renderStoryChoices(['Continue']);
@@ -455,6 +470,7 @@ async function generateStoryBeat(chat) {
 
     // 4. noChoices enforcement — show Continue
     if (phase && phase.noChoices) {
+      console.log('[STORY] → path 4: noChoices phase, showing Continue');
       chat.lastChoices = null;
       saveChats();
       renderStoryChoices(['Continue']);
@@ -464,6 +480,7 @@ async function generateStoryBeat(chat) {
 
     // 5. Normal: show static choices instantly, try AI enhancement in background
     const staticChoices = (phase && phase.choices) || ['Continue'];
+    console.log('[STORY] → path 5: normal choices', staticChoices);
     chat.lastChoices = staticChoices;
     saveChats();
     renderStoryChoices(staticChoices);
@@ -474,6 +491,7 @@ async function generateStoryBeat(chat) {
     }
 
   } catch (err) {
+    console.error('[STORY] error in generateStoryBeat:', err);
     if (streamDiv) streamDiv.remove();
     typingIndicator.classList.remove('visible');
     showToast(err.message || 'Something went wrong.');

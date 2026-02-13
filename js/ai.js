@@ -136,7 +136,7 @@ async function callOllama(chat) {
         model: ollamaModel,
         messages: buildMessages(chat),
         stream: false,
-        keep_alive: 0,
+        keep_alive: 10,
         options: {
           num_predict: isStory ? 1500 : 500,
           num_ctx: 8192,
@@ -171,7 +171,7 @@ async function streamOllama(chat, onChunk) {
         model: ollamaModel,
         messages: buildMessages(chat),
         stream: true,
-        keep_alive: 0,
+        keep_alive: 10,
         options: {
           num_predict: isStory ? 1500 : 500,
           num_ctx: 8192,
@@ -297,7 +297,7 @@ async function callAI(messages, maxTokens = 600) {
           model: ollamaModel,
           messages,
           stream: false,
-          keep_alive: 0,
+          keep_alive: 10,
           options: {
             num_predict: maxTokens,
             num_ctx: 8192,
