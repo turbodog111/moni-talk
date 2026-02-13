@@ -263,14 +263,24 @@ const STORY_PHASES = {
   d1_before_club: {
     label: 'Before Club',
     maxBeats: 2,
-    noChoices: true,
-    instruction: `Scene: The final bell rings in math class. Monika (who sits nearby — they're friends from this class) casually mentions the Literature Club and asks if MC is coming today. MC is noncommittal. Then in the hallway, Sayori catches MC, bouncing with excitement. She guilt-trips him into coming: "I told everyone I was bringing a new member! Natsuki made cupcakes and everything!" MC reluctantly agrees. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`
+    noChoices: false,
+    instruction: `Scene: The final bell rings in math class. Monika (who sits nearby — they're friends from this class) casually mentions the Literature Club and asks if MC is coming today. MC is noncommittal. Then in the hallway, Sayori catches MC, bouncing with excitement. She guilt-trips him into coming: "I told everyone I was bringing a new member! Natsuki made cupcakes and everything!" MC reluctantly agrees. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+    choices: [
+      'Tell Monika you\'ll think about it — you don\'t want to commit yet',
+      'Try to dodge Sayori\'s guilt trip — but she\'s relentless',
+      'Give in immediately — Sayori\'s puppy-dog eyes are too powerful'
+    ]
   },
   d1_arriving: {
     label: 'Arriving at Club',
     maxBeats: 1,
-    noChoices: true,
-    instruction: `Scene: Sayori leads MC through the school hallways and upstairs to the clubroom. She swings open the door: "Everyone! The new member is here!" MC steps in and sees a cozy classroom with afternoon sunlight. There are exactly TWO unknown girls — a tall girl with long purple hair reading by the window, and a short girl with pink hair and a sharp expression. MC does NOT know their names yet — DO NOT use the names "Yuri" or "Natsuki" in narration or dialogue. Monika greets MC warmly (they already know each other from math class). Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`
+    noChoices: false,
+    instruction: `Scene: Sayori leads MC through the school hallways and upstairs to the clubroom. She swings open the door: "Everyone! The new member is here!" MC steps in and sees a cozy classroom with afternoon sunlight. There are exactly TWO unknown girls — a tall girl with long purple hair reading by the window, and a short girl with pink hair and a sharp expression. MC does NOT know their names yet — DO NOT use the names "Yuri" or "Natsuki" in narration or dialogue. Monika greets MC warmly (they already know each other from math class). Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+    choices: [
+      'Wave awkwardly at everyone — this is more people than you expected',
+      'Stick close to Sayori — at least you know her',
+      'Greet Monika first — a familiar face is reassuring'
+    ]
   },
   d1_introductions: {
     label: 'Meeting the Club',
@@ -321,21 +331,36 @@ const STORY_PHASES = {
     maxBeats: 2,
     noChoices: false,
     forceEndOfDay: true,
-    instruction: `Scene: MC decides to join the club (the girls' hopeful expressions convince him). The meeting wraps up. MC walks home with Sayori — they're neighbors. She's thrilled he joined. End your response with [END_OF_DAY] on its own line.`
+    instruction: `Scene: MC decides to join the club (the girls' hopeful expressions convince him). The meeting wraps up. MC walks home with Sayori — they're neighbors. She's thrilled he joined. End your response with [END_OF_DAY] on its own line.`,
+    choices: [
+      'Tell Sayori you\'re actually glad she dragged you here',
+      'Admit the club is way different from what you expected',
+      'Ask Sayori what she thinks of the other members'
+    ]
   },
 
   // === Day 2+ Phases ===
   morning: {
     label: 'Morning',
     maxBeats: 1,
-    noChoices: true,
-    instruction: `Scene: New school day begins. MC walks to school with Sayori (their daily routine as neighbors). Brief morning interaction — maybe she overslept, maybe they chat about something from yesterday. Keep it short and charming. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`
+    noChoices: false,
+    instruction: `Scene: New school day begins. MC walks to school with Sayori (their daily routine as neighbors). Brief morning interaction — maybe she overslept, maybe they chat about something from yesterday. Keep it short and charming. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+    choices: [
+      'Tease Sayori about oversleeping again',
+      'Ask Sayori if anything interesting happened yesterday',
+      'Walk in comfortable silence — enjoy the morning calm'
+    ]
   },
   club_arrival: {
     label: 'Arriving at Club',
     maxBeats: 1,
-    noChoices: true,
-    instruction: `Scene: After classes end, MC heads to the Literature Club. Describe who's already there and what they're doing when he walks in. Brief greetings from the girls. Keep it short. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`
+    noChoices: false,
+    instruction: `Scene: After classes end, MC heads to the Literature Club. Describe who's already there and what they're doing when he walks in. Brief greetings from the girls. Keep it short. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+    choices: [
+      'Greet whoever catches your eye first',
+      'Head to your usual spot and settle in',
+      'See what everyone is working on today'
+    ]
   },
   poem_sharing: {
     label: 'Poem Sharing',
@@ -382,7 +407,12 @@ const STORY_PHASES = {
     maxBeats: 2,
     noChoices: false,
     forceEndOfDay: true,
-    instruction: null // Built dynamically based on affinity in buildPhaseInstruction()
+    instruction: null, // Built dynamically based on affinity in buildPhaseInstruction()
+    choices: [
+      'Chat about something lighthearted on the walk home',
+      'Bring up something that happened in the club today',
+      'Enjoy the quiet moment together'
+    ]
   }
 };
 
