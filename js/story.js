@@ -250,7 +250,19 @@ async function selectStoryChoice(choice) {
   await generateStoryBeat(chat);
 }
 
-// ====== GENERATE STORY BEAT (phase-aware) ======
+// ====== LIVE TAG STRIPPING (for streaming display) ======
+function liveStripTags(text) {
+  return text
+    .replace(/\[DAY:\d+\]\s*/g, '')
+    .replace(/\[AFFINITY:[^\]]+\]\s*/gi, '')
+    .replace(/\[CHOICE[_ ]?\d?\]\s*.+/gi, '')
+    .replace(/\[END_OF_DAY\]\s*/gi, '')
+    .replace(/\[POETRY\]\s*/gi, '')
+    .replace(/^(?:[1-4][.):\-]\s+|[A-D][.):\-]\s+|[-*]\s+).{10,}$/gm, '')
+    .trim();
+}
+
+// ====== GENERATE STORY BEAT (phase-aware, streaming) ======
 async function generateStoryBeat(chat) {
   if (isGenerating) return;
   if (provider === 'openrouter' && !apiKey) { openSettings(); showToast('Enter your OpenRouter API key first.'); return; }
@@ -264,20 +276,55 @@ async function generateStoryBeat(chat) {
   scrollToBottom();
   updatePhaseDisplay(chat);
 
-  try {
-    const rawReply = await callProvider(chat);
+  let streamDiv = null;
+  let streamBubble = null;
 
-    // Guard: if the API returned empty/fallback, don't pollute message history — just retry
-    if (!rawReply || rawReply === 'Hmm, I lost my train of thought...') {
+  try {
+    let fullText = '';
+    let updatePending = false;
+
+    await callProviderStreaming(chat, (chunk) => {
+      // On first chunk, swap typing indicator for live narrative element
+      if (!streamDiv) {
+        typingIndicator.classList.remove('visible');
+        streamDiv = document.createElement('div');
+        streamDiv.className = 'message narrator';
+        streamDiv.innerHTML = '<div class="msg-content"><div class="msg-bubble"></div></div>';
+        chatArea.insertBefore(streamDiv, typingIndicator);
+        streamBubble = streamDiv.querySelector('.msg-bubble');
+      }
+      fullText += chunk;
+      // Throttle DOM updates to animation frames
+      if (!updatePending) {
+        updatePending = true;
+        requestAnimationFrame(() => {
+          const liveText = liveStripTags(fullText);
+          if (liveText && streamBubble) streamBubble.innerHTML = renderMarkdown(liveText);
+          scrollToBottom();
+          updatePending = false;
+        });
+      }
+    });
+
+    const rawReply = fullText.trim();
+
+    // Guard: empty response
+    if (!rawReply) {
+      if (streamDiv) streamDiv.remove();
       throw new Error('Got an empty response from the model. Try again.');
     }
 
     const { narrative, choices, day, hasPoetry, isEndOfDay, affinity } = parseStoryResponse(rawReply);
 
-    // Guard: if parsed narrative is too short (model returned only tags or garbage), retry
+    // Guard: garbled response
     if (narrative.length < 20) {
+      if (streamDiv) streamDiv.remove();
       throw new Error('Model returned a garbled response. Try again.');
     }
+
+    // Final clean render (replaces streamed text with properly parsed narrative)
+    typingIndicator.classList.remove('visible');
+    if (streamBubble) streamBubble.innerHTML = renderMarkdown(narrative);
 
     // Day is JS-authoritative — ignore model's day tag, use our tracked day
     updateChatHeader(chat);
@@ -298,8 +345,6 @@ async function generateStoryBeat(chat) {
     updateAffinityPanel(chat.storyAffinity);
 
     chat.messages.push({ role: 'assistant', content: rawReply });
-    typingIndicator.classList.remove('visible');
-    insertStoryNarrative(narrative);
     updateVnSprites(narrative);
     scrollToBottom();
     updateContextBar();
@@ -310,7 +355,6 @@ async function generateStoryBeat(chat) {
     const isWrapPhase = chat.storyPhase === 'wrap_up' || chat.storyPhase === 'd1_wrap_up';
 
     // 1. Handle end of day — ONLY honor [END_OF_DAY] during wrap-up phases
-    //    (models sometimes output stray [END_OF_DAY] during other phases, which would skip choices)
     if ((isEndOfDay && isWrapPhase) || (phase && phase.forceEndOfDay && chat.storyBeatInPhase >= phase.maxBeats)) {
       saveChats();
       await showEndOfDay(chat);
@@ -318,7 +362,6 @@ async function generateStoryBeat(chat) {
     }
 
     // 2. Handle poetry tag — ONLY during poem_sharing phase
-    //    (prevents stray [POETRY] tags from derailing the flow)
     if (hasPoetry && (phase && phase.triggerPoetry)) {
       saveChats();
       showWordPicker();
@@ -356,6 +399,7 @@ async function generateStoryBeat(chat) {
     updatePhaseDisplay(chat);
 
   } catch (err) {
+    if (streamDiv) streamDiv.remove();
     typingIndicator.classList.remove('visible');
     showToast(err.message || 'Something went wrong.');
     renderStoryChoices(['Retry']);

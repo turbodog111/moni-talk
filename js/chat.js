@@ -241,14 +241,39 @@ async function sendMessage() {
   isGenerating = true; sendBtn.disabled = true;
   typingIndicator.classList.add('visible'); scrollToBottom();
 
+  let msgBubble = null;
   try {
-    const rawReply = await callProvider(chat);
+    let fullText = '';
+    let updatePending = false;
+
+    await callProviderStreaming(chat, (chunk) => {
+      if (!msgBubble) {
+        typingIndicator.classList.remove('visible');
+        const div = document.createElement('div');
+        div.className = 'message monika';
+        div.innerHTML = '<img class="msg-avatar" src="Monika PFP.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
+        chatArea.insertBefore(div, typingIndicator);
+        msgBubble = div.querySelector('.msg-bubble');
+      }
+      fullText += chunk;
+      if (!updatePending) {
+        updatePending = true;
+        requestAnimationFrame(() => {
+          const display = fullText.replace(/^\[MOOD:\w+\]\s*/i, '');
+          if (msgBubble) msgBubble.innerHTML = renderMarkdown(display);
+          scrollToBottom();
+          updatePending = false;
+        });
+      }
+    });
+
+    typingIndicator.classList.remove('visible');
+    const rawReply = fullText.trim();
     const { mood, text: reply } = parseMood(rawReply, chat.mood || 'cheerful');
     chat.mood = mood;
     chat.messages.push({ role: 'assistant', content: reply });
     saveChats();
-    typingIndicator.classList.remove('visible');
-    insertMessageEl('assistant', reply);
+    if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
     updateChatHeader(chat);
     scrollToBottom(); updateContextBar();
   } catch (err) {
