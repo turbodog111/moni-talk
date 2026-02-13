@@ -10,6 +10,11 @@ function parseMood(raw, fallback) {
 }
 
 // ====== BUILD MESSAGES ======
+// Condensed character reminder injected when conversation is long
+const CHARACTER_REMINDER = `[Character quick-ref: Sayori=coral pink hair+red bow, sky blue eyes, bubbly/cheerful childhood friend. Natsuki=pink bob+ribbon clips, fuchsia eyes, tsundere with sharp tongue. Yuri=long dark purple hair, soft violet eyes, shy bookworm. Monika=chestnut ponytail+white bow, emerald green eyes, confident club president. Write their dialogue in-character.]`;
+
+const STORY_MSG_LIMIT = 30; // Keep last 30 messages to protect system prompt from being pushed out
+
 function buildMessages(chat) {
   if (chat.mode === 'story') {
     const day = chat.storyDay || 1;
@@ -21,10 +26,23 @@ function buildMessages(chat) {
       + (phaseInstruction ? `\n\n${phaseInstruction}` : '')
       + `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}\nAffinity: Sayori=${aff.sayori}, Natsuki=${aff.natsuki}, Yuri=${aff.yuri}, Monika=${aff.monika}`;
 
+    // Trim to last N messages to prevent context overflow
+    let recentMessages = chat.messages;
+    if (recentMessages.length > STORY_MSG_LIMIT) {
+      recentMessages = recentMessages.slice(-STORY_MSG_LIMIT);
+    }
+
     const msgs = [
       { role: 'system', content: systemPrompt },
-      ...chat.messages.map(m => ({ role: m.role, content: m.content }))
+      ...recentMessages.map(m => ({ role: m.role, content: m.content }))
     ];
+
+    // Inject condensed character reminder every ~20 messages to keep model on track
+    if (chat.messages.length > 10) {
+      // Insert reminder as a system message near the end of history
+      msgs.splice(-2, 0, { role: 'system', content: CHARACTER_REMINDER });
+    }
+
     if (chat.messages.length === 0) {
       msgs.push({ role: 'user', content: `Begin the story. My name is ${mcName}.` });
     }
@@ -139,7 +157,7 @@ async function callOllama(chat) {
         keep_alive: 10,
         options: {
           num_predict: isStory ? 1500 : 500,
-          num_ctx: 8192,
+          num_ctx: 16384,
           temperature: isStory ? 0.8 : 0.75,
           top_p: 0.92,
           top_k: 60,
@@ -174,7 +192,7 @@ async function streamOllama(chat, onChunk) {
         keep_alive: 10,
         options: {
           num_predict: isStory ? 1500 : 500,
-          num_ctx: 8192,
+          num_ctx: 16384,
           temperature: isStory ? 0.8 : 0.75,
           top_p: 0.92,
           top_k: 60,
@@ -300,7 +318,7 @@ async function callAI(messages, maxTokens = 600) {
           keep_alive: 10,
           options: {
             num_predict: maxTokens,
-            num_ctx: 8192,
+            num_ctx: 16384,
             temperature: 0.85,
             top_p: 0.92,
             top_k: 60,
