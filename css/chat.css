@@ -43,7 +43,7 @@
 .typing-dots span { width: 7px; height: 7px; background: var(--green-mid); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; }
 .typing-dots span:nth-child(2) { animation-delay: 0.16s; } .typing-dots span:nth-child(3) { animation-delay: 0.32s; }
 @keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
-.input-area { display: flex; gap: 8px; padding: 12px 16px; background: white; border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
+.input-area { display: flex; gap: 8px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: white; border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
 .input-area textarea { flex: 1; border: 1px solid var(--gray-mid); border-radius: 20px; padding: 10px 16px; font-size: 15px; font-family: inherit; resize: none; outline: none; max-height: 120px; line-height: 1.4; transition: border-color 0.2s; }
 .input-area textarea:focus { border-color: var(--green-mid); }
 .input-area textarea::placeholder { color: #aaa; }
@@ -96,7 +96,7 @@
 .affinity-fill.monika { background: #3CB371; }
 
 /* === Word Picker === */
-.word-picker { padding: 12px 16px; background: white; border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
+.word-picker { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: white; border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
 .word-picker-title { font-size: 15px; font-weight: 700; color: var(--green-dark); margin-bottom: 2px; text-align: center; }
 .word-picker-hint { font-size: 12px; color: var(--gray-text); margin-bottom: 10px; text-align: center; }
 .word-grid { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
@@ -106,3 +106,22 @@
 .word-submit-btn { display: block; margin: 0 auto; padding: 10px 32px; border: none; border-radius: 20px; background: var(--green-dark); color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
 .word-submit-btn:hover { background: var(--green-mid); }
 .word-submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* === Keyboard-open compact mode === */
+.keyboard-open .header { padding-top: 6px; padding-bottom: 6px; }
+.keyboard-open .header-avatar { width: 28px; height: 28px; }
+.keyboard-open .header-sub { display: none; }
+.keyboard-open .context-bar { display: none; }
+.keyboard-open .input-area { padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); }
+.keyboard-open .input-area textarea { padding: 8px 14px; font-size: 14px; }
+.keyboard-open .send-btn { width: 38px; height: 38px; font-size: 18px; }
+
+/* === Tablet breakpoint === */
+@media (min-width: 601px) and (max-width: 1024px) {
+  .chat-area { padding: 16px 24px; }
+  .input-area { padding-left: 24px; padding-right: 24px; }
+  .context-bar { padding-left: 24px; padding-right: 24px; }
+  .story-choice-btn { padding: 18px 20px; }
+  .word-picker { padding-left: 24px; padding-right: 24px; }
+  .word-grid { gap: 8px; }
+}

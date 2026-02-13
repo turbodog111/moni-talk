@@ -317,3 +317,16 @@
   .vn-sprite-name { font-size: 9px; bottom: -16px; }
   .screen.vn-mode .message.narrator .msg-bubble { padding: 14px 16px; font-size: 14px; }
 }
+
+/* === Keyboard-open compact mode (VN) === */
+.keyboard-open .vn-sprites { display: none; }
+.keyboard-open .screen.vn-mode .header { padding-top: 6px; padding-bottom: 6px; }
+.keyboard-open .screen.vn-mode .header-avatar { width: 28px; height: 28px; }
+.keyboard-open .screen.vn-mode .header-sub { display: none; }
+
+/* === Tablet breakpoint (VN) === */
+@media (min-width: 601px) and (max-width: 1024px) {
+  .vn-sprite { width: 64px; height: 64px; }
+  .vn-side-panel { width: 320px; }
+  .screen.vn-mode .message.narrator { max-width: 85%; align-self: center; }
+}

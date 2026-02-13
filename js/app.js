@@ -55,15 +55,36 @@ function init() {
 
 // ====== MOBILE KEYBOARD ======
 function setupViewport() {
+  let baseHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const KEYBOARD_THRESHOLD = 150;
+
   const update = () => {
     const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     document.documentElement.style.setProperty('--app-height', h + 'px');
+
+    // Track largest viewport as base (keyboard closed state)
+    if (h > baseHeight) baseHeight = h;
+
+    // Toggle .keyboard-open when viewport shrinks significantly
+    const keyboardOpen = (baseHeight - h) > KEYBOARD_THRESHOLD;
+    document.documentElement.classList.toggle('keyboard-open', keyboardOpen);
+
     if (screens.chat.classList.contains('active')) scrollToBottom();
   };
+
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', update);
   }
   window.addEventListener('resize', update);
+
+  // Reset baseHeight on orientation change (toolbar size differs)
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      baseHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      update();
+    }, 300);
+  });
+
   update();
 }
 
