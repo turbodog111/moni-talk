@@ -171,7 +171,10 @@
     <button id="trimBtn" title="Remove older messages to free up context">Trim</button>
     <button id="storyRetryBtn" class="story-retry-btn" title="Force continue if the story is stuck" style="display:none;">Stuck?</button>
   </div>
+  <div class="image-preview" id="imagePreview" style="display:none;"></div>
   <div class="input-area" id="inputArea">
+    <button class="image-attach-btn" id="imageAttachBtn" title="Attach image">&#128206;</button>
+    <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
     <textarea id="userInput" rows="1" placeholder="Say something to Monika..."></textarea>
     <button class="send-btn" id="sendBtn" title="Send">&#10148;</button>
   </div>
@@ -354,6 +357,7 @@
 <script src="js/ai.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/sync.js"></script>
+<script src="js/memory.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/story.js"></script>
 <script src="js/vn.js"></script>

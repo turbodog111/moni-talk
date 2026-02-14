@@ -24,24 +24,50 @@ function parseStateTags(raw, fallbackMood, fallbackIntensity, fallbackDrift) {
 
 // ====== TIME CONTEXT (computed, zero model cost) ======
 function buildTimeContext(chat) {
-  const now = Date.now();
+  const now = new Date();
   const lines = [];
 
-  // Time of day
-  const hour = new Date(now).getHours();
-  if (hour >= 5 && hour < 12) lines.push('It\'s morning right now.');
-  else if (hour >= 12 && hour < 17) lines.push('It\'s afternoon right now.');
-  else if (hour >= 17 && hour < 21) lines.push('It\'s evening right now.');
-  else lines.push('It\'s late night right now.');
+  // Day of week
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  lines.push(`It's ${days[now.getDay()]}.`);
+
+  // Descriptive time of day with actual time
+  const hour = now.getHours();
+  const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (hour >= 5 && hour < 12) lines.push(`It's morning, ${timeStr}.`);
+  else if (hour >= 12 && hour < 14) lines.push(`It's early afternoon, ${timeStr}.`);
+  else if (hour >= 14 && hour < 17) lines.push(`It's afternoon, ${timeStr}.`);
+  else if (hour >= 17 && hour < 21) lines.push(`It's evening, ${timeStr}.`);
+  else if (hour >= 21 || hour < 2) lines.push(`It's late evening, ${timeStr}.`);
+  else lines.push(`It's late night, ${timeStr}.`);
+
+  // Holiday check
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const holiday = HOLIDAYS[`${mm}-${dd}`];
+  if (holiday) lines.push(`Today is ${holiday}.`);
 
   // Gap since last conversation
   const lastActive = chat.lastActiveTime || chat.lastModified || chat.created;
-  const gapMs = now - lastActive;
+  const gapMs = now.getTime() - lastActive;
   const gapHours = gapMs / (1000 * 60 * 60);
-  if (gapHours >= 72) lines.push('It\'s been a few days since you two last talked.');
-  else if (gapHours >= 24) lines.push('It\'s been about a day since the last conversation.');
-  else if (gapHours >= 6) lines.push('It\'s been a while since you last chatted.');
+  const gapDays = Math.floor(gapHours / 24);
+  if (gapDays >= 7) lines.push(`It's been about ${gapDays} days since you two last talked — you missed them.`);
+  else if (gapDays >= 3) lines.push(`It's been a few days since you two last talked.`);
+  else if (gapHours >= 24) lines.push(`It's been about a day since the last conversation.`);
+  else if (gapHours >= 6) lines.push(`It's been a while since you last chatted.`);
   // Under 6 hours — say nothing, feels like an active session
+
+  // Conversation count today
+  const todayKey = `${now.getFullYear()}-${mm}-${dd}`;
+  const lastVisit = localStorage.getItem('moni_talk_last_visit') || '';
+  let dailyCount = parseInt(localStorage.getItem('moni_talk_daily_count') || '0');
+  if (lastVisit !== todayKey) {
+    dailyCount = 1;
+    localStorage.setItem('moni_talk_last_visit', todayKey);
+    localStorage.setItem('moni_talk_daily_count', '1');
+  }
+  if (dailyCount > 3) lines.push(`This is conversation #${dailyCount} today — they keep coming back to you.`);
 
   // Session length
   const msgCount = chat.messages.length;
@@ -94,7 +120,7 @@ function buildMessages(chat) {
     return msgs;
   }
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
-  let sys = BASE_PROMPT + '\n\n' + rel.prompt + buildProfilePrompt();
+  let sys = BASE_PROMPT + '\n\n' + rel.prompt + buildProfilePrompt() + buildMemoryPrompt();
 
   const mood = chat.mood || 'cheerful';
   const intensity = chat.moodIntensity || 'moderate';
@@ -106,11 +132,25 @@ function buildMessages(chat) {
   sys += `\nLet your mood and drift evolve naturally from here.`;
 
   // Strip legacy expression tags from old room mode messages
+  // Handle multimodal messages (content arrays with images)
+  const supportsVision = ['gemini', 'openrouter', 'puter'].includes(provider);
   const msgs = chat.messages.map(m => {
-    if (chat.mode === 'room' && m.role === 'assistant' && /^\[\w+\]\s/m.test(m.content)) {
-      return { role: m.role, content: m.content.replace(/^\[(\w+)\]\s*/gm, '') };
+    let content = m.content;
+    // Handle multimodal content arrays
+    if (Array.isArray(content)) {
+      if (supportsVision) {
+        // Pass through as-is for vision-capable providers
+        return { role: m.role, content: content };
+      } else {
+        // Strip images for non-vision providers
+        const textPart = content.find(p => p.type === 'text');
+        content = (textPart?.text || '') + ' (User shared an image but your model can\'t see it)';
+      }
     }
-    return { role: m.role, content: m.content };
+    if (chat.mode === 'room' && m.role === 'assistant' && typeof content === 'string' && /^\[\w+\]\s/m.test(content)) {
+      return { role: m.role, content: content.replace(/^\[(\w+)\]\s*/gm, '') };
+    }
+    return { role: m.role, content: content };
   });
 
   return [

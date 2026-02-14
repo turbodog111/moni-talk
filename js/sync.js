@@ -36,7 +36,8 @@ async function syncToCloud() {
     const promises = [
       puter.kv.set('moni_chat_index', JSON.stringify(index)),
       puter.kv.set('moni_profile', JSON.stringify(profile)),
-      puter.kv.set('moni_deleted_ids', JSON.stringify([...deletedChatIds]))
+      puter.kv.set('moni_deleted_ids', JSON.stringify([...deletedChatIds])),
+      puter.kv.set('moni_talk_memories', JSON.stringify(memories))
     ];
     for (const chat of chats) {
       promises.push(puter.kv.set('moni_chat_' + chat.id, JSON.stringify(chat)));
@@ -97,6 +98,21 @@ async function syncFromCloud() {
         profile = cloudProfile;
         localStorage.setItem(STORAGE.PROFILE, JSON.stringify(profile));
       }
+    }
+
+    // Pull memories — merge cloud + local, deduplicate
+    const cloudMemories = parseKV(await puter.kv.get('moni_talk_memories')) || [];
+    if (cloudMemories.length > 0) {
+      const merged = [...memories];
+      for (const cm of cloudMemories) {
+        const isDup = merged.some(m =>
+          m.fact.toLowerCase().includes(cm.fact.toLowerCase()) ||
+          cm.fact.toLowerCase().includes(m.fact.toLowerCase())
+        );
+        if (!isDup) merged.push(cm);
+      }
+      memories = merged.slice(0, 50);
+      localStorage.setItem('moni_talk_memories', JSON.stringify(memories));
     }
 
     renderChatList();

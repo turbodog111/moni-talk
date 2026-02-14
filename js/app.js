@@ -74,6 +74,17 @@ function init() {
   userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
   sendBtn.addEventListener('click', sendMessage);
 
+  // Image attach
+  const imageAttachBtn = $('imageAttachBtn');
+  const imageFileInput = $('imageFileInput');
+  if (imageAttachBtn && imageFileInput) {
+    imageAttachBtn.addEventListener('click', () => imageFileInput.click());
+    imageFileInput.addEventListener('change', (e) => {
+      if (e.target.files[0]) handleImageAttach(e.target.files[0]);
+      e.target.value = '';
+    });
+  }
+
   $('globalSettingsBtn').addEventListener('click', openSettings);
   $('chatSettingsBtn').addEventListener('click', openSettings);
   $('saveKeyBtn').addEventListener('click', saveSettings);

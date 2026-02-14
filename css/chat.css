@@ -56,6 +56,25 @@
 .send-btn:hover { background: var(--green-mid); } .send-btn:active { transform: scale(0.93); }
 .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* === Image Attach === */
+.image-attach-btn { width: 44px; height: 44px; border: none; border-radius: 50%; background: none; color: var(--gray-text); font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s; flex-shrink: 0; align-self: flex-end; }
+.image-attach-btn:hover { color: var(--green-mid); }
+
+/* === Image Preview === */
+.image-preview { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--green-pale); border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
+.image-preview img { max-height: 64px; max-width: 120px; border-radius: 8px; object-fit: cover; border: 2px solid var(--green-mid); }
+.image-preview-remove { background: none; border: none; color: #c0392b; font-size: 20px; cursor: pointer; padding: 4px 8px; border-radius: 50%; transition: background 0.2s; }
+.image-preview-remove:hover { background: rgba(192,57,43,0.1); }
+
+/* === Message Image Thumbnail === */
+.msg-image { max-width: 240px; max-height: 180px; border-radius: 12px; object-fit: cover; margin-bottom: 4px; cursor: pointer; transition: transform 0.2s; }
+.msg-image:hover { transform: scale(1.02); }
+
+/* === Poem Block === */
+.poem-block { background: var(--green-pale); border-left: 3px solid var(--green-mid); border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 8px 0; }
+.poem-text { font-style: italic; line-height: 1.8; color: var(--text); }
+.poem-attr { text-align: right; font-size: 12px; color: var(--gray-text); margin-top: 6px; }
+
 /* === Context Bar === */
 .context-bar {
   display: flex; align-items: center; gap: 8px; padding: 6px 16px;
@@ -146,6 +165,13 @@
 [data-theme="dark"] .word-chip:hover { border-color: var(--green-mid); }
 [data-theme="dark"] .word-chip.selected { border-color: var(--green-dark); background: var(--green-light); color: var(--green-mid); }
 [data-theme="dark"] .msg-bubble code { background: rgba(255,255,255,0.08); }
+[data-theme="dark"] .image-attach-btn { color: #888; }
+[data-theme="dark"] .image-attach-btn:hover { color: var(--green-mid); }
+[data-theme="dark"] .image-preview { background: #1a2e23; border-top-color: var(--gray-mid); }
+[data-theme="dark"] .image-preview img { border-color: var(--green-mid); }
+[data-theme="dark"] .poem-block { background: #1a2e23; border-left-color: #48bb78; }
+[data-theme="dark"] .poem-text { color: var(--text); }
+[data-theme="dark"] .poem-attr { color: var(--gray-text); }
 
 /* === Tablet breakpoint === */
 @media (min-width: 601px) and (max-width: 1024px) {

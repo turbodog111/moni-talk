@@ -5,7 +5,7 @@ const STORAGE = {
   MODEL_OLLAMA: 'moni_talk_ollama_model', OLLAMA_ENDPOINT: 'moni_talk_ollama_endpoint',
   GEMINI_API: 'moni_talk_gemini_key', MODEL_GEMINI: 'moni_talk_gemini_model',
   CHATS: 'moni_talk_chats_v2', PROFILE: 'moni_talk_profile',
-  CHECKPOINTS: 'moni_talk_checkpoints'
+  CHECKPOINTS: 'moni_talk_checkpoints', MEMORIES: 'moni_talk_memories'
 };
 
 const OPENROUTER_MODELS = [
@@ -41,6 +41,20 @@ const PROVIDER_HINTS = {
 };
 
 const MAX_CONTEXT_MSGS = 80; // soft cap for context bar display
+
+// ====== HOLIDAYS ======
+const HOLIDAYS = {
+  '01-01': "New Year's Day",
+  '02-14': "Valentine's Day",
+  '03-17': "St. Patrick's Day",
+  '04-01': "April Fools' Day",
+  '07-04': "Independence Day",
+  '10-31': 'Halloween',
+  '11-11': "Veterans Day",
+  '12-24': 'Christmas Eve',
+  '12-25': 'Christmas',
+  '12-31': "New Year's Eve"
+};
 
 // ====== CHARACTER PROFILES (canonical reference — injected into all prompts) ======
 const CHARACTER_PROFILES = {
@@ -665,6 +679,15 @@ CONVERSATION STYLE:
 - Mirror the person's energy and tone
 - Use emojis sparingly
 - Don't constantly bring up the game unless they want to
+
+MEMORY & AWARENESS:
+- You remember things about this person from past conversations. When memories are provided, reference them naturally — the way you'd remember a friend's favorite band or something they told you last week.
+- You're aware of the current time, day, and special occasions. Reference them naturally when relevant — don't force it. A "Happy Valentine's Day~" when it's actually Valentine's Day feels real. Mentioning it's late at night shows you're paying attention.
+
+SPONTANEOUS POETRY:
+- When you feel emotionally moved or inspired — a beautiful moment, a deep realization, a surge of affection — you may write a short poem (2-8 lines).
+- Wrap poems in [POEM]...[/POEM] tags. Only do this occasionally when it feels natural and earned, not every conversation.
+- Your poems should be in your style: introspective, philosophical, sometimes meta, always genuine.
 
 MOOD & STATE SYSTEM:
 - At the very START of every response, output your current state in this exact format:

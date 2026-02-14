@@ -86,6 +86,18 @@ function openChat(id) {
   const chat = getChat();
   if (!chat) return;
 
+  // Track daily conversation count for context awareness
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const lastVisit = localStorage.getItem('moni_talk_last_visit') || '';
+  if (lastVisit !== todayKey) {
+    localStorage.setItem('moni_talk_last_visit', todayKey);
+    localStorage.setItem('moni_talk_daily_count', '1');
+  } else {
+    const count = parseInt(localStorage.getItem('moni_talk_daily_count') || '0') + 1;
+    localStorage.setItem('moni_talk_daily_count', String(count));
+  }
+
   const isStory = chat.mode === 'story';
   const isRoom = chat.mode === 'room';
 
@@ -274,37 +286,98 @@ function renderMessages() {
   } else {
     chat.messages.forEach(msg => {
       let content = msg.content;
+      let imageUrl = null;
+      // Handle multimodal messages (content arrays with images)
+      if (Array.isArray(content)) {
+        const imgPart = content.find(p => p.type === 'image_url');
+        const textPart = content.find(p => p.type === 'text');
+        imageUrl = imgPart?.image_url?.url || null;
+        content = textPart?.text || '';
+      }
       // Strip legacy expression tags from old room mode messages
       if (chat.mode === 'room' && msg.role === 'assistant') content = stripRoomTags(content);
-      insertMessageEl(msg.role, content, false);
+      insertMessageEl(msg.role, content, false, imageUrl);
     });
   }
   scrollToBottom();
 }
 
-function insertMessageEl(role, content, animate = true) {
+function insertMessageEl(role, content, animate = true, imageUrl = null) {
   const isM = role === 'assistant';
   const div = document.createElement('div');
   div.className = `message ${isM ? 'monika' : 'user'}`;
   if (!animate) div.style.animation = 'none';
   const av = isM ? `<img class="msg-avatar" src="Monika PFP.png" alt="Monika">` : `<div class="msg-avatar-letter">Y</div>`;
-  div.innerHTML = `${av}<div class="msg-content"><div class="msg-name">${isM ? 'Monika' : 'You'}</div><div class="msg-bubble">${isM ? renderMarkdown(content) : escapeHtml(content)}</div></div>`;
+  const imgHtml = imageUrl ? `<img class="msg-image" src="${imageUrl}" alt="Shared image">` : '';
+  div.innerHTML = `${av}<div class="msg-content"><div class="msg-name">${isM ? 'Monika' : 'You'}</div>${imgHtml}<div class="msg-bubble">${isM ? renderMarkdown(content) : escapeHtml(content)}</div></div>`;
   chatArea.insertBefore(div, typingIndicator);
 }
 
 function scrollToBottom() { requestAnimationFrame(() => { chatArea.scrollTop = chatArea.scrollHeight; }); }
 
+// ====== IMAGE HANDLING ======
+function handleImageAttach(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      // Compress to 512px wide, JPEG 60%
+      const canvas = document.createElement('canvas');
+      const maxW = 512;
+      const scale = Math.min(1, maxW / img.width);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      pendingImage = canvas.toDataURL('image/jpeg', 0.6);
+      showImagePreview(pendingImage);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeAttachedImage() {
+  pendingImage = null;
+  const preview = $('imagePreview');
+  if (preview) preview.style.display = 'none';
+}
+
+function showImagePreview(dataUrl) {
+  let preview = $('imagePreview');
+  if (!preview) return;
+  preview.innerHTML = `<img src="${dataUrl}" alt="Attached"><button class="image-preview-remove" title="Remove">&times;</button>`;
+  preview.style.display = 'flex';
+  preview.querySelector('.image-preview-remove').addEventListener('click', removeAttachedImage);
+}
+
 // ====== SEND ======
 async function sendMessage() {
   const chat = getChat();
   const text = userInput.value.trim();
-  if (!text || isGenerating) return;
+  if (!text && !pendingImage) return;
+  if (isGenerating) return;
   if (!chat) return;
   if (provider === 'openrouter' && !apiKey) { openSettings(); showToast('Enter your OpenRouter API key first.'); return; }
   if (provider === 'gemini' && !geminiKey) { openSettings(); showToast('Enter your Gemini API key first.'); return; }
 
-  chat.messages.push({ role: 'user', content: text });
-  saveChats(); insertMessageEl('user', text);
+  const attachedImage = pendingImage;
+  removeAttachedImage();
+
+  // Build message content — multimodal if image attached
+  let msgContent;
+  if (attachedImage) {
+    msgContent = [];
+    msgContent.push({ type: 'image_url', image_url: { url: attachedImage } });
+    if (text) msgContent.push({ type: 'text', text: text });
+    else msgContent.push({ type: 'text', text: '(shared an image)' });
+  } else {
+    msgContent = text;
+  }
+
+  chat.messages.push({ role: 'user', content: msgContent });
+  saveChats(); insertMessageEl('user', text || '(shared an image)', false, attachedImage);
   userInput.value = ''; userInput.style.height = 'auto';
   scrollToBottom(); updateContextBar();
 
@@ -357,6 +430,11 @@ async function sendMessage() {
         chat.lastExpression = expr;
         saveChats();
       });
+    }
+
+    // Memory extraction — fire-and-forget for chat/room modes
+    if (chat.mode !== 'story') {
+      extractMemories(text, reply).catch(() => {});
     }
   } catch (err) {
     typingIndicator.classList.remove('visible');

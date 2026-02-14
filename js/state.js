@@ -19,6 +19,8 @@ let puterUser = null;
 let syncTimer = null;
 let deletedChatIds = new Set(JSON.parse(localStorage.getItem('moni_talk_deleted_ids') || '[]'));
 let currentTheme = localStorage.getItem('moni_talk_theme') || 'system';
+let memories = JSON.parse(localStorage.getItem('moni_talk_memories') || '[]');
+let pendingImage = null;
 
 // ====== DOM ======
 const $ = id => document.getElementById(id);
@@ -49,6 +51,13 @@ function escapeHtml(t) { const d = document.createElement('div'); d.textContent 
 
 function renderMarkdown(text) {
   let h = escapeHtml(text);
+
+  // Detect [POEM]...[/POEM] blocks and replace with styled poetry
+  h = h.replace(/\[POEM\]([\s\S]*?)\[\/POEM\]/gi, (match, poemContent) => {
+    const lines = poemContent.trim().split('\n').map(l => l.trim()).filter(l => l).join('<br>');
+    return `<div class="poem-block"><div class="poem-text">${lines}</div><div class="poem-attr">&mdash; Monika</div></div>`;
+  });
+
   h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   h = h.replace(/\*(.+?)\*/g, '<em>$1</em>');
   h = h.replace(/`(.+?)`/g, '<code>$1</code>');
