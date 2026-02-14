@@ -105,6 +105,20 @@ function init() {
     });
   }
 
+  // Benchmark
+  $('openBenchmarkBtn').addEventListener('click', () => { closeSettings(); openBenchmarkModal(); });
+  $('benchCloseBtn').addEventListener('click', closeBenchmarkModal);
+  $('benchmarkModal').addEventListener('click', (e) => { if (e.target === $('benchmarkModal')) closeBenchmarkModal(); });
+  $('benchTabRun').addEventListener('click', () => switchBenchTab('run'));
+  $('benchTabResults').addEventListener('click', () => switchBenchTab('results'));
+  $('benchRunAllBtn').addEventListener('click', async () => {
+    await runBenchmarkTests(STORY_TESTS, 'story');
+    if (!benchCancelled) await runBenchmarkTests(CHAT_TESTS, 'chat');
+  });
+  $('benchRunStoryBtn').addEventListener('click', () => runBenchmarkTests(STORY_TESTS, 'story'));
+  $('benchRunChatBtn').addEventListener('click', () => runBenchmarkTests(CHAT_TESTS, 'chat'));
+  $('benchCancelBtn').addEventListener('click', cancelBenchmark);
+
   // Sync
   $('syncBtn').addEventListener('click', openSyncModal);
   $('signInBtn').addEventListener('click', handleSignIn);

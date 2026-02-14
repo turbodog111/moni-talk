@@ -238,6 +238,10 @@
       <option value="dark">Dark</option>
     </select>
     <div class="hint">Choose your preferred color theme.</div>
+    <div class="field-gap"></div>
+    <label>Model Benchmark</label>
+    <div class="hint">Run standardized tests to compare how well your current model handles Moni-Talk scenarios (character voice, tag formatting, affinity tracking).</div>
+    <button class="btn btn-primary bench-open-btn" id="openBenchmarkBtn" style="width:100%;margin-top:8px;">Open Benchmark Suite</button>
     <div class="modal-actions">
       <button class="btn btn-danger" id="clearKeyBtn">Clear Key</button>
       <button class="btn btn-secondary" id="cancelSettingsBtn">Cancel</button>
@@ -268,6 +272,44 @@
         <button class="btn btn-primary" id="syncNowBtn">Sync Now</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Benchmark Modal -->
+<div class="modal-overlay" id="benchmarkModal">
+  <div class="modal bench-modal">
+    <div class="bench-header">
+      <h2>Benchmark Suite</h2>
+      <button class="bench-close" id="benchCloseBtn">&times;</button>
+    </div>
+    <div class="bench-model-bar" id="benchModelInfo"></div>
+    <div class="bench-tabs">
+      <button class="bench-tab active" id="benchTabRun">Run Tests</button>
+      <button class="bench-tab" id="benchTabResults">Results</button>
+    </div>
+    <div class="bench-body" id="benchRunContent">
+      <div class="bench-section">
+        <h3>Story Mode</h3>
+        <div id="benchStoryTests"></div>
+      </div>
+      <div class="bench-section">
+        <h3>Casual Chat</h3>
+        <div id="benchChatTests"></div>
+      </div>
+      <div class="bench-actions">
+        <button class="btn btn-primary" id="benchRunAllBtn">Run All Tests</button>
+        <button class="btn btn-secondary" id="benchRunStoryBtn">Story Only</button>
+        <button class="btn btn-secondary" id="benchRunChatBtn">Chat Only</button>
+      </div>
+      <div class="bench-progress" id="benchProgressSection" style="display:none;">
+        <div class="bench-progress-row">
+          <span id="benchProgressLabel">Preparing...</span>
+          <button class="btn btn-danger btn-sm" id="benchCancelBtn">Cancel</button>
+        </div>
+        <div class="bench-progress-track"><div class="bench-progress-fill" id="benchProgressBar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="bench-body" id="benchResultsContent" style="display:none;"></div>
   </div>
 </div>
 
@@ -358,6 +400,7 @@
 <script src="js/settings.js"></script>
 <script src="js/sync.js"></script>
 <script src="js/memory.js"></script>
+<script src="js/benchmark.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/story.js"></script>
 <script src="js/vn.js"></script>
