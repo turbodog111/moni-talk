@@ -247,12 +247,16 @@ async function callGemini(chat) {
 // ====== API: OLLAMA (non-streaming, kept for callAI) ======
 async function callOllama(chat) {
   const isStory = chat.mode === 'story';
+  const timeout = isStory ? 300000 : 180000; // 5 min story, 3 min chat
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
 
   let res;
   try {
     res = await fetch(`${ollamaEndpoint}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
       body: JSON.stringify({
         model: ollamaModel,
         messages: buildMessages(chat),
@@ -270,7 +274,10 @@ async function callOllama(chat) {
       })
     });
   } catch (err) {
+    if (err.name === 'AbortError') throw new Error('Ollama request timed out. The model may need more time — try a smaller quantization or shorter context.');
     throw new Error('Cannot reach Ollama. Is it running? Check that Ollama is open and OLLAMA_ORIGINS is set.');
+  } finally {
+    clearTimeout(timer);
   }
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -283,12 +290,16 @@ async function callOllama(chat) {
 // ====== STREAMING: OLLAMA (NDJSON) ======
 async function streamOllama(chat, onChunk) {
   const isStory = chat.mode === 'story';
+  const timeout = isStory ? 300000 : 180000; // 5 min story, 3 min chat
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
 
   let res;
   try {
     res = await fetch(`${ollamaEndpoint}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
       body: JSON.stringify({
         model: ollamaModel,
         messages: buildMessages(chat),
@@ -306,8 +317,12 @@ async function streamOllama(chat, onChunk) {
       })
     });
   } catch (err) {
+    clearTimeout(timer);
+    if (err.name === 'AbortError') throw new Error('Ollama request timed out. The model may need more time — try a smaller quantization or shorter context.');
     throw new Error('Cannot reach Ollama. Is it running? Check that Ollama is open and OLLAMA_ORIGINS is set.');
   }
+  // Connection established — clear initial timeout, streaming is alive
+  clearTimeout(timer);
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data?.error?.message || `Ollama error (${res.status})`);
@@ -411,10 +426,13 @@ async function callAI(messages, maxTokens = 600) {
     return data.choices?.[0]?.message?.content?.trim() || '';
   }
   if (provider === 'ollama') {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 180000);
     try {
       const res = await fetch(`${ollamaEndpoint}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           model: ollamaModel,
           messages,
@@ -435,7 +453,10 @@ async function callAI(messages, maxTokens = 600) {
       const data = await res.json();
       return data.message?.content?.trim() || '';
     } catch (err) {
+      if (err.name === 'AbortError') throw new Error('Ollama request timed out.');
       throw new Error(err?.message || 'Ollama request failed. Is it running?');
+    } finally {
+      clearTimeout(timer);
     }
   }
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {

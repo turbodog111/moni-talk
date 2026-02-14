@@ -480,13 +480,15 @@ async function generateStoryBeat(chat) {
     updateVnDay(chat.storyDay || 1);
 
     // Affinity fallback — merge with existing, never lose values
+    // Rule-based filter: only accept affinity changes for characters actually present in the scene
     const prev = { ...(chat.storyAffinity || { sayori: 15, natsuki: 1, yuri: 1, monika: 10 }) };
     if (affinity) {
+      const sceneLower = narrative.toLowerCase();
       chat.storyAffinity = {
-        sayori: affinity.sayori ?? prev.sayori,
-        natsuki: affinity.natsuki ?? prev.natsuki,
-        yuri: affinity.yuri ?? prev.yuri,
-        monika: affinity.monika ?? prev.monika
+        sayori: (sceneLower.includes('sayori') && affinity.sayori != null) ? affinity.sayori : prev.sayori,
+        natsuki: (sceneLower.includes('natsuki') && affinity.natsuki != null) ? affinity.natsuki : prev.natsuki,
+        yuri: (sceneLower.includes('yuri') && affinity.yuri != null) ? affinity.yuri : prev.yuri,
+        monika: (sceneLower.includes('monika') && affinity.monika != null) ? affinity.monika : prev.monika
       };
     } else {
       chat.storyAffinity = prev;
