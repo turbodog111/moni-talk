@@ -146,19 +146,13 @@ function openChat(id) {
   }
   hideAffinityPanel();
 
-  if (isRoom) {
-    initRoomMode(chat);
-    renderMessages(); // still render for history purposes (hidden in room mode)
-  } else {
-    renderMessages();
-  }
+  if (isRoom) initRoomMode(chat);
+  renderMessages();
   updateContextBar();
 
   if (isStory && chat.messages.length === 0) {
     generateStoryBeat(chat);
-  } else if (!isStory && !isRoom) {
-    userInput.focus();
-  } else if (isRoom) {
+  } else if (!isStory) {
     userInput.focus();
   }
 }
@@ -278,7 +272,12 @@ function renderMessages() {
       renderStoryChoices(['Continue']);
     }
   } else {
-    chat.messages.forEach(msg => insertMessageEl(msg.role, msg.content, false));
+    chat.messages.forEach(msg => {
+      let content = msg.content;
+      // Strip legacy expression tags from old room mode messages
+      if (chat.mode === 'room' && msg.role === 'assistant') content = stripRoomTags(content);
+      insertMessageEl(msg.role, content, false);
+    });
   }
   scrollToBottom();
 }
@@ -298,7 +297,6 @@ function scrollToBottom() { requestAnimationFrame(() => { chatArea.scrollTop = c
 // ====== SEND ======
 async function sendMessage() {
   const chat = getChat();
-  if (chat && chat.mode === 'room') { sendRoomMessage(); return; }
   const text = userInput.value.trim();
   if (!text || isGenerating) return;
   if (!chat) return;
@@ -311,6 +309,7 @@ async function sendMessage() {
   scrollToBottom(); updateContextBar();
 
   isGenerating = true; sendBtn.disabled = true;
+  if (chat.mode === 'room') drawMasSprite('think');
   typingIndicator.classList.add('visible'); scrollToBottom();
 
   let msgBubble = null;
@@ -351,9 +350,18 @@ async function sendMessage() {
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
     updateChatHeader(chat);
     scrollToBottom(); updateContextBar();
+
+    // Room mode: update sprite expression asynchronously
+    if (chat.mode === 'room') {
+      updateRoomExpression(reply, mood, moodIntensity).then(expr => {
+        chat.lastExpression = expr;
+        saveChats();
+      });
+    }
   } catch (err) {
     typingIndicator.classList.remove('visible');
     showToast(err.message || 'Something went wrong.');
+    if (chat.mode === 'room') drawMasSprite(chat.lastExpression || 'happy');
   } finally {
     isGenerating = false; sendBtn.disabled = false; userInput.focus();
   }

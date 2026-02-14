@@ -5,15 +5,12 @@ const masImageCache = {};
 let masImagesLoaded = false;
 let masLoadingPromise = null;
 
-// Dialogue queue state
-let roomDialogueLines = [];
-let roomDialogueIndex = -1;
-let roomDialogueActive = false;
-let roomClickHandlersInit = false;
-
 // Canvas ref
 let masCanvas = null;
 let masCtx = null;
+
+// Current expression for redrawing on resize
+let currentRoomExpression = 'happy';
 
 // Canonical canvas size — all layers drawn at this size
 const MAS_W = 1280, MAS_H = 850;
@@ -27,8 +24,9 @@ const MAS_LAYER_ORDER = [
   { type: 'clothes0',   file: 'sprites/monika/c/def/clothes-0.png' },
   { type: 'clothes1',   file: 'sprites/monika/c/def/clothes-1.png' },
   { type: 'arms',       file: 'sprites/monika/b/arms-steepling-10.png' },
-  { type: 'ribbonback', file: 'sprites/monika/a/ribbon_def/0.png' },
+  { type: 'armclothes', file: 'sprites/monika/c/def/arms-steepling-10.png' },
   { type: 'hairback',   file: 'sprites/monika/h/def/0.png' },
+  { type: 'ribbonback', file: 'sprites/monika/a/ribbon_def/0.png' },
   { type: 'bodyhead',   file: 'sprites/monika/b/body-def-head.png' },
   // Face parts inserted dynamically after bodyhead
   { type: 'ribbonfront',file: 'sprites/monika/a/ribbon_def/5.png' },
@@ -53,7 +51,7 @@ function loadImage(src) {
     img.onload = () => { masImageCache[src] = img; resolve(img); };
     img.onerror = () => {
       console.warn('[ROOM] Failed to load:', src);
-      resolve(null); // Missing sprites shouldn't crash
+      resolve(null);
     };
     img.src = src;
   });
@@ -65,15 +63,9 @@ async function preloadMasImages() {
 
   masLoadingPromise = (async () => {
     const files = new Set();
-
-    // Backgrounds
     files.add(MAS_BG_DAY);
     files.add(MAS_BG_NIGHT);
-
-    // Static layers
     MAS_LAYER_ORDER.forEach(l => files.add(l.file));
-
-    // Face parts: nose + all expression variants
     files.add('sprites/monika/f/face-nose-def.png');
     for (const [, expr] of Object.entries(MAS_EXPRESSIONS)) {
       files.add(`sprites/monika/f/face-eyes-${expr.eyes}.png`);
@@ -83,7 +75,6 @@ async function preloadMasImages() {
       if (expr.tears) files.add(`sprites/monika/f/face-tears-${expr.tears}.png`);
       if (expr.sweat) files.add(`sprites/monika/f/face-sweatdrop-${expr.sweat}.png`);
     }
-
     await Promise.all([...files].map(f => loadImage(f)));
     masImagesLoaded = true;
     masLoadingPromise = null;
@@ -99,9 +90,11 @@ function resizeMasCanvas() {
   masCtx = masCanvas.getContext('2d');
 
   const container = masCanvas.parentElement;
-  const dpr = window.devicePixelRatio || 1;
+  if (!container) return;
   const rect = container.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
 
+  const dpr = window.devicePixelRatio || 1;
   const scale = Math.min(rect.width / MAS_W, rect.height / MAS_H);
   const drawW = Math.floor(MAS_W * scale);
   const drawH = Math.floor(MAS_H * scale);
@@ -111,6 +104,9 @@ function resizeMasCanvas() {
   masCanvas.style.width = drawW + 'px';
   masCanvas.style.height = drawH + 'px';
   masCtx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+
+  // Redraw current expression after resize (canvas clears when dimensions change)
+  if (masImagesLoaded) drawMasSprite(currentRoomExpression);
 }
 
 function drawLayer(src) {
@@ -122,18 +118,17 @@ function drawMasSprite(expressionName) {
   if (!masCtx || !masCanvas) return;
 
   const expr = MAS_EXPRESSIONS[expressionName] || MAS_EXPRESSIONS.happy;
+  currentRoomExpression = expressionName;
 
   masCtx.clearRect(0, 0, MAS_W, MAS_H);
 
   // 1. Background — stretched to fill canvas (1280x720 → 1280x850)
-  const bgFile = getMasBgFile();
-  drawLayer(bgFile);
+  drawLayer(getMasBgFile());
 
-  // 2. Draw character layers in order, inserting face parts after bodyhead
+  // 2. Character layers with face parts inserted after bodyhead
   for (const layer of MAS_LAYER_ORDER) {
     drawLayer(layer.file);
 
-    // After bodyhead, draw face parts
     if (layer.type === 'bodyhead') {
       drawLayer(`sprites/monika/f/face-eyes-${expr.eyes}.png`);
       drawLayer(`sprites/monika/f/face-eyebrows-${expr.eyebrows}.png`);
@@ -146,250 +141,47 @@ function drawMasSprite(expressionName) {
   }
 }
 
-// ====== RESPONSE PARSING ======
-function parseRoomResponse(rawText) {
-  // 1. Strip mood/drift tags
-  const { mood, moodIntensity, drift, text } = parseStateTags(
-    rawText,
-    'cheerful', 'moderate', 'casual'
-  );
+// ====== EXPRESSION PICKER (separate AI call) ======
+const EXPRESSION_PICKER_PROMPT = `Pick the single facial expression that best matches this message and mood. Reply with ONLY the expression name, nothing else.
 
-  // 2. Split into lines
-  const rawLines = text.split('\n').map(l => l.trim()).filter(Boolean);
+Expressions: happy, sad, angry, surprised, flirty, smug, laugh, tender, think, worried, cry, pout, wink, nervous`;
 
-  // 3. Parse expression tags from each line
-  const tagRe = /^\[(\w+)\]\s*(.+)$/;
-  const dialogueLines = [];
-  let lastExpr = 'happy';
-
-  if (rawLines.length === 0) {
-    return { mood, moodIntensity, drift, dialogueLines: [{ expression: 'happy', text: rawText.trim() || '...' }] };
-  }
-
-  // Check if ANY line has a tag
-  const hasAnyTags = rawLines.some(l => tagRe.test(l));
-
-  if (hasAnyTags) {
-    for (const line of rawLines) {
-      const m = line.match(tagRe);
-      if (m) {
-        const exprName = m[1].toLowerCase();
-        const expr = MAS_EXPRESSIONS[exprName] ? exprName : lastExpr;
-        lastExpr = expr;
-        dialogueLines.push({ expression: expr, text: m[2].trim() });
-      } else {
-        dialogueLines.push({ expression: lastExpr, text: line });
-      }
-    }
-  } else {
-    // No tags — split by sentences and use keyword detection
-    const fullText = rawLines.join(' ');
-    const sentences = fullText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [fullText];
-    for (const sentence of sentences) {
-      const trimmed = sentence.trim();
-      if (!trimmed) continue;
-      dialogueLines.push({ expression: detectExpression(trimmed), text: trimmed });
-    }
-  }
-
-  if (dialogueLines.length === 0) {
-    dialogueLines.push({ expression: 'happy', text: text });
-  }
-
-  return { mood, moodIntensity, drift, dialogueLines };
-}
-
-function detectExpression(text) {
-  const priority = ['cry', 'laugh', 'flirty', 'angry', 'surprised', 'wink', 'pout', 'nervous', 'smug', 'tender', 'worried', 'sad', 'think', 'happy'];
-  for (const name of priority) {
-    if (EXPRESSION_KEYWORDS[name] && EXPRESSION_KEYWORDS[name].test(text)) return name;
-  }
-  return 'happy';
-}
-
-// ====== LIVE STREAMING DISPLAY ======
-// Strip mood/drift/expression tags for live display
-function liveStripRoomTags(text) {
-  return text
-    .replace(/^\[MOOD:\s*\w+(?::\s*\w+)?\]\s*(?:\[DRIFT:\s*\w+\]\s*)?/i, '')
-    .replace(/^\[(\w+)\]\s*/gm, '')
-    .trim();
-}
-
-// ====== DIALOGUE QUEUE ======
-function startRoomDialogue(lines) {
-  roomDialogueLines = lines;
-  roomDialogueIndex = 0;
-  roomDialogueActive = true;
-  showRoomLine(0);
-}
-
-function showRoomLine(index) {
-  if (index < 0 || index >= roomDialogueLines.length) return;
-
-  const line = roomDialogueLines[index];
-  const textEl = $('roomDialogueText');
-  const box = $('roomDialogueBox');
-  const hint = $('roomAdvanceHint');
-  if (!textEl || !box) return;
-
-  // Update sprite expression
-  drawMasSprite(line.expression);
-
-  // Update dialogue text
-  textEl.textContent = line.text;
-  box.style.display = '';
-
-  // Show/hide advance indicator
-  const isLast = index >= roomDialogueLines.length - 1;
-  hint.textContent = isLast ? '' : '\u25BC';
-  hint.style.display = isLast ? 'none' : '';
-}
-
-function advanceRoomDialogue() {
-  if (!roomDialogueActive) return;
-
-  roomDialogueIndex++;
-  if (roomDialogueIndex >= roomDialogueLines.length) {
-    finishRoomDialogue();
-    return;
-  }
-  showRoomLine(roomDialogueIndex);
-}
-
-function finishRoomDialogue() {
-  roomDialogueActive = false;
-  roomDialogueIndex = -1;
-
-  const box = $('roomDialogueBox');
-  if (box) box.style.display = 'none';
-
-  // Re-enable input
-  const input = $('userInput');
-  const btn = $('sendBtn');
-  if (input) { input.disabled = false; input.focus(); }
-  if (btn) btn.disabled = false;
-
-  // Keep the last expression on screen
-  if (roomDialogueLines.length > 0) {
-    drawMasSprite(roomDialogueLines[roomDialogueLines.length - 1].expression);
-  }
-}
-
-// ====== SEND FLOW ======
-async function sendRoomMessage() {
-  const text = userInput.value.trim();
-  if (!text || isGenerating) return;
-  const chat = getChat();
-  if (!chat) return;
-  if (provider === 'openrouter' && !apiKey) { openSettings(); showToast('Enter your OpenRouter API key first.'); return; }
-  if (provider === 'gemini' && !geminiKey) { openSettings(); showToast('Enter your Gemini API key first.'); return; }
-
-  // Push user message
-  chat.messages.push({ role: 'user', content: text });
-  saveChats();
-  userInput.value = '';
-  userInput.style.height = 'auto';
-
-  // Disable input, show thinking expression
-  userInput.disabled = true;
-  sendBtn.disabled = true;
-  isGenerating = true;
-  drawMasSprite('think');
-
-  // Show dialogue box for live streaming text
-  const textEl = $('roomDialogueText');
-  const box = $('roomDialogueBox');
-  const hint = $('roomAdvanceHint');
-  if (box) box.style.display = '';
-  if (textEl) textEl.textContent = '...';
-  if (hint) hint.style.display = 'none';
-
+async function pickExpressionAI(responseText, mood, intensity) {
   try {
-    let fullText = '';
-    let updatePending = false;
-
-    // Stream text live into the dialogue box
-    await callProviderStreaming(chat, (chunk) => {
-      fullText += chunk;
-      if (!updatePending) {
-        updatePending = true;
-        requestAnimationFrame(() => {
-          if (textEl) textEl.textContent = liveStripRoomTags(fullText);
-          updatePending = false;
-        });
-      }
-    });
-
-    const rawReply = fullText.trim();
-    if (!rawReply) throw new Error('Got an empty response. Try again.');
-
-    // Hide dialogue box briefly, then start click-to-advance
-    if (box) box.style.display = 'none';
-
-    // Parse response
-    const { mood, moodIntensity, drift, dialogueLines } = parseRoomResponse(rawReply);
-
-    // Update chat state
-    chat.mood = mood;
-    chat.moodIntensity = moodIntensity;
-    chat.drift = drift;
-    chat.lastActiveTime = Date.now();
-    chat.lastExpression = dialogueLines[dialogueLines.length - 1]?.expression || 'happy';
-
-    // Store clean reply for history
-    const cleanReply = dialogueLines.map(l => `[${l.expression}] ${l.text}`).join('\n');
-    chat.messages.push({ role: 'assistant', content: cleanReply });
-    saveChats();
-    updateChatHeader(chat);
-
-    // Start click-to-advance dialogue queue
-    startRoomDialogue(dialogueLines);
-
-  } catch (err) {
-    showToast(err.message || 'Something went wrong.');
-    if (box) box.style.display = 'none';
-    userInput.disabled = false;
-    sendBtn.disabled = false;
-    drawMasSprite(chat.lastExpression || 'happy');
-  } finally {
-    isGenerating = false;
+    const messages = [
+      { role: 'system', content: EXPRESSION_PICKER_PROMPT },
+      { role: 'user', content: `Mood: ${mood} (${intensity})\nMessage: "${responseText.slice(0, 300)}"` }
+    ];
+    const result = await callAI(messages, 10);
+    const name = result.trim().toLowerCase().replace(/[^a-z]/g, '');
+    return MAS_EXPRESSIONS[name] ? name : null;
+  } catch {
+    return null;
   }
 }
 
-// ====== CLICK/TAP/KEY HANDLERS ======
-function initRoomClickHandlers() {
-  if (roomClickHandlersInit) return;
-  roomClickHandlersInit = true;
+// Mood-to-expression mapping for instant fallback
+function moodToExpression(mood) {
+  const map = {
+    cheerful: 'happy', playful: 'smug', thoughtful: 'think', melancholic: 'sad',
+    excited: 'surprised', tender: 'tender', teasing: 'wink', curious: 'think',
+    nostalgic: 'tender', flustered: 'nervous', calm: 'happy', passionate: 'flirty'
+  };
+  return map[mood] || 'happy';
+}
 
-  const scene = $('roomScene');
-  const box = $('roomDialogueBox');
+// Update expression: immediate mood fallback, then async AI refinement
+async function updateRoomExpression(responseText, mood, intensity) {
+  // Immediate: use mood mapping
+  const moodExpr = moodToExpression(mood);
+  drawMasSprite(moodExpr);
 
-  if (box) {
-    box.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (roomDialogueActive) advanceRoomDialogue();
-    });
-  }
+  // Async: ask AI for better expression
+  const aiExpr = await pickExpressionAI(responseText, mood, intensity);
+  // Only update if user hasn't started another message
+  if (!isGenerating && aiExpr) drawMasSprite(aiExpr);
 
-  if (scene) {
-    scene.addEventListener('click', (e) => {
-      if (e.target.closest('.room-dialogue-box') || e.target.closest('.input-area')) return;
-      if (roomDialogueActive) advanceRoomDialogue();
-    });
-  }
-
-  // Keyboard: Space or Enter to advance (only when dialogue is active and not typing)
-  document.addEventListener('keydown', (e) => {
-    if (!roomDialogueActive) return;
-    const chat = getChat();
-    if (!chat || chat.mode !== 'room') return;
-    if (e.key === ' ' || e.key === 'Enter') {
-      if (document.activeElement === $('userInput')) return;
-      e.preventDefault();
-      advanceRoomDialogue();
-    }
-  });
+  return aiExpr || moodExpr;
 }
 
 // ====== INIT / TEARDOWN ======
@@ -411,42 +203,22 @@ async function initRoomMode(chat) {
   await preloadMasImages();
   loadingEl.style.display = 'none';
 
-  // Setup canvas
   resizeMasCanvas();
 
-  // Draw initial expression (restore last from chat history)
-  let lastExpr = chat.lastExpression || 'happy';
-  if (chat.messages.length > 0) {
-    const lastAssistant = [...chat.messages].reverse().find(m => m.role === 'assistant');
-    if (lastAssistant) {
-      const { dialogueLines } = parseRoomResponse(lastAssistant.content);
-      if (dialogueLines.length > 0) lastExpr = dialogueLines[dialogueLines.length - 1].expression;
-    }
-  }
+  // Restore last expression
+  const lastExpr = chat.lastExpression || 'happy';
   drawMasSprite(lastExpr);
 
-  // Resize handler
   window.addEventListener('resize', resizeMasCanvas);
-
-  // Init click handlers (once)
-  initRoomClickHandlers();
 }
 
 function teardownRoomMode() {
   const scene = $('roomScene');
   if (scene) scene.style.display = 'none';
-
-  const box = $('roomDialogueBox');
-  if (box) box.style.display = 'none';
-
-  roomDialogueActive = false;
-  roomDialogueLines = [];
-  roomDialogueIndex = -1;
-
   window.removeEventListener('resize', resizeMasCanvas);
 }
 
-// Strip expression tags for chat list preview
+// Strip expression tags for legacy room mode messages
 function stripRoomTags(text) {
   return text.replace(/^\[(\w+)\]\s*/gm, '').trim();
 }

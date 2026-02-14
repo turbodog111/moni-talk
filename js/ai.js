@@ -93,26 +93,6 @@ function buildMessages(chat) {
     }
     return msgs;
   }
-  // Room mode
-  if (chat.mode === 'room') {
-    const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
-    let sys = BASE_PROMPT + ROOM_EXPRESSION_ADDON + '\n\n' + rel.prompt + buildProfilePrompt();
-
-    const mood = chat.mood || 'cheerful';
-    const intensity = chat.moodIntensity || 'moderate';
-    const drift = chat.drift || 'casual';
-    const timeCtx = buildTimeContext(chat);
-
-    sys += `\n\n=== CURRENT STATE ===\nMood: ${mood} (${intensity})\nDrift: ${drift}`;
-    if (timeCtx) sys += `\n${timeCtx}`;
-    sys += `\nLet your mood and drift evolve naturally from here.`;
-
-    return [
-      { role: 'system', content: sys },
-      ...chat.messages.map(m => ({ role: m.role, content: m.content }))
-    ];
-  }
-
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
   let sys = BASE_PROMPT + '\n\n' + rel.prompt + buildProfilePrompt();
 
@@ -125,9 +105,17 @@ function buildMessages(chat) {
   if (timeCtx) sys += `\n${timeCtx}`;
   sys += `\nLet your mood and drift evolve naturally from here.`;
 
+  // Strip legacy expression tags from old room mode messages
+  const msgs = chat.messages.map(m => {
+    if (chat.mode === 'room' && m.role === 'assistant' && /^\[\w+\]\s/m.test(m.content)) {
+      return { role: m.role, content: m.content.replace(/^\[(\w+)\]\s*/gm, '') };
+    }
+    return { role: m.role, content: m.content };
+  });
+
   return [
     { role: 'system', content: sys },
-    ...chat.messages.map(m => ({ role: m.role, content: m.content }))
+    ...msgs
   ];
 }
 
@@ -155,7 +143,7 @@ async function callOpenRouter(chat) {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': window.location.href, 'X-Title': 'Moni-Talk' },
-    body: JSON.stringify({ model: selectedModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 1500 : chat.mode === 'room' ? 600 : 400, temperature: chat.mode === 'story' ? 0.85 : 0.8 })
+    body: JSON.stringify({ model: selectedModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 1500 : 400, temperature: chat.mode === 'story' ? 0.85 : 0.8 })
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -202,7 +190,7 @@ async function callGemini(chat) {
     body: JSON.stringify({
       model: geminiModel,
       messages: buildMessages(chat),
-      max_tokens: chat.mode === 'story' ? 2000 : chat.mode === 'room' ? 600 : 400,
+      max_tokens: chat.mode === 'story' ? 2000 : 400,
       temperature: chat.mode === 'story' ? 0.85 : 0.8
     })
   });
@@ -219,7 +207,7 @@ async function callGemini(chat) {
 // ====== API: OLLAMA (non-streaming, kept for callAI) ======
 async function callOllama(chat) {
   const isStory = chat.mode === 'story';
-  const isRoom = chat.mode === 'room';
+
   let res;
   try {
     res = await fetch(`${ollamaEndpoint}/api/chat`, {
@@ -231,7 +219,7 @@ async function callOllama(chat) {
         stream: false,
         keep_alive: 10,
         options: {
-          num_predict: isStory ? 1500 : isRoom ? 600 : 500,
+          num_predict: isStory ? 1500 : 500,
           num_ctx: 16384,
           temperature: isStory ? 0.8 : 0.75,
           top_p: 0.92,
@@ -255,7 +243,7 @@ async function callOllama(chat) {
 // ====== STREAMING: OLLAMA (NDJSON) ======
 async function streamOllama(chat, onChunk) {
   const isStory = chat.mode === 'story';
-  const isRoom = chat.mode === 'room';
+
   let res;
   try {
     res = await fetch(`${ollamaEndpoint}/api/chat`, {
@@ -267,7 +255,7 @@ async function streamOllama(chat, onChunk) {
         stream: true,
         keep_alive: 10,
         options: {
-          num_predict: isStory ? 1500 : isRoom ? 600 : 500,
+          num_predict: isStory ? 1500 : 500,
           num_ctx: 16384,
           temperature: isStory ? 0.8 : 0.75,
           top_p: 0.92,
@@ -336,7 +324,7 @@ async function streamGemini(chat, onChunk) {
   return await streamSSE(
     'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
     { 'Content-Type': 'application/json', 'Authorization': `Bearer ${geminiKey}` },
-    { model: geminiModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 2000 : chat.mode === 'room' ? 600 : 400, temperature: chat.mode === 'story' ? 0.85 : 0.8 },
+    { model: geminiModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 2000 : 400, temperature: chat.mode === 'story' ? 0.85 : 0.8 },
     onChunk
   );
 }
@@ -345,7 +333,7 @@ async function streamOpenRouter(chat, onChunk) {
   return await streamSSE(
     'https://openrouter.ai/api/v1/chat/completions',
     { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': window.location.href, 'X-Title': 'Moni-Talk' },
-    { model: selectedModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 1500 : chat.mode === 'room' ? 600 : 400, temperature: chat.mode === 'story' ? 0.85 : 0.8 },
+    { model: selectedModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 1500 : 400, temperature: chat.mode === 'story' ? 0.85 : 0.8 },
     onChunk
   );
 }
