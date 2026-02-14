@@ -1,3 +1,32 @@
+// ====== THEME ======
+function applyTheme() {
+  let effective;
+  if (currentTheme === 'system') {
+    effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  } else {
+    effective = currentTheme;
+  }
+  document.documentElement.dataset.theme = effective;
+  const icon = $('themeToggleBtn');
+  if (icon) icon.innerHTML = effective === 'dark' ? '&#9788;' : '&#9790;';
+}
+
+function toggleTheme() {
+  if (currentTheme === 'system') {
+    currentTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark';
+  } else if (currentTheme === 'dark') {
+    currentTheme = 'light';
+  } else {
+    currentTheme = 'dark';
+  }
+  localStorage.setItem('moni_talk_theme', currentTheme);
+  applyTheme();
+}
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (currentTheme === 'system') applyTheme();
+});
+
 // ====== INIT ======
 function init() {
   OPENROUTER_MODELS.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.label; orModelSelect.appendChild(o); });
@@ -7,6 +36,7 @@ function init() {
   GEMINI_MODELS.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.label; geminiModelSelect.appendChild(o); });
   geminiModelSelect.value = geminiModel;
 
+  applyTheme();
   renderChatList();
   updateRelDisplay();
   loadProfile();
@@ -48,6 +78,18 @@ function init() {
   $('clearKeyBtn').addEventListener('click', clearKey);
   providerSelect.addEventListener('change', () => toggleProviderFields(providerSelect.value));
   settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) closeSettings(); });
+
+  // Theme
+  $('themeToggleBtn').addEventListener('click', toggleTheme);
+  const themeSelect = $('themeSelect');
+  if (themeSelect) {
+    themeSelect.value = currentTheme;
+    themeSelect.addEventListener('change', () => {
+      currentTheme = themeSelect.value;
+      localStorage.setItem('moni_talk_theme', currentTheme);
+      applyTheme();
+    });
+  }
 
   // Sync
   $('syncBtn').addEventListener('click', openSyncModal);

@@ -5,7 +5,12 @@ function renderChatList() {
     chatListBody.innerHTML = `<div class="chat-list-empty"><img src="Monika PFP.png" alt="Monika"><h3>No conversations yet</h3><p>Tap + to start talking to Monika.</p></div>`;
     return;
   }
-  [...chats].sort((a, b) => b.created - a.created).forEach(chat => {
+  [...chats].sort((a, b) => {
+    const aStarred = a.starred ? 1 : 0;
+    const bStarred = b.starred ? 1 : 0;
+    if (bStarred !== aStarred) return bStarred - aStarred;
+    return (b.lastModified || b.created) - (a.lastModified || a.created);
+  }).forEach(chat => {
     const rel = chat.mode === 'story' ? { label: 'Story Mode' } : (RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2]);
     const lastMsg = chat.messages[chat.messages.length - 1];
     let preview;
@@ -18,6 +23,7 @@ function renderChatList() {
 
     const item = document.createElement('div');
     item.className = 'chat-item';
+    const starIcon = chat.starred ? '\u2605' : '\u2606';
     item.innerHTML = `
       <img class="chat-item-avatar" src="Monika PFP.png" alt="Monika">
       <div class="chat-item-info">
@@ -27,15 +33,23 @@ function renderChatList() {
         </div>
         <div class="chat-item-preview">${escapeHtml(preview)}</div>
       </div>
+      <button class="chat-item-star ${chat.starred ? 'starred' : ''}" title="Star">${starIcon}</button>
       <button class="chat-item-delete" title="Delete">&times;</button>`;
-    item.addEventListener('click', (e) => { if (!e.target.closest('.chat-item-delete')) openChat(chat.id); });
-    item.querySelector('.chat-item-delete').addEventListener('click', (e) => {
+    item.addEventListener('click', (e) => { if (!e.target.closest('.chat-item-delete') && !e.target.closest('.chat-item-star')) openChat(chat.id); });
+    item.querySelector('.chat-item-star').addEventListener('click', (e) => {
+      e.stopPropagation();
+      chat.starred = !chat.starred;
+      saveChats(); renderChatList();
+    });
+    item.querySelector('.chat-item-delete').addEventListener('click', async (e) => {
       e.stopPropagation();
       if (confirm('Delete this conversation?')) {
         const delId = chat.id;
         chats = chats.filter(c => c.id !== delId);
+        deletedChatIds.add(delId);
+        localStorage.setItem('moni_talk_deleted_ids', JSON.stringify([...deletedChatIds]));
         saveChats(); renderChatList();
-        deleteCloudChat(delId);
+        await deleteCloudChat(delId);
       }
     });
     chatListBody.appendChild(item);
@@ -45,7 +59,7 @@ function renderChatList() {
 // ====== CHAT CRUD ======
 function createChat() {
   const now = Date.now();
-  const chat = { id: crypto.randomUUID(), relationship: parseInt(relSlider.value), created: now, lastModified: now, messages: [], mood: 'cheerful', moodIntensity: 'moderate', drift: 'casual', lastActiveTime: now };
+  const chat = { id: crypto.randomUUID(), relationship: parseInt(relSlider.value), created: now, lastModified: now, messages: [], mood: 'cheerful', moodIntensity: 'moderate', drift: 'casual', lastActiveTime: now, starred: false };
   if (newChatMode === 'story') {
     chat.mode = 'story';
     chat.mcName = $('mcNameInput').value.trim() || 'MC';
@@ -94,6 +108,9 @@ function openChat(id) {
     if (!chat.lastActiveTime) chat.lastActiveTime = chat.lastModified || chat.created;
     saveChats();
   }
+
+  // Migration: starred property for existing chats
+  if (chat.starred === undefined) { chat.starred = false; saveChats(); }
 
   updateChatHeader(chat);
 

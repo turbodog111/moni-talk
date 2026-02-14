@@ -35,7 +35,8 @@ async function syncToCloud() {
     const index = chats.map(c => ({ id: c.id, relationship: c.relationship, created: c.created, lastModified: c.lastModified || c.created }));
     const promises = [
       puter.kv.set('moni_chat_index', JSON.stringify(index)),
-      puter.kv.set('moni_profile', JSON.stringify(profile))
+      puter.kv.set('moni_profile', JSON.stringify(profile)),
+      puter.kv.set('moni_deleted_ids', JSON.stringify([...deletedChatIds]))
     ];
     for (const chat of chats) {
       promises.push(puter.kv.set('moni_chat_' + chat.id, JSON.stringify(chat)));
@@ -62,10 +63,19 @@ async function syncFromCloud() {
     );
     const cloudChats = (await Promise.all(chatPromises)).filter(Boolean);
 
+    // Pull and merge deleted IDs from cloud
+    const cloudDeletedRaw = await puter.kv.get('moni_deleted_ids');
+    const cloudDeleted = parseKV(cloudDeletedRaw) || [];
+    for (const id of cloudDeleted) deletedChatIds.add(id);
+    localStorage.setItem('moni_talk_deleted_ids', JSON.stringify([...deletedChatIds]));
+
     // Merge chats
     const merged = new Map();
-    for (const c of chats) merged.set(c.id, c);
+    for (const c of chats) {
+      if (!deletedChatIds.has(c.id)) merged.set(c.id, c);
+    }
     for (const cc of cloudChats) {
+      if (deletedChatIds.has(cc.id)) continue;
       const local = merged.get(cc.id);
       if (!local) {
         merged.set(cc.id, cc);
@@ -105,9 +115,13 @@ async function fullSync() {
 async function deleteCloudChat(id) {
   if (!hasPuter() || !puter.auth.isSignedIn()) return;
   try {
-    await puter.kv.del('moni_chat_' + id);
-    const index = chats.map(c => ({ id: c.id, relationship: c.relationship, created: c.created, lastModified: c.lastModified || c.created }));
-    await puter.kv.set('moni_chat_index', JSON.stringify(index));
+    await Promise.all([
+      puter.kv.del('moni_chat_' + id),
+      puter.kv.set('moni_chat_index', JSON.stringify(
+        chats.map(c => ({ id: c.id, relationship: c.relationship, created: c.created, lastModified: c.lastModified || c.created }))
+      )),
+      puter.kv.set('moni_deleted_ids', JSON.stringify([...deletedChatIds]))
+    ]);
   } catch (err) { console.error('Cloud delete failed:', err); }
 }
 

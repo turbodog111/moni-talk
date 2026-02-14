@@ -17,6 +17,8 @@ let wordMap = {};
 let syncStatus = 'offline'; // offline | syncing | synced | error
 let puterUser = null;
 let syncTimer = null;
+let deletedChatIds = new Set(JSON.parse(localStorage.getItem('moni_talk_deleted_ids') || '[]'));
+let currentTheme = localStorage.getItem('moni_talk_theme') || 'system';
 
 // ====== DOM ======
 const $ = id => document.getElementById(id);

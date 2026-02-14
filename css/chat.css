@@ -6,16 +6,20 @@
 .chat-list-empty p { font-size: 14px; line-height: 1.5; }
 .chat-item {
   display: flex; align-items: center; gap: 12px; padding: 14px 16px;
-  border-bottom: 1px solid var(--gray-mid); cursor: pointer; transition: background 0.15s;
+  border-bottom: 1px solid var(--gray-mid); cursor: pointer; transition: all 0.15s;
+  border-left: 3px solid transparent;
 }
-.chat-item:hover { background: var(--green-pale); }
-.chat-item-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.chat-item:hover { background: var(--green-pale); border-left-color: var(--green-mid); }
+.chat-item-avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .chat-item-info { flex: 1; min-width: 0; }
 .chat-item-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.chat-item-rel { font-size: 15px; font-weight: 600; color: var(--text); }
-.chat-item-date { font-size: 11px; color: var(--gray-text); flex-shrink: 0; }
+.chat-item-rel { font-size: 15px; font-weight: 700; color: var(--text); }
+.chat-item-date { font-size: 11px; color: var(--gray-text); flex-shrink: 0; font-weight: 400; }
 .chat-item-preview { font-size: 13px; color: var(--gray-text); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chat-item-delete { background: none; border: none; color: #ccc; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: color 0.2s; }
+.chat-item-star { background: none; border: none; color: #ccc; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: color 0.2s; flex-shrink: 0; }
+.chat-item-star:hover { color: #f0c040; }
+.chat-item-star.starred { color: #f0c040; }
+.chat-item-delete { background: none; border: none; color: #ccc; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: color 0.2s; flex-shrink: 0; }
 .chat-item-delete:hover { color: #c0392b; }
 
 /* === Chat Screen === */
@@ -32,8 +36,8 @@
 .msg-content { display: flex; flex-direction: column; gap: 2px; }
 .msg-name { font-size: 11px; font-weight: 600; color: var(--gray-text); padding: 0 4px; }
 .message.user .msg-name { text-align: right; }
-.msg-bubble { padding: 10px 14px; border-radius: 16px; line-height: 1.5; font-size: 15px; box-shadow: var(--shadow); word-wrap: break-word; overflow-wrap: break-word; }
-.message.monika .msg-bubble { background: var(--green-light); border-bottom-left-radius: 4px; }
+.msg-bubble { padding: 12px 16px; border-radius: 18px; line-height: 1.5; font-size: 15px; box-shadow: var(--shadow); word-wrap: break-word; overflow-wrap: break-word; }
+.message.monika .msg-bubble { background: var(--green-light); border-bottom-left-radius: 4px; border-left: 3px solid var(--green-mid); }
 .message.user .msg-bubble { background: var(--bubble-user); border-bottom-right-radius: 4px; }
 .msg-bubble p { margin: 0 0 8px 0; } .msg-bubble p:last-child { margin-bottom: 0; }
 .msg-bubble em { font-style: italic; } .msg-bubble strong { font-weight: 600; }
@@ -44,8 +48,8 @@
 .typing-dots span { width: 7px; height: 7px; background: var(--green-mid); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; }
 .typing-dots span:nth-child(2) { animation-delay: 0.16s; } .typing-dots span:nth-child(3) { animation-delay: 0.32s; }
 @keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
-.input-area { display: flex; gap: 8px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: white; border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
-.input-area textarea { flex: 1; border: 1px solid var(--gray-mid); border-radius: 20px; padding: 10px 16px; font-size: 15px; font-family: inherit; resize: none; outline: none; max-height: 120px; line-height: 1.4; transition: border-color 0.2s; }
+.input-area { display: flex; gap: 8px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
+.input-area textarea { flex: 1; border: 1px solid var(--gray-mid); border-radius: 20px; padding: 10px 16px; font-size: 15px; font-family: inherit; resize: none; outline: none; max-height: 120px; line-height: 1.4; transition: border-color 0.2s; background: var(--bg); color: var(--text); }
 .input-area textarea:focus { border-color: var(--green-mid); }
 .input-area textarea::placeholder { color: #aaa; }
 .send-btn { width: 44px; height: 44px; border: none; border-radius: 50%; background: var(--green-dark); color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, transform 0.1s; flex-shrink: 0; align-self: flex-end; }
@@ -69,10 +73,10 @@
 
 /* === Story Mode === */
 .mode-toggle { display: flex; width: 100%; max-width: 420px; border-radius: 10px; overflow: hidden; border: 2px solid var(--green-dark); margin-bottom: 20px; }
-.mode-toggle button { flex: 1; padding: 10px; border: none; background: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--green-dark); }
+.mode-toggle button { flex: 1; padding: 10px; border: none; background: var(--bg); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--green-dark); }
 .mode-toggle button.active { background: var(--green-dark); color: white; }
-.story-choices { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; background: white; border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
-.story-choice-btn { padding: 12px 16px; border: 2px solid var(--green-mid); border-radius: 12px; background: white; font-size: 14px; font-family: inherit; cursor: pointer; text-align: left; transition: all 0.2s; line-height: 1.4; }
+.story-choices { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; background: var(--bg); border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
+.story-choice-btn { padding: 12px 16px; border: 2px solid var(--green-mid); border-radius: 12px; background: var(--bg); font-size: 14px; font-family: inherit; cursor: pointer; text-align: left; transition: all 0.2s; line-height: 1.4; color: var(--text); }
 .story-choice-btn:hover { background: var(--green-pale); border-color: var(--green-dark); }
 .story-choice-btn:active { transform: scale(0.98); }
 .story-choice-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -97,11 +101,11 @@
 .affinity-fill.monika { background: #3CB371; }
 
 /* === Word Picker === */
-.word-picker { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: white; border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
+.word-picker { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
 .word-picker-title { font-size: 15px; font-weight: 700; color: var(--green-dark); margin-bottom: 2px; text-align: center; }
 .word-picker-hint { font-size: 12px; color: var(--gray-text); margin-bottom: 10px; text-align: center; }
 .word-grid { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
-.word-chip { padding: 6px 12px; border: 2px solid var(--gray-mid); border-radius: 18px; background: white; font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.15s; user-select: none; }
+.word-chip { padding: 6px 12px; border: 2px solid var(--gray-mid); border-radius: 18px; background: var(--bg); color: var(--text); font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.15s; user-select: none; }
 .word-chip:hover { border-color: var(--green-mid); }
 .word-chip.selected { border-color: var(--green-dark); background: var(--green-light); color: var(--green-dark); font-weight: 600; }
 .word-submit-btn { display: block; margin: 0 auto; padding: 10px 32px; border: none; border-radius: 20px; background: var(--green-dark); color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
@@ -116,6 +120,32 @@
 .keyboard-open .input-area { padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); }
 .keyboard-open .input-area textarea { padding: 8px 14px; font-size: 14px; }
 .keyboard-open .send-btn { width: 38px; height: 38px; font-size: 18px; }
+
+/* === Dark Mode Chat Overrides === */
+[data-theme="dark"] .message.monika .msg-bubble { background: #1a2e23; border-left-color: #48bb78; }
+[data-theme="dark"] .message.user .msg-bubble { background: #2a2a2a; }
+[data-theme="dark"] .typing-dots { background: #1a2e23; }
+[data-theme="dark"] .typing-dots span { background: #48bb78; }
+[data-theme="dark"] .context-bar { background: var(--green-pale); border-top-color: var(--gray-mid); }
+[data-theme="dark"] .context-bar button { border-color: var(--gray-mid); color: var(--gray-text); }
+[data-theme="dark"] .context-bar button:hover { border-color: var(--green-mid); color: var(--green-mid); }
+[data-theme="dark"] .input-area { background: #1e1e1e; border-top-color: var(--gray-mid); }
+[data-theme="dark"] .input-area textarea { background: #2a2a2a; color: var(--text); border-color: var(--gray-mid); }
+[data-theme="dark"] .input-area textarea::placeholder { color: #666; }
+[data-theme="dark"] .send-btn { background: var(--green-dark); }
+[data-theme="dark"] .send-btn:hover { background: var(--green-mid); }
+[data-theme="dark"] .chat-item-delete { color: #555; }
+[data-theme="dark"] .chat-item-star { color: #555; }
+[data-theme="dark"] .chat-item-star.starred { color: #f0c040; }
+[data-theme="dark"] .story-choices { background: #1e1e1e; border-top-color: var(--gray-mid); }
+[data-theme="dark"] .story-choice-btn { background: #2a2a2a; border-color: var(--gray-mid); color: var(--text); }
+[data-theme="dark"] .story-choice-btn:hover { background: var(--green-pale); border-color: var(--green-mid); }
+[data-theme="dark"] .word-picker { background: #1e1e1e; border-top-color: var(--gray-mid); }
+[data-theme="dark"] .word-picker-title { color: var(--green-mid); }
+[data-theme="dark"] .word-chip { background: #2a2a2a; border-color: var(--gray-mid); color: var(--text); }
+[data-theme="dark"] .word-chip:hover { border-color: var(--green-mid); }
+[data-theme="dark"] .word-chip.selected { border-color: var(--green-dark); background: var(--green-light); color: var(--green-mid); }
+[data-theme="dark"] .msg-bubble code { background: rgba(255,255,255,0.08); }
 
 /* === Tablet breakpoint === */
 @media (min-width: 601px) and (max-width: 1024px) {

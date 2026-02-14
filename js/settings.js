@@ -12,7 +12,10 @@ function openSettings() {
   orModelSelect.value = selectedModel; puterModelSelect.value = puterModel;
   ollamaEndpointInput.value = ollamaEndpoint;
   geminiKeyInput.value = geminiKey; geminiModelSelect.value = geminiModel;
-  toggleProviderFields(provider); settingsModal.classList.add('open');
+  toggleProviderFields(provider);
+  const ts = $('themeSelect');
+  if (ts) ts.value = currentTheme;
+  settingsModal.classList.add('open');
 }
 function closeSettings() { settingsModal.classList.remove('open'); }
 function saveSettings() {

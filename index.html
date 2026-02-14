@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Moni-Talk</title>
 <script src="https://js.puter.com/v2/"></script>
+<script>
+  // Apply theme immediately to prevent flash
+  (function(){
+    var t = localStorage.getItem('moni_talk_theme') || 'system';
+    var e = t === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : t;
+    document.documentElement.dataset.theme = e;
+  })();
+</script>
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/chat.css">
 <link rel="stylesheet" href="css/vn.css">
@@ -20,6 +28,7 @@
       <div class="header-sub" id="chatListSub">Your conversations with Monika</div>
     </div>
     <div class="header-actions">
+      <button class="icon-btn" id="themeToggleBtn" title="Toggle Theme" aria-label="Toggle Theme"><span class="theme-toggle-icon">&#9790;</span></button>
       <button class="icon-btn sync-btn" id="syncBtn" title="Cloud Sync" aria-label="Cloud Sync">&#9729;<span class="sync-dot offline" id="syncDot"></span></button>
       <button class="icon-btn" id="profileBtn" title="Your Profile" aria-label="Profile">&#128100;</button>
       <button class="icon-btn" id="globalSettingsBtn" title="Settings" aria-label="Settings">&#9881;</button>
@@ -199,6 +208,14 @@
       <input type="text" id="ollamaEndpointInput" placeholder="http://localhost:11434" autocomplete="off">
       <div class="hint">Default: http://localhost:11434. Change only if you moved the port.</div>
     </div>
+    <div class="field-gap"></div>
+    <label for="themeSelect">Theme</label>
+    <select id="themeSelect">
+      <option value="system">System (auto)</option>
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+    <div class="hint">Choose your preferred color theme.</div>
     <div class="modal-actions">
       <button class="btn btn-danger" id="clearKeyBtn">Clear Key</button>
       <button class="btn btn-secondary" id="cancelSettingsBtn">Cancel</button>
