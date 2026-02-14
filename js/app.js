@@ -47,6 +47,9 @@ function init() {
   $('startChatBtn').addEventListener('click', createChat);
   $('modeChatBtn').addEventListener('click', () => setNewChatMode('chat'));
   $('modeStoryBtn').addEventListener('click', () => setNewChatMode('story'));
+  $('modeRoomBtn').addEventListener('click', () => setNewChatMode('room'));
+  const roomSlider = $('roomRelSlider');
+  if (roomSlider) roomSlider.addEventListener('input', updateRoomRelDisplay);
   $('wordSubmitBtn').addEventListener('click', submitPoem);
   $('vnPanelBtn').addEventListener('click', toggleVnPanel);
   $('vnPanelClose').addEventListener('click', closeVnPanel);
@@ -63,7 +66,7 @@ function init() {
   $('profileBtn').addEventListener('click', () => { loadProfile(); showScreen('profile'); });
   $('profileBackBtn').addEventListener('click', () => showScreen('chatList'));
   $('saveProfileBtn').addEventListener('click', saveProfile);
-  $('chatBackBtn').addEventListener('click', () => { activeChatId = null; screens.chat.classList.remove('vn-mode'); closeVnPanel(); showScreen('chatList'); renderChatList(); });
+  $('chatBackBtn').addEventListener('click', () => { activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); teardownRoomMode(); closeVnPanel(); showScreen('chatList'); renderChatList(); });
   $('trimBtn').addEventListener('click', trimContext);
   $('storyRetryBtn').addEventListener('click', forceStoryRetry);
 

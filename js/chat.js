@@ -11,13 +11,16 @@ function renderChatList() {
     if (bStarred !== aStarred) return bStarred - aStarred;
     return (b.lastModified || b.created) - (a.lastModified || a.created);
   }).forEach(chat => {
-    const rel = chat.mode === 'story' ? { label: 'Story Mode' } : (RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2]);
+    const rel = chat.mode === 'story' ? { label: 'Story Mode' } : chat.mode === 'room' ? { label: 'Room Mode' } : (RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2]);
     const lastMsg = chat.messages[chat.messages.length - 1];
     let preview;
     if (!lastMsg) { preview = 'No messages yet'; }
     else if (chat.mode === 'story') {
       const raw = lastMsg.role === 'assistant' ? parseStoryResponse(lastMsg.content).narrative : lastMsg.content;
       preview = raw.slice(0, 60);
+    } else if (chat.mode === 'room') {
+      const raw = lastMsg.role === 'assistant' ? stripRoomTags(lastMsg.content) : lastMsg.content;
+      preview = (lastMsg.role === 'user' ? 'You: ' : 'Monika: ') + raw.slice(0, 60);
     } else { preview = (lastMsg.role === 'user' ? 'You: ' : 'Monika: ') + lastMsg.content.slice(0, 60); }
     const moodText = chat.mood && chat.mode !== 'story' ? ` \u2022 ${chat.mood}` : '';
 
@@ -68,6 +71,11 @@ function createChat() {
     chat.storyBeatInPhase = 0;
     chat.storyAffinity = { sayori: 15, natsuki: 1, yuri: 1, monika: 10 };
     chat.milestonesCrossed = {};
+  } else if (newChatMode === 'room') {
+    chat.mode = 'room';
+    const roomSlider = $('roomRelSlider');
+    chat.relationship = roomSlider ? parseInt(roomSlider.value) : parseInt(relSlider.value);
+    chat.lastExpression = 'happy';
   }
   chats.push(chat); saveChats(); openChat(chat.id);
 }
@@ -79,6 +87,7 @@ function openChat(id) {
   if (!chat) return;
 
   const isStory = chat.mode === 'story';
+  const isRoom = chat.mode === 'room';
 
   // Migration for legacy story chats without phase fields
   if (isStory && !chat.storyPhase) {
@@ -115,8 +124,12 @@ function openChat(id) {
   updateChatHeader(chat);
 
   screens.chat.classList.toggle('vn-mode', isStory);
+  screens.chat.classList.toggle('room-mode', isRoom);
   $('vnPanelBtn').style.display = isStory ? '' : 'none';
   showScreen('chat');
+
+  // Teardown room mode if switching away
+  if (!isRoom) teardownRoomMode();
 
   $('inputArea').style.display = isStory ? 'none' : '';
   $('storyRetryBtn').style.display = isStory ? '' : 'none';
@@ -133,12 +146,19 @@ function openChat(id) {
   }
   hideAffinityPanel();
 
-  renderMessages();
+  if (isRoom) {
+    initRoomMode(chat);
+    renderMessages(); // still render for history purposes (hidden in room mode)
+  } else {
+    renderMessages();
+  }
   updateContextBar();
 
   if (isStory && chat.messages.length === 0) {
     generateStoryBeat(chat);
-  } else if (!isStory) {
+  } else if (!isStory && !isRoom) {
+    userInput.focus();
+  } else if (isRoom) {
     userInput.focus();
   }
 }
@@ -151,6 +171,15 @@ function updateChatHeader(chat) {
     const phase = STORY_PHASES[chat.storyPhase];
     const phaseLabel = phase ? ` \u2014 ${phase.label}` : '';
     chatHeaderSub.textContent = `Day ${chat.storyDay || 1}${phaseLabel}`;
+    return;
+  }
+  if (chat.mode === 'room') {
+    $('chatHeaderName').textContent = 'Monika';
+    const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
+    const moodEmoji = getMoodEmoji(chat.mood || 'cheerful');
+    const drift = chat.drift || 'casual';
+    const driftEmoji = DRIFT_EMOJIS[drift] || '\u2615';
+    chatHeaderSub.innerHTML = `${rel.label} <span class="chat-header-mood">${moodEmoji} ${chat.mood || 'cheerful'}</span> <span class="chat-header-drift">${driftEmoji} ${drift}</span>`;
     return;
   }
   $('chatHeaderName').textContent = 'Monika';
@@ -268,9 +297,10 @@ function scrollToBottom() { requestAnimationFrame(() => { chatArea.scrollTop = c
 
 // ====== SEND ======
 async function sendMessage() {
+  const chat = getChat();
+  if (chat && chat.mode === 'room') { sendRoomMessage(); return; }
   const text = userInput.value.trim();
   if (!text || isGenerating) return;
-  const chat = getChat();
   if (!chat) return;
   if (provider === 'openrouter' && !apiKey) { openSettings(); showToast('Enter your OpenRouter API key first.'); return; }
   if (provider === 'gemini' && !geminiKey) { openSettings(); showToast('Enter your Gemini API key first.'); return; }

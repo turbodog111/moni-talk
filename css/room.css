@@ -1,0 +1,199 @@
+/* ====== ROOM MODE — MAS-STYLE ====== */
+
+/* Room mode header override */
+.screen.room-mode .header {
+  background: linear-gradient(135deg, #3d2b5a 0%, #5a3d6e 100%);
+}
+
+[data-theme="dark"] .screen.room-mode .header {
+  background: linear-gradient(135deg, #2a1d40 0%, #3d2855 100%);
+}
+
+/* Hide chat bubbles and story elements in room mode */
+.screen.room-mode .chat-area { display: none !important; }
+.screen.room-mode .affinity-panel { display: none !important; }
+.screen.room-mode .vn-sprites { display: none !important; }
+.screen.room-mode .context-bar { display: none !important; }
+.screen.room-mode .story-choices { display: none !important; }
+.screen.room-mode .word-picker { display: none !important; }
+
+/* Room scene container — fills space between header and input */
+.room-scene {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #000;
+  min-height: 0;
+}
+
+/* Canvas — responsive, centered */
+#masCanvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Dialogue box — positioned at bottom of scene */
+.room-dialogue-box {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(20, 12, 35, 0.88);
+  border-top: 2px solid rgba(180, 140, 255, 0.4);
+  padding: 16px 20px 14px;
+  min-height: 80px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  z-index: 10;
+  animation: roomDialogueFadeIn 0.2s ease;
+}
+
+@keyframes roomDialogueFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.room-dialogue-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #c9a0ff;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.room-dialogue-text {
+  font-size: 17px;
+  line-height: 1.5;
+  color: #fff;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.room-dialogue-advance {
+  position: absolute;
+  bottom: 10px;
+  right: 16px;
+  font-size: 14px;
+  color: rgba(200, 160, 255, 0.7);
+  animation: roomAdvanceBounce 1s ease-in-out infinite;
+}
+
+@keyframes roomAdvanceBounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(4px); }
+}
+
+/* Room input area — ensure it shows below the scene */
+.screen.room-mode .input-area {
+  display: flex !important;
+  border-top: 1px solid rgba(180, 140, 255, 0.2);
+  background: var(--bg-primary, #fff);
+}
+
+.screen.room-mode .input-area textarea {
+  background: var(--bg-secondary, #f5f5f5);
+}
+
+[data-theme="dark"] .screen.room-mode .input-area {
+  border-top-color: rgba(180, 140, 255, 0.15);
+}
+
+/* Room mode loading state */
+.room-loading-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(200, 160, 255, 0.8);
+  font-size: 15px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Mode toggle — three buttons */
+.mode-toggle {
+  display: flex;
+  gap: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--green-mid);
+  margin-bottom: 16px;
+}
+
+.mode-toggle button {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  color: var(--green-mid);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.mode-toggle button.active {
+  background: var(--green-mid);
+  color: #fff;
+}
+
+.mode-toggle button:not(.active):hover {
+  background: rgba(76, 175, 80, 0.1);
+}
+
+/* Room mode options in new chat screen */
+#roomModeOptions {
+  text-align: center;
+}
+
+#roomModeOptions .rel-display {
+  margin-bottom: 12px;
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] .room-dialogue-box {
+  background: rgba(10, 6, 20, 0.92);
+  border-top-color: rgba(140, 100, 200, 0.3);
+}
+
+[data-theme="dark"] .room-dialogue-name {
+  color: #b080e0;
+}
+
+[data-theme="dark"] .room-dialogue-text {
+  color: #e8e0f0;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+  .room-dialogue-box {
+    padding: 12px 14px 10px;
+    min-height: 70px;
+  }
+
+  .room-dialogue-text {
+    font-size: 15px;
+  }
+
+  .room-dialogue-name {
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 1024px) {
+  .room-dialogue-box {
+    padding: 18px 24px 16px;
+    min-height: 90px;
+  }
+
+  .room-dialogue-text {
+    font-size: 18px;
+  }
+}

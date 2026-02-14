@@ -3,11 +3,40 @@ function setNewChatMode(mode) {
   newChatMode = mode;
   $('modeChatBtn').classList.toggle('active', mode === 'chat');
   $('modeStoryBtn').classList.toggle('active', mode === 'story');
+  $('modeRoomBtn').classList.toggle('active', mode === 'room');
   $('chatModeOptions').style.display = mode === 'chat' ? '' : 'none';
   $('storyModeOptions').style.display = mode === 'story' ? '' : 'none';
-  $('newChatTitle').textContent = mode === 'story' ? 'Doki Doki Literature Club' : 'Talk to Monika';
-  $('newChatSubtitle').textContent = mode === 'story' ? 'Your story begins now.' : 'How well do you two know each other?';
-  $('startChatBtn').textContent = mode === 'story' ? 'Begin Story' : 'Start Chatting';
+  $('roomModeOptions').style.display = mode === 'room' ? '' : 'none';
+
+  if (mode === 'story') {
+    $('newChatTitle').textContent = 'Doki Doki Literature Club';
+    $('newChatSubtitle').textContent = 'Your story begins now.';
+    $('startChatBtn').textContent = 'Begin Story';
+  } else if (mode === 'room') {
+    $('newChatTitle').textContent = "Monika's Room";
+    $('newChatSubtitle').textContent = 'Just the two of you.';
+    $('startChatBtn').textContent = 'Enter Room';
+    // Sync room relationship slider
+    const roomSlider = $('roomRelSlider');
+    if (roomSlider) {
+      roomSlider.value = relSlider.value;
+      updateRoomRelDisplay();
+    }
+  } else {
+    $('newChatTitle').textContent = 'Talk to Monika';
+    $('newChatSubtitle').textContent = 'How well do you two know each other?';
+    $('startChatBtn').textContent = 'Start Chatting';
+  }
+}
+
+function updateRoomRelDisplay() {
+  const roomSlider = $('roomRelSlider');
+  const roomLabel = $('roomRelLabel');
+  const roomDesc = $('roomRelDesc');
+  if (!roomSlider || !roomLabel || !roomDesc) return;
+  const rel = RELATIONSHIPS[parseInt(roomSlider.value)] || RELATIONSHIPS[2];
+  roomLabel.textContent = rel.label;
+  roomDesc.textContent = rel.desc;
 }
 
 function resetNewChatScreen() {
@@ -15,6 +44,8 @@ function resetNewChatScreen() {
   relSlider.value = 2;
   updateRelDisplay();
   $('mcNameInput').value = profile.name || '';
+  const roomSlider = $('roomRelSlider');
+  if (roomSlider) { roomSlider.value = 2; updateRoomRelDisplay(); }
 }
 
 // ====== PHASE HELPERS ======

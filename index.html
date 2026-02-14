@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/chat.css">
 <link rel="stylesheet" href="css/vn.css">
+<link rel="stylesheet" href="css/room.css">
 </head>
 <body>
 
@@ -87,6 +88,7 @@
     <div class="mode-toggle">
       <button id="modeChatBtn" class="active">Chat</button>
       <button id="modeStoryBtn">Story</button>
+      <button id="modeRoomBtn">Room</button>
     </div>
     <div id="chatModeOptions" class="form-section">
       <div class="rel-display">
@@ -105,6 +107,20 @@
         <label for="mcNameInput">Your Character's Name</label>
         <input type="text" id="mcNameInput" placeholder="What should the MC be called?">
         <div class="form-hint">This name will be used throughout the story.</div>
+      </div>
+    </div>
+    <div id="roomModeOptions" class="form-section" style="display:none;">
+      <div class="rel-display">
+        <div class="rel-label">Monika's Room</div>
+        <div class="rel-desc">Sit across from Monika in the space classroom &mdash; just the two of you. Chat freely while she reacts with full MAS-style expressions.</div>
+      </div>
+      <div class="form-section" style="margin-top:16px;">
+        <div class="rel-display">
+          <div class="rel-label" id="roomRelLabel"></div>
+          <div class="rel-desc" id="roomRelDesc"></div>
+        </div>
+        <input type="range" id="roomRelSlider" min="0" max="5" value="2" step="1">
+        <div class="slider-labels"><span>Stranger</span><span>In Love</span></div>
       </div>
     </div>
     <button class="primary-btn" id="startChatBtn">Start Chatting</button>
@@ -139,6 +155,14 @@
     <div class="vn-sprite yuri" id="spriteYuri"><img src="Yuri PFP.png" alt="Yuri"><span class="vn-sprite-name">Yuri</span></div>
     <div class="vn-sprite monika" id="spriteMonika"><img src="Monika PFP.png" alt="Monika"><span class="vn-sprite-name">Monika</span></div>
     <div class="vn-route-indicator" id="routeIndicator" style="display:none;"></div>
+  </div>
+  <div class="room-scene" id="roomScene" style="display:none;">
+    <canvas id="masCanvas" width="1280" height="850"></canvas>
+    <div class="room-dialogue-box" id="roomDialogueBox" style="display:none;">
+      <div class="room-dialogue-name">Monika</div>
+      <div class="room-dialogue-text" id="roomDialogueText"></div>
+      <div class="room-dialogue-advance" id="roomAdvanceHint">&#9660;</div>
+    </div>
   </div>
   <div class="chat-area" id="chatArea">
     <div class="typing-indicator" id="typingIndicator">
@@ -338,6 +362,7 @@
 <script src="js/chat.js"></script>
 <script src="js/story.js"></script>
 <script src="js/vn.js"></script>
+<script src="js/room.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
