@@ -9,22 +9,28 @@ let masLoadingPromise = null;
 let roomDialogueLines = [];
 let roomDialogueIndex = -1;
 let roomDialogueActive = false;
+let roomClickHandlersInit = false;
 
 // Canvas ref
 let masCanvas = null;
 let masCtx = null;
 
+// Canonical canvas size — all layers drawn at this size
+const MAS_W = 1280, MAS_H = 850;
+
 // Layer ordering for MAS sprite compositing
+// Arms go between clothes and hairback (on top of body, behind hair/table)
 const MAS_LAYER_ORDER = [
-  // Background drawn separately (spaceroom)
-  { type: 'table',    file: 'sprites/monika/t/chair-def.png' },
+  { type: 'chair',    file: 'sprites/monika/t/chair-def.png' },
   { type: 'body',     file: 'sprites/monika/b/body-def-0.png' },
   { type: 'body',     file: 'sprites/monika/b/body-def-1.png' },
   { type: 'clothes0', file: 'sprites/monika/c/def/clothes-0.png' },
   { type: 'clothes1', file: 'sprites/monika/c/def/clothes-1.png' },
+  { type: 'arms0',    file: 'sprites/monika/a/arms-def-steeple-0.png' },
+  { type: 'arms1',    file: 'sprites/monika/a/arms-def-steeple-1.png' },
   { type: 'hairback', file: 'sprites/monika/h/def/0.png' },
   { type: 'bodyhead', file: 'sprites/monika/b/body-def-head.png' },
-  // Face parts inserted dynamically after bodyhead (eyes, eyebrows, nose, mouth, blush, tears, sweat)
+  // Face parts inserted dynamically after bodyhead
   { type: 'hairfront',file: 'sprites/monika/h/def/10.png' },
   { type: 'table',    file: 'sprites/monika/t/table-def.png' }
 ];
@@ -41,12 +47,12 @@ function getMasBgFile() {
 
 function loadImage(src) {
   if (masImageCache[src]) return Promise.resolve(masImageCache[src]);
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => { masImageCache[src] = img; resolve(img); };
     img.onerror = () => {
       console.warn('[ROOM] Failed to load:', src);
-      resolve(null); // Don't reject — missing sprites shouldn't crash
+      resolve(null); // Missing sprites shouldn't crash
     };
     img.src = src;
   });
@@ -66,18 +72,16 @@ async function preloadMasImages() {
     // Static layers
     MAS_LAYER_ORDER.forEach(l => files.add(l.file));
 
-    // All face part variants used by expressions
-    const faceFiles = new Set();
-    faceFiles.add('sprites/monika/f/face-nose-def.png');
+    // Face parts: nose + all expression variants
+    files.add('sprites/monika/f/face-nose-def.png');
     for (const [, expr] of Object.entries(MAS_EXPRESSIONS)) {
-      faceFiles.add(`sprites/monika/f/face-eyes-${expr.eyes}.png`);
-      faceFiles.add(`sprites/monika/f/face-eyebrows-${expr.eyebrows}.png`);
-      faceFiles.add(`sprites/monika/f/face-mouth-${expr.mouth}.png`);
-      if (expr.blush) faceFiles.add(`sprites/monika/f/face-blush-${expr.blush}.png`);
-      if (expr.tears) faceFiles.add(`sprites/monika/f/face-tears-${expr.tears}.png`);
-      if (expr.sweat) faceFiles.add(`sprites/monika/f/face-sweatdrop-${expr.sweat}.png`);
+      files.add(`sprites/monika/f/face-eyes-${expr.eyes}.png`);
+      files.add(`sprites/monika/f/face-eyebrows-${expr.eyebrows}.png`);
+      files.add(`sprites/monika/f/face-mouth-${expr.mouth}.png`);
+      if (expr.blush) files.add(`sprites/monika/f/face-blush-${expr.blush}.png`);
+      if (expr.tears) files.add(`sprites/monika/f/face-tears-${expr.tears}.png`);
+      if (expr.sweat) files.add(`sprites/monika/f/face-sweatdrop-${expr.sweat}.png`);
     }
-    faceFiles.forEach(f => files.add(f));
 
     await Promise.all([...files].map(f => loadImage(f)));
     masImagesLoaded = true;
@@ -97,11 +101,9 @@ function resizeMasCanvas() {
   const dpr = window.devicePixelRatio || 1;
   const rect = container.getBoundingClientRect();
 
-  // Native resolution of MAS sprites
-  const nativeW = 1280, nativeH = 850;
-  const scale = Math.min(rect.width / nativeW, rect.height / nativeH);
-  const drawW = Math.floor(nativeW * scale);
-  const drawH = Math.floor(nativeH * scale);
+  const scale = Math.min(rect.width / MAS_W, rect.height / MAS_H);
+  const drawW = Math.floor(MAS_W * scale);
+  const drawH = Math.floor(MAS_H * scale);
 
   masCanvas.width = drawW * dpr;
   masCanvas.height = drawH * dpr;
@@ -110,46 +112,37 @@ function resizeMasCanvas() {
   masCtx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
 }
 
+function drawLayer(src) {
+  const img = masImageCache[src];
+  if (img) masCtx.drawImage(img, 0, 0, MAS_W, MAS_H);
+}
+
 function drawMasSprite(expressionName) {
   if (!masCtx || !masCanvas) return;
 
   const expr = MAS_EXPRESSIONS[expressionName] || MAS_EXPRESSIONS.happy;
-  const W = 1280, H = 850;
 
-  masCtx.clearRect(0, 0, W, H);
+  masCtx.clearRect(0, 0, MAS_W, MAS_H);
 
-  // 1. Background — native 1280x720, draw at natural size (top-aligned)
+  // 1. Background — stretched to fill canvas (1280x720 → 1280x850)
   const bgFile = getMasBgFile();
-  const bgImg = masImageCache[bgFile];
-  if (bgImg) {
-    masCtx.drawImage(bgImg, 0, 0, bgImg.naturalWidth, bgImg.naturalHeight);
-  }
+  drawLayer(bgFile);
 
-  // 2. Draw character layers at native size (1280x850), inserting face parts after bodyhead
+  // 2. Draw character layers in order, inserting face parts after bodyhead
   for (const layer of MAS_LAYER_ORDER) {
-    const img = masImageCache[layer.file];
-    if (img) masCtx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+    drawLayer(layer.file);
 
     // After bodyhead, draw face parts
     if (layer.type === 'bodyhead') {
-      drawFaceParts(expr);
+      drawLayer(`sprites/monika/f/face-eyes-${expr.eyes}.png`);
+      drawLayer(`sprites/monika/f/face-eyebrows-${expr.eyebrows}.png`);
+      drawLayer('sprites/monika/f/face-nose-def.png');
+      drawLayer(`sprites/monika/f/face-mouth-${expr.mouth}.png`);
+      if (expr.blush) drawLayer(`sprites/monika/f/face-blush-${expr.blush}.png`);
+      if (expr.tears) drawLayer(`sprites/monika/f/face-tears-${expr.tears}.png`);
+      if (expr.sweat) drawLayer(`sprites/monika/f/face-sweatdrop-${expr.sweat}.png`);
     }
   }
-}
-
-function drawFacePart(src) {
-  const img = masImageCache[src];
-  if (img) masCtx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
-}
-
-function drawFaceParts(expr) {
-  drawFacePart(`sprites/monika/f/face-eyes-${expr.eyes}.png`);
-  drawFacePart(`sprites/monika/f/face-eyebrows-${expr.eyebrows}.png`);
-  drawFacePart('sprites/monika/f/face-nose-def.png');
-  drawFacePart(`sprites/monika/f/face-mouth-${expr.mouth}.png`);
-  if (expr.blush) drawFacePart(`sprites/monika/f/face-blush-${expr.blush}.png`);
-  if (expr.tears) drawFacePart(`sprites/monika/f/face-tears-${expr.tears}.png`);
-  if (expr.sweat) drawFacePart(`sprites/monika/f/face-sweatdrop-${expr.sweat}.png`);
 }
 
 // ====== RESPONSE PARSING ======
@@ -169,7 +162,6 @@ function parseRoomResponse(rawText) {
   let lastExpr = 'happy';
 
   if (rawLines.length === 0) {
-    // Fallback: single empty response
     return { mood, moodIntensity, drift, dialogueLines: [{ expression: 'happy', text: rawText.trim() || '...' }] };
   }
 
@@ -177,7 +169,6 @@ function parseRoomResponse(rawText) {
   const hasAnyTags = rawLines.some(l => tagRe.test(l));
 
   if (hasAnyTags) {
-    // Tagged format
     for (const line of rawLines) {
       const m = line.match(tagRe);
       if (m) {
@@ -186,23 +177,20 @@ function parseRoomResponse(rawText) {
         lastExpr = expr;
         dialogueLines.push({ expression: expr, text: m[2].trim() });
       } else {
-        // No tag — inherit previous
         dialogueLines.push({ expression: lastExpr, text: line });
       }
     }
   } else {
-    // No tags at all — split by sentences and use keyword detection
+    // No tags — split by sentences and use keyword detection
     const fullText = rawLines.join(' ');
     const sentences = fullText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [fullText];
     for (const sentence of sentences) {
       const trimmed = sentence.trim();
       if (!trimmed) continue;
-      const expr = detectExpression(trimmed);
-      dialogueLines.push({ expression: expr, text: trimmed });
+      dialogueLines.push({ expression: detectExpression(trimmed), text: trimmed });
     }
   }
 
-  // Ensure at least one line
   if (dialogueLines.length === 0) {
     dialogueLines.push({ expression: 'happy', text: text });
   }
@@ -211,14 +199,20 @@ function parseRoomResponse(rawText) {
 }
 
 function detectExpression(text) {
-  // Check keywords in priority order (more specific first)
   const priority = ['cry', 'laugh', 'flirty', 'angry', 'surprised', 'wink', 'pout', 'nervous', 'smug', 'tender', 'worried', 'sad', 'think', 'happy'];
   for (const name of priority) {
-    if (EXPRESSION_KEYWORDS[name] && EXPRESSION_KEYWORDS[name].test(text)) {
-      return name;
-    }
+    if (EXPRESSION_KEYWORDS[name] && EXPRESSION_KEYWORDS[name].test(text)) return name;
   }
-  return 'happy'; // default
+  return 'happy';
+}
+
+// ====== LIVE STREAMING DISPLAY ======
+// Strip mood/drift/expression tags for live display
+function liveStripRoomTags(text) {
+  return text
+    .replace(/^\[MOOD:\s*\w+(?::\s*\w+)?\]\s*(?:\[DRIFT:\s*\w+\]\s*)?/i, '')
+    .replace(/^\[(\w+)\]\s*/gm, '')
+    .trim();
 }
 
 // ====== DIALOGUE QUEUE ======
@@ -236,7 +230,6 @@ function showRoomLine(index) {
   const textEl = $('roomDialogueText');
   const box = $('roomDialogueBox');
   const hint = $('roomAdvanceHint');
-
   if (!textEl || !box) return;
 
   // Update sprite expression
@@ -276,10 +269,9 @@ function finishRoomDialogue() {
   if (input) { input.disabled = false; input.focus(); }
   if (btn) btn.disabled = false;
 
-  // Draw the last expression (stays on screen)
+  // Keep the last expression on screen
   if (roomDialogueLines.length > 0) {
-    const lastExpr = roomDialogueLines[roomDialogueLines.length - 1].expression;
-    drawMasSprite(lastExpr);
+    drawMasSprite(roomDialogueLines[roomDialogueLines.length - 1].expression);
   }
 }
 
@@ -304,15 +296,35 @@ async function sendRoomMessage() {
   isGenerating = true;
   drawMasSprite('think');
 
+  // Show dialogue box for live streaming text
+  const textEl = $('roomDialogueText');
+  const box = $('roomDialogueBox');
+  const hint = $('roomAdvanceHint');
+  if (box) box.style.display = '';
+  if (textEl) textEl.textContent = '...';
+  if (hint) hint.style.display = 'none';
+
   try {
-    // Collect full response (no streaming display for room mode)
     let fullText = '';
+    let updatePending = false;
+
+    // Stream text live into the dialogue box
     await callProviderStreaming(chat, (chunk) => {
       fullText += chunk;
+      if (!updatePending) {
+        updatePending = true;
+        requestAnimationFrame(() => {
+          if (textEl) textEl.textContent = liveStripRoomTags(fullText);
+          updatePending = false;
+        });
+      }
     });
 
     const rawReply = fullText.trim();
     if (!rawReply) throw new Error('Got an empty response. Try again.');
+
+    // Hide dialogue box briefly, then start click-to-advance
+    if (box) box.style.display = 'none';
 
     // Parse response
     const { mood, moodIntensity, drift, dialogueLines } = parseRoomResponse(rawReply);
@@ -324,20 +336,20 @@ async function sendRoomMessage() {
     chat.lastActiveTime = Date.now();
     chat.lastExpression = dialogueLines[dialogueLines.length - 1]?.expression || 'happy';
 
-    // Store the raw reply for history, but strip mood/drift tags
+    // Store clean reply for history
     const cleanReply = dialogueLines.map(l => `[${l.expression}] ${l.text}`).join('\n');
     chat.messages.push({ role: 'assistant', content: cleanReply });
     saveChats();
     updateChatHeader(chat);
 
-    // Start dialogue queue
+    // Start click-to-advance dialogue queue
     startRoomDialogue(dialogueLines);
 
   } catch (err) {
     showToast(err.message || 'Something went wrong.');
+    if (box) box.style.display = 'none';
     userInput.disabled = false;
     sendBtn.disabled = false;
-    // Restore last expression
     drawMasSprite(chat.lastExpression || 'happy');
   } finally {
     isGenerating = false;
@@ -346,6 +358,9 @@ async function sendRoomMessage() {
 
 // ====== CLICK/TAP/KEY HANDLERS ======
 function initRoomClickHandlers() {
+  if (roomClickHandlersInit) return;
+  roomClickHandlersInit = true;
+
   const scene = $('roomScene');
   const box = $('roomDialogueBox');
 
@@ -358,20 +373,17 @@ function initRoomClickHandlers() {
 
   if (scene) {
     scene.addEventListener('click', (e) => {
-      // Don't advance if clicking inside dialogue box (handled above) or input
       if (e.target.closest('.room-dialogue-box') || e.target.closest('.input-area')) return;
       if (roomDialogueActive) advanceRoomDialogue();
     });
   }
 
-  // Keyboard: Space or Enter to advance (only when dialogue is active)
+  // Keyboard: Space or Enter to advance (only when dialogue is active and not typing)
   document.addEventListener('keydown', (e) => {
     if (!roomDialogueActive) return;
     const chat = getChat();
     if (!chat || chat.mode !== 'room') return;
-
     if (e.key === ' ' || e.key === 'Enter') {
-      // Don't capture if typing in input
       if (document.activeElement === $('userInput')) return;
       e.preventDefault();
       advanceRoomDialogue();
@@ -395,31 +407,28 @@ async function initRoomMode(chat) {
   }
   loadingEl.style.display = '';
 
-  // Preload sprites
   await preloadMasImages();
   loadingEl.style.display = 'none';
 
   // Setup canvas
   resizeMasCanvas();
 
-  // Draw initial expression
-  const lastExpr = chat.lastExpression || 'happy';
+  // Draw initial expression (restore last from chat history)
+  let lastExpr = chat.lastExpression || 'happy';
+  if (chat.messages.length > 0) {
+    const lastAssistant = [...chat.messages].reverse().find(m => m.role === 'assistant');
+    if (lastAssistant) {
+      const { dialogueLines } = parseRoomResponse(lastAssistant.content);
+      if (dialogueLines.length > 0) lastExpr = dialogueLines[dialogueLines.length - 1].expression;
+    }
+  }
   drawMasSprite(lastExpr);
 
   // Resize handler
   window.addEventListener('resize', resizeMasCanvas);
 
-  // If chat has messages, replay the last assistant message's last expression
-  if (chat.messages.length > 0) {
-    const lastAssistant = [...chat.messages].reverse().find(m => m.role === 'assistant');
-    if (lastAssistant) {
-      const { dialogueLines } = parseRoomResponse(lastAssistant.content);
-      if (dialogueLines.length > 0) {
-        const expr = dialogueLines[dialogueLines.length - 1].expression;
-        drawMasSprite(expr);
-      }
-    }
-  }
+  // Init click handlers (once)
+  initRoomClickHandlers();
 }
 
 function teardownRoomMode() {
@@ -440,8 +449,3 @@ function teardownRoomMode() {
 function stripRoomTags(text) {
   return text.replace(/^\[(\w+)\]\s*/gm, '').trim();
 }
-
-// Initialize click handlers once on load
-document.addEventListener('DOMContentLoaded', initRoomClickHandlers);
-// Fallback if DOMContentLoaded already fired
-if (document.readyState !== 'loading') initRoomClickHandlers();
