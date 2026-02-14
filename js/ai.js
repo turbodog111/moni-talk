@@ -96,7 +96,7 @@ function buildMessages(chat) {
   // Room mode
   if (chat.mode === 'room') {
     const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
-    let sys = ROOM_PROMPT + '\n\n' + rel.prompt + buildProfilePrompt();
+    let sys = BASE_PROMPT + ROOM_EXPRESSION_ADDON + '\n\n' + rel.prompt + buildProfilePrompt();
 
     const mood = chat.mood || 'cheerful';
     const intensity = chat.moodIntensity || 'moderate';

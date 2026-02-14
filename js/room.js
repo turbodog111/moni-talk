@@ -118,15 +118,17 @@ function drawMasSprite(expressionName) {
 
   masCtx.clearRect(0, 0, W, H);
 
-  // 1. Background
+  // 1. Background — native 1280x720, draw at natural size (top-aligned)
   const bgFile = getMasBgFile();
   const bgImg = masImageCache[bgFile];
-  if (bgImg) masCtx.drawImage(bgImg, 0, 0, W, H);
+  if (bgImg) {
+    masCtx.drawImage(bgImg, 0, 0, bgImg.naturalWidth, bgImg.naturalHeight);
+  }
 
-  // 2. Draw static layers in order, inserting face parts after bodyhead
+  // 2. Draw character layers at native size (1280x850), inserting face parts after bodyhead
   for (const layer of MAS_LAYER_ORDER) {
     const img = masImageCache[layer.file];
-    if (img) masCtx.drawImage(img, 0, 0, W, H);
+    if (img) masCtx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
 
     // After bodyhead, draw face parts
     if (layer.type === 'bodyhead') {
@@ -135,38 +137,19 @@ function drawMasSprite(expressionName) {
   }
 }
 
+function drawFacePart(src) {
+  const img = masImageCache[src];
+  if (img) masCtx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+}
+
 function drawFaceParts(expr) {
-  const W = 1280, H = 850;
-
-  // Eyes
-  const eyesImg = masImageCache[`sprites/monika/f/face-eyes-${expr.eyes}.png`];
-  if (eyesImg) masCtx.drawImage(eyesImg, 0, 0, W, H);
-
-  // Eyebrows
-  const ebImg = masImageCache[`sprites/monika/f/face-eyebrows-${expr.eyebrows}.png`];
-  if (ebImg) masCtx.drawImage(ebImg, 0, 0, W, H);
-
-  // Nose
-  const noseImg = masImageCache['sprites/monika/f/face-nose-def.png'];
-  if (noseImg) masCtx.drawImage(noseImg, 0, 0, W, H);
-
-  // Mouth
-  const mouthImg = masImageCache[`sprites/monika/f/face-mouth-${expr.mouth}.png`];
-  if (mouthImg) masCtx.drawImage(mouthImg, 0, 0, W, H);
-
-  // Optional extras
-  if (expr.blush) {
-    const blushImg = masImageCache[`sprites/monika/f/face-blush-${expr.blush}.png`];
-    if (blushImg) masCtx.drawImage(blushImg, 0, 0, W, H);
-  }
-  if (expr.tears) {
-    const tearsImg = masImageCache[`sprites/monika/f/face-tears-${expr.tears}.png`];
-    if (tearsImg) masCtx.drawImage(tearsImg, 0, 0, W, H);
-  }
-  if (expr.sweat) {
-    const sweatImg = masImageCache[`sprites/monika/f/face-sweatdrop-${expr.sweat}.png`];
-    if (sweatImg) masCtx.drawImage(sweatImg, 0, 0, W, H);
-  }
+  drawFacePart(`sprites/monika/f/face-eyes-${expr.eyes}.png`);
+  drawFacePart(`sprites/monika/f/face-eyebrows-${expr.eyebrows}.png`);
+  drawFacePart('sprites/monika/f/face-nose-def.png');
+  drawFacePart(`sprites/monika/f/face-mouth-${expr.mouth}.png`);
+  if (expr.blush) drawFacePart(`sprites/monika/f/face-blush-${expr.blush}.png`);
+  if (expr.tears) drawFacePart(`sprites/monika/f/face-tears-${expr.tears}.png`);
+  if (expr.sweat) drawFacePart(`sprites/monika/f/face-sweatdrop-${expr.sweat}.png`);
 }
 
 // ====== RESPONSE PARSING ======
