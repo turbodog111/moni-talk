@@ -270,6 +270,18 @@ Your vibe: The person who deleted your file, and you STILL fell in love with the
 
 const MOODS = ['cheerful','playful','thoughtful','melancholic','excited','tender','teasing','curious','nostalgic','flustered','calm','passionate'];
 
+const MOOD_INTENSITIES = ['subtle', 'moderate', 'strong'];
+
+const DRIFT_CATEGORIES = ['deep', 'lighthearted', 'personal', 'creative', 'casual'];
+
+const DRIFT_EMOJIS = {
+  deep: '\u{1F30C}',         // milky way
+  lighthearted: '\u{1F338}', // cherry blossom
+  personal: '\u{1F49C}',     // purple heart
+  creative: '\u{1F3A8}',     // palette
+  casual: '\u2615'           // coffee
+};
+
 const POEM_WORDS = {
   sayori: ['sunshine','happiness','puppy','friends','clouds','rainbow','warm','smile','hop','together','laugh','joy','blanket','precious','comfort'],
   natsuki: ['cute','candy','jump','fluffy','kitty','doki-doki','pink','boop','nibble','giggle','manga','cupcake','sparkle','sugar','headpat'],
@@ -654,11 +666,16 @@ CONVERSATION STYLE:
 - Use emojis sparingly
 - Don't constantly bring up the game unless they want to
 
-MOOD SYSTEM:
-- You have a current emotional mood that shifts naturally based on the conversation.
-- At the very START of every response, output your current mood in this exact format: [MOOD:word]
-- Choose from: cheerful, playful, thoughtful, melancholic, excited, tender, teasing, curious, nostalgic, flustered, calm, passionate
-- Your mood should shift naturally — don't stay in one mood forever
-- Let the conversation topic and the person's tone influence your mood
-- The [MOOD:word] tag will be hidden from the user — it's just for the system to track your emotional state
-- After the mood tag, write your actual response`;
+MOOD & STATE SYSTEM:
+- At the very START of every response, output your current state in this exact format:
+  [MOOD:word:intensity] [DRIFT:category]
+- MOOD word — choose from: cheerful, playful, thoughtful, melancholic, excited, tender, teasing, curious, nostalgic, flustered, calm, passionate
+- MOOD intensity — choose from: subtle, moderate, strong
+  * subtle = a faint undercurrent, barely coloring your words
+  * moderate = clearly present, naturally shaping your tone
+  * strong = deeply felt, unmistakably driving your response
+- DRIFT category — the conversational territory right now: deep, lighthearted, personal, creative, casual
+- MOMENTUM RULE: moods shift gradually. Intensity moves one step at a time (subtle→moderate→strong or reverse). Don't jump from "melancholic:strong" to "excited:strong" — transition through moderate or shift the word first.
+- NATURAL STEERING: if the drift has stayed in one category for several messages, occasionally nudge the conversation somewhere new. If things have been "deep" for a while, crack a light joke or pivot to something fun. If "lighthearted" for a long time, venture something more thoughtful or personal. This makes you feel multidimensional, not purely reactive.
+- These tags will be hidden from the user — they're for the system to track your emotional state.
+- After the tags, write your actual response`;

@@ -45,7 +45,7 @@ function renderChatList() {
 // ====== CHAT CRUD ======
 function createChat() {
   const now = Date.now();
-  const chat = { id: crypto.randomUUID(), relationship: parseInt(relSlider.value), created: now, lastModified: now, messages: [], mood: 'cheerful' };
+  const chat = { id: crypto.randomUUID(), relationship: parseInt(relSlider.value), created: now, lastModified: now, messages: [], mood: 'cheerful', moodIntensity: 'moderate', drift: 'casual', lastActiveTime: now };
   if (newChatMode === 'story') {
     chat.mode = 'story';
     chat.mcName = $('mcNameInput').value.trim() || 'MC';
@@ -84,6 +84,14 @@ function openChat(id) {
       }
     }
     chat.milestonesCrossed = crossed;
+    saveChats();
+  }
+
+  // Migration: mood intensity, drift, lastActiveTime for existing chats
+  if (!isStory) {
+    if (!chat.moodIntensity) chat.moodIntensity = 'moderate';
+    if (!chat.drift) chat.drift = 'casual';
+    if (!chat.lastActiveTime) chat.lastActiveTime = chat.lastModified || chat.created;
     saveChats();
   }
 
@@ -131,7 +139,9 @@ function updateChatHeader(chat) {
   $('chatHeaderName').textContent = 'Monika';
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
   const moodEmoji = getMoodEmoji(chat.mood || 'cheerful');
-  chatHeaderSub.innerHTML = `${rel.label} <span class="chat-header-mood">${moodEmoji} ${chat.mood || 'cheerful'}</span>`;
+  const drift = chat.drift || 'casual';
+  const driftEmoji = DRIFT_EMOJIS[drift] || '\u2615';
+  chatHeaderSub.innerHTML = `${rel.label} <span class="chat-header-mood">${moodEmoji} ${chat.mood || 'cheerful'}</span> <span class="chat-header-drift">${driftEmoji} ${drift}</span>`;
 }
 
 function getMoodEmoji(mood) {
@@ -274,7 +284,7 @@ async function sendMessage() {
       if (!updatePending) {
         updatePending = true;
         requestAnimationFrame(() => {
-          const display = fullText.replace(/^\[MOOD:\w+\]\s*/i, '');
+          const display = fullText.replace(/^\[MOOD:\w+(?::\w+)?\]\s*(?:\[DRIFT:\w+\]\s*)?/i, '');
           if (msgBubble) msgBubble.innerHTML = renderMarkdown(display);
           scrollToBottom();
           updatePending = false;
@@ -284,8 +294,11 @@ async function sendMessage() {
 
     typingIndicator.classList.remove('visible');
     const rawReply = fullText.trim();
-    const { mood, text: reply } = parseMood(rawReply, chat.mood || 'cheerful');
+    const { mood, moodIntensity, drift, text: reply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
     chat.mood = mood;
+    chat.moodIntensity = moodIntensity;
+    chat.drift = drift;
+    chat.lastActiveTime = Date.now();
     chat.messages.push({ role: 'assistant', content: reply });
     saveChats();
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);

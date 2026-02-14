@@ -1,12 +1,53 @@
-// ====== MOOD PARSING ======
-function parseMood(raw, fallback) {
-  const match = raw.match(/^\[MOOD:(\w+)\]\s*/i);
+// ====== STATE TAG PARSING ======
+function parseStateTags(raw, fallbackMood, fallbackIntensity, fallbackDrift) {
+  fallbackIntensity = fallbackIntensity || 'moderate';
+  fallbackDrift = fallbackDrift || 'casual';
+
+  // Match [MOOD:word:intensity] or [MOOD:word], optionally followed by [DRIFT:category]
+  const re = /^\[MOOD:(\w+)(?::(\w+))?\]\s*(?:\[DRIFT:(\w+)\]\s*)?/i;
+  const match = raw.match(re);
   if (match) {
     const mood = match[1].toLowerCase();
+    const intensity = match[2] ? match[2].toLowerCase() : fallbackIntensity;
+    const drift = match[3] ? match[3].toLowerCase() : fallbackDrift;
     const text = raw.slice(match[0].length).trim();
-    return { mood: MOODS.includes(mood) ? mood : fallback, text: text || raw };
+    return {
+      mood: MOODS.includes(mood) ? mood : fallbackMood,
+      moodIntensity: MOOD_INTENSITIES.includes(intensity) ? intensity : fallbackIntensity,
+      drift: DRIFT_CATEGORIES.includes(drift) ? drift : fallbackDrift,
+      text: text || raw
+    };
   }
-  return { mood: fallback, text: raw };
+  return { mood: fallbackMood, moodIntensity: fallbackIntensity, drift: fallbackDrift, text: raw };
+}
+
+// ====== TIME CONTEXT (computed, zero model cost) ======
+function buildTimeContext(chat) {
+  const now = Date.now();
+  const lines = [];
+
+  // Time of day
+  const hour = new Date(now).getHours();
+  if (hour >= 5 && hour < 12) lines.push('It\'s morning right now.');
+  else if (hour >= 12 && hour < 17) lines.push('It\'s afternoon right now.');
+  else if (hour >= 17 && hour < 21) lines.push('It\'s evening right now.');
+  else lines.push('It\'s late night right now.');
+
+  // Gap since last conversation
+  const lastActive = chat.lastActiveTime || chat.lastModified || chat.created;
+  const gapMs = now - lastActive;
+  const gapHours = gapMs / (1000 * 60 * 60);
+  if (gapHours >= 72) lines.push('It\'s been a few days since you two last talked.');
+  else if (gapHours >= 24) lines.push('It\'s been about a day since the last conversation.');
+  else if (gapHours >= 6) lines.push('It\'s been a while since you last chatted.');
+  // Under 6 hours — say nothing, feels like an active session
+
+  // Session length
+  const msgCount = chat.messages.length;
+  if (msgCount >= 30) lines.push('You\'ve been chatting for quite a while — the conversation is deep into its flow.');
+  else if (msgCount >= 15) lines.push('You\'ve been chatting a while now — the conversation has a nice rhythm going.');
+
+  return lines.join(' ');
 }
 
 // ====== BUILD MESSAGES ======
@@ -53,7 +94,16 @@ function buildMessages(chat) {
   }
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
   let sys = BASE_PROMPT + '\n\n' + rel.prompt + buildProfilePrompt();
-  if (chat.mood) sys += `\n\nYour current mood is: ${chat.mood}. Let it evolve naturally.`;
+
+  const mood = chat.mood || 'cheerful';
+  const intensity = chat.moodIntensity || 'moderate';
+  const drift = chat.drift || 'casual';
+  const timeCtx = buildTimeContext(chat);
+
+  sys += `\n\n=== CURRENT STATE ===\nMood: ${mood} (${intensity})\nDrift: ${drift}`;
+  if (timeCtx) sys += `\n${timeCtx}`;
+  sys += `\nLet your mood and drift evolve naturally from here.`;
+
   return [
     { role: 'system', content: sys },
     ...chat.messages.map(m => ({ role: m.role, content: m.content }))
