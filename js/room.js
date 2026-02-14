@@ -19,20 +19,21 @@ let masCtx = null;
 const MAS_W = 1280, MAS_H = 850;
 
 // Layer ordering for MAS sprite compositing
-// Arms go between clothes and hairback (on top of body, behind hair/table)
+// Depth numbers from MAS filenames: 0=back, 5=mid, 10=front
 const MAS_LAYER_ORDER = [
-  { type: 'chair',    file: 'sprites/monika/t/chair-def.png' },
-  { type: 'body',     file: 'sprites/monika/b/body-def-0.png' },
-  { type: 'body',     file: 'sprites/monika/b/body-def-1.png' },
-  { type: 'clothes0', file: 'sprites/monika/c/def/clothes-0.png' },
-  { type: 'clothes1', file: 'sprites/monika/c/def/clothes-1.png' },
-  { type: 'arms0',    file: 'sprites/monika/a/arms-def-steeple-0.png' },
-  { type: 'arms1',    file: 'sprites/monika/a/arms-def-steeple-1.png' },
-  { type: 'hairback', file: 'sprites/monika/h/def/0.png' },
-  { type: 'bodyhead', file: 'sprites/monika/b/body-def-head.png' },
+  { type: 'chair',      file: 'sprites/monika/t/chair-def.png' },
+  { type: 'body',       file: 'sprites/monika/b/body-def-0.png' },
+  { type: 'body',       file: 'sprites/monika/b/body-def-1.png' },
+  { type: 'clothes0',   file: 'sprites/monika/c/def/clothes-0.png' },
+  { type: 'clothes1',   file: 'sprites/monika/c/def/clothes-1.png' },
+  { type: 'arms',       file: 'sprites/monika/b/arms-steepling-10.png' },
+  { type: 'ribbonback', file: 'sprites/monika/a/ribbon_def/0.png' },
+  { type: 'hairback',   file: 'sprites/monika/h/def/0.png' },
+  { type: 'bodyhead',   file: 'sprites/monika/b/body-def-head.png' },
   // Face parts inserted dynamically after bodyhead
-  { type: 'hairfront',file: 'sprites/monika/h/def/10.png' },
-  { type: 'table',    file: 'sprites/monika/t/table-def.png' }
+  { type: 'ribbonfront',file: 'sprites/monika/a/ribbon_def/5.png' },
+  { type: 'hairfront',  file: 'sprites/monika/h/def/10.png' },
+  { type: 'table',      file: 'sprites/monika/t/table-def.png' }
 ];
 
 // Background files
