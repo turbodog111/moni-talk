@@ -261,14 +261,14 @@ function renderMessages() {
         renderStoryChoices(['Begin next day']);
       } else if (parsed.hasPoetry && curPhase && curPhase.triggerPoetry) {
         showWordPicker();
-      } else if (chat.storyBeatInPhase === 0 && chat.messages.length > 1) {
-        renderStoryChoices(['Continue']);
       } else {
         const phase = STORY_PHASES[chat.storyPhase];
         if (phase && phase.noChoices) {
           renderStoryChoices(['Continue']);
         } else if (chat.lastChoices && chat.lastChoices.length >= 2) {
           renderStoryChoices(chat.lastChoices);
+        } else if (chat.storyBeatInPhase === 0 && chat.messages.length > 1) {
+          renderStoryChoices(['Continue']);
         } else if (phase && phase.choices) {
           renderStoryChoices(phase.choices);
         } else {
