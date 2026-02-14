@@ -4,7 +4,8 @@ function parseStateTags(raw, fallbackMood, fallbackIntensity, fallbackDrift) {
   fallbackDrift = fallbackDrift || 'casual';
 
   // Match [MOOD:word:intensity] or [MOOD:word], optionally followed by [DRIFT:category]
-  const re = /^\[MOOD:(\w+)(?::(\w+))?\]\s*(?:\[DRIFT:(\w+)\]\s*)?/i;
+  // Tolerates optional spaces after colons (AI sometimes adds them)
+  const re = /^\[MOOD:\s*(\w+)(?::\s*(\w+))?\]\s*(?:\[DRIFT:\s*(\w+)\]\s*)?/i;
   const match = raw.match(re);
   if (match) {
     const mood = match[1].toLowerCase();

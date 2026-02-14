@@ -301,7 +301,7 @@ async function sendMessage() {
       if (!updatePending) {
         updatePending = true;
         requestAnimationFrame(() => {
-          const display = fullText.replace(/^\[MOOD:\w+(?::\w+)?\]\s*(?:\[DRIFT:\w+\]\s*)?/i, '');
+          const display = fullText.replace(/^\[MOOD:\s*\w+(?::\s*\w+)?\]\s*(?:\[DRIFT:\s*\w+\]\s*)?/i, '');
           if (msgBubble) msgBubble.innerHTML = renderMarkdown(display);
           scrollToBottom();
           updatePending = false;
