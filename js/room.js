@@ -20,8 +20,8 @@ const MAS_LAYER_ORDER = [
   { type: 'table',    file: 'sprites/monika/t/chair-def.png' },
   { type: 'body',     file: 'sprites/monika/b/body-def-0.png' },
   { type: 'body',     file: 'sprites/monika/b/body-def-1.png' },
-  { type: 'clothes0', file: 'sprites/monika/c/def/0.png' },
-  { type: 'clothes1', file: 'sprites/monika/c/def/1.png' },
+  { type: 'clothes0', file: 'sprites/monika/c/def/clothes-0.png' },
+  { type: 'clothes1', file: 'sprites/monika/c/def/clothes-1.png' },
   { type: 'hairback', file: 'sprites/monika/h/def/0.png' },
   { type: 'bodyhead', file: 'sprites/monika/b/body-def-head.png' },
   // Face parts inserted dynamically after bodyhead (eyes, eyebrows, nose, mouth, blush, tears, sweat)
