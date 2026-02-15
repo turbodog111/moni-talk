@@ -382,19 +382,26 @@ async function selectStoryChoice(choice) {
     if (isStillWrapUp && lastMsg?.role === 'assistant' && /\[END_OF_DAY\]/i.test(lastMsg.content)) {
       chat.storyDay = (chat.storyDay || 1) + 1;
       initPhaseForDay(chat);
+      chat.lastChoices = null;
       updateChatHeader(chat);
       updateVnDay(chat.storyDay);
       updatePhaseDisplay(chat);
-      saveChats();
     }
+    // Push a user turn so the model has something to respond to on the new day
+    chat.messages.push({ role: 'user', content: '[Continue]' });
+    saveChats();
     await generateStoryBeat(chat);
     return;
   }
 
   // Don't push "Continue" as a visible user message — just nudge the story forward
   if (choice === 'Continue') {
-    chat.messages.push({ role: 'user', content: '[Continue]' });
-    saveChats();
+    const lastMsg = chat.messages[chat.messages.length - 1];
+    // Avoid duplicate [Continue] messages (e.g., after failed day transition + reload)
+    if (!(lastMsg?.role === 'user' && lastMsg?.content === '[Continue]')) {
+      chat.messages.push({ role: 'user', content: '[Continue]' });
+      saveChats();
+    }
   } else {
     chat.messages.push({ role: 'user', content: choice });
     saveChats();
@@ -528,6 +535,7 @@ async function generateStoryBeat(chat) {
     // 1. Handle end of day — ONLY honor [END_OF_DAY] during wrap-up phases
     if ((isEndOfDay && isWrapPhase) || (phase && phase.forceEndOfDay && chat.storyBeatInPhase >= phase.maxBeats)) {
       console.log('[STORY] → path 1: end of day');
+      chat.lastChoices = null; // Clear so reload doesn't show stale choices
       saveChats();
       await showEndOfDay(chat);
       return;

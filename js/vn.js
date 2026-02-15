@@ -200,6 +200,9 @@ function closeJournal() {
   if (!chat) return;
   chat.storyDay = (chat.storyDay || 1) + 1;
   initPhaseForDay(chat);
+  chat.lastChoices = null; // Clear stale choices from previous day
+  // Push a user turn so the model has something to respond to on the new day
+  chat.messages.push({ role: 'user', content: '[Continue]' });
   updateChatHeader(chat);
   updateVnDay(chat.storyDay);
   updatePhaseDisplay(chat);
