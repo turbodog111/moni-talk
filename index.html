@@ -242,6 +242,7 @@
     <label>Model Benchmark</label>
     <div class="hint">Run standardized tests to compare how well your current model handles Moni-Talk scenarios (character voice, tag formatting, affinity tracking).</div>
     <button class="btn btn-primary bench-open-btn" id="openBenchmarkBtn" style="width:100%;margin-top:8px;">Open Benchmark Suite</button>
+    <div id="benchSettingsHint"></div>
     <div class="modal-actions">
       <button class="btn btn-danger" id="clearKeyBtn">Clear Key</button>
       <button class="btn btn-secondary" id="cancelSettingsBtn">Cancel</button>
@@ -288,6 +289,7 @@
       <button class="bench-tab" id="benchTabResults">Results</button>
     </div>
     <div class="bench-body" id="benchRunContent">
+      <div id="benchModelViewer"></div>
       <div class="bench-section">
         <h3>Story Mode</h3>
         <div id="benchStoryTests"></div>

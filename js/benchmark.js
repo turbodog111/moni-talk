@@ -1,5 +1,6 @@
 // ====== BENCHMARK SUITE ======
 const BENCH_STORAGE = 'moni_talk_benchmarks';
+let benchViewModelKey = null; // null = use current model
 
 // --- Helpers ---
 function getCurrentModelKey() {
@@ -22,6 +23,10 @@ function loadBenchResults() {
 
 function saveBenchResults(data) {
   localStorage.setItem(BENCH_STORAGE, JSON.stringify(data));
+}
+
+function getBenchViewKey() {
+  return benchViewModelKey || getCurrentModelKey();
 }
 
 // --- Test Definitions ---
@@ -501,7 +506,7 @@ function renderTestDetail(parentEl, test, rawText, scores, timeSec, tps) {
 
   // Load existing ratings
   const all = loadBenchResults();
-  const modelKey = getCurrentModelKey();
+  const modelKey = getBenchViewKey();
   const category = STORY_TESTS.some(t => t.id === test.id) ? 'story' : 'chat';
   const existing = all[modelKey]?.[category]?.userRatings?.[test.id] || {};
 
@@ -540,7 +545,7 @@ function formatScoreKey(key) {
 
 function saveStarRating(testId, category, ratingKey, value) {
   const all = loadBenchResults();
-  const modelKey = getCurrentModelKey();
+  const modelKey = getBenchViewKey();
   if (!all[modelKey]) all[modelKey] = {};
   if (!all[modelKey][category]) all[modelKey][category] = { tests: [], autoScores: {}, userRatings: {}, timestamp: Date.now() };
   if (!all[modelKey][category].userRatings) all[modelKey][category].userRatings = {};
@@ -583,18 +588,23 @@ function switchBenchTab(tab) {
 }
 
 function renderBenchRunTab() {
+  // Update top model bar
   const modelInfo = $('benchModelInfo');
   if (modelInfo) {
+    const viewKey = getBenchViewKey();
     const all = loadBenchResults();
-    const modelKey = getCurrentModelKey();
-    const data = all[modelKey];
+    const data = all[viewKey];
+    const label = viewKey.split(':').slice(1).join(':') || viewKey;
     let lastDate = '';
     if (data) {
       const ts = Math.max(data.story?.timestamp || 0, data.chat?.timestamp || 0);
       if (ts) lastDate = ' | Last run: ' + new Date(ts).toLocaleDateString();
     }
-    modelInfo.textContent = getCurrentModelLabel() + lastDate;
+    modelInfo.textContent = label + lastDate;
   }
+
+  // Render model viewer dropdown
+  renderBenchModelViewer();
 
   // Render story tests
   renderTestList('benchStoryTests', STORY_TESTS, 'story');
@@ -606,13 +616,41 @@ function renderBenchRunTab() {
   if (progressSection) progressSection.style.display = 'none';
 }
 
+function renderBenchModelViewer() {
+  const viewer = $('benchModelViewer');
+  if (!viewer) return;
+  const all = loadBenchResults();
+  const keys = Object.keys(all);
+  const current = getCurrentModelKey();
+
+  if (keys.length === 0) { viewer.innerHTML = ''; return; }
+
+  // Ensure current model is in the list even if not yet benchmarked
+  if (!keys.includes(current)) keys.unshift(current);
+
+  let html = '<div class="bench-viewer"><label>Viewing results for:</label><select id="benchViewSelect">';
+  keys.forEach(key => {
+    const label = key.split(':').slice(1).join(':') || key;
+    const isCurrent = key === current;
+    const sel = key === getBenchViewKey() ? ' selected' : '';
+    html += `<option value="${escapeHtml(key)}"${sel}>${escapeHtml(label)}${isCurrent ? ' (current)' : ''}</option>`;
+  });
+  html += '</select></div>';
+  viewer.innerHTML = html;
+
+  $('benchViewSelect').addEventListener('change', (e) => {
+    benchViewModelKey = e.target.value === getCurrentModelKey() ? null : e.target.value;
+    renderBenchRunTab();
+  });
+}
+
 function renderTestList(containerId, tests, category) {
   const container = $(containerId);
   if (!container) return;
   container.innerHTML = '';
 
   const all = loadBenchResults();
-  const modelKey = getCurrentModelKey();
+  const modelKey = getBenchViewKey();
   const catData = all[modelKey]?.[category];
 
   tests.forEach(test => {
@@ -727,6 +765,9 @@ function renderComparisonTable(all) {
     return;
   }
 
+  // Compute rankings for overall scores
+  const rankings = computeRankings(all);
+
   const metrics = [
     { key: 'story.autoScores.totalTime', label: 'Story Total Time (s)', fmt: v => v || '-' },
     { key: 'story.autoScores.avgTokensPerSec', label: 'Story Tok/s (avg)', fmt: v => v || '-' },
@@ -745,6 +786,58 @@ function renderComparisonTable(all) {
   });
   html += '</tr></thead><tbody>';
 
+  // Overall score row (highlighted)
+  html += '<tr class="bench-overall-row"><td><strong>Overall Score</strong></td>';
+  checked.forEach(modelKey => {
+    const r = rankings.find(x => x.key === modelKey);
+    html += `<td class="bench-overall-cell"><strong>${r ? r.overall : '-'}</strong>/100</td>`;
+  });
+  html += '</tr>';
+
+  // Rank rows
+  html += '<tr class="bench-rank-row"><td>Story Rank</td>';
+  checked.forEach(modelKey => {
+    const r = rankings.find(x => x.key === modelKey);
+    html += `<td>#${r ? r.storyRank : '-'} of ${rankings.length}</td>`;
+  });
+  html += '</tr>';
+  html += '<tr class="bench-rank-row"><td>Chat Rank</td>';
+  checked.forEach(modelKey => {
+    const r = rankings.find(x => x.key === modelKey);
+    html += `<td>#${r ? r.chatRank : '-'} of ${rankings.length}</td>`;
+  });
+  html += '</tr>';
+  html += '<tr class="bench-rank-row"><td>Speed Rank</td>';
+  checked.forEach(modelKey => {
+    const r = rankings.find(x => x.key === modelKey);
+    html += `<td>#${r ? r.speedRank : '-'} of ${rankings.length}</td>`;
+  });
+  html += '</tr>';
+
+  // User rating rows
+  html += '<tr class="bench-section-row"><td colspan="' + (checked.length + 1) + '">User Ratings</td></tr>';
+  ['voice', 'creativity', 'coherence'].forEach(rKey => {
+    const label = rKey === 'voice' ? 'Character Voice' : rKey.charAt(0).toUpperCase() + rKey.slice(1);
+    html += `<tr><td>${label}</td>`;
+    checked.forEach(modelKey => {
+      const avg = getAvgUserRating(all[modelKey], rKey);
+      html += `<td>${avg ? renderStarsHtml(avg) : '<span class="bench-no-rating">Not rated</span>'}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '<tr class="bench-rank-row"><td>Avg User Rating</td>';
+  checked.forEach(modelKey => {
+    const r = rankings.find(x => x.key === modelKey);
+    if (r && r.hasUserRatings) {
+      html += `<td>${(r.userScore / 20).toFixed(1)}/5</td>`;
+    } else {
+      html += '<td><span class="bench-no-rating">-</span></td>';
+    }
+  });
+  html += '</tr>';
+
+  // Auto metrics
+  html += '<tr class="bench-section-row"><td colspan="' + (checked.length + 1) + '">Auto Metrics</td></tr>';
   metrics.forEach(m => {
     html += `<tr><td>${m.label}</td>`;
     checked.forEach(modelKey => {
@@ -755,6 +848,7 @@ function renderComparisonTable(all) {
   });
 
   // Individual test scores
+  html += '<tr class="bench-section-row"><td colspan="' + (checked.length + 1) + '">Individual Tests</td></tr>';
   const allTests = [...STORY_TESTS, ...CHAT_TESTS];
   allTests.forEach(test => {
     const cat = STORY_TESTS.includes(test) ? 'story' : 'chat';
@@ -777,6 +871,27 @@ function renderComparisonTable(all) {
   tableContainer.innerHTML = html;
 }
 
+function getAvgUserRating(modelData, ratingKey) {
+  if (!modelData) return 0;
+  const vals = [];
+  ['story', 'chat'].forEach(cat => {
+    const ratings = modelData[cat]?.userRatings || {};
+    Object.values(ratings).forEach(r => {
+      if (r[ratingKey]) vals.push(r[ratingKey]);
+    });
+  });
+  return vals.length ? (vals.reduce((s, v) => s + v, 0) / vals.length) : 0;
+}
+
+function renderStarsHtml(avg) {
+  let html = '';
+  for (let i = 1; i <= 5; i++) {
+    html += `<span class="bench-star-display${i <= Math.round(avg) ? ' active' : ''}">\u2605</span>`;
+  }
+  html += ` <span class="bench-star-num">${avg.toFixed(1)}</span>`;
+  return html;
+}
+
 function getNestedVal(obj, path) {
   return path.split('.').reduce((o, k) => o?.[k], obj);
 }
@@ -790,4 +905,118 @@ function exportBenchResults() {
   a.download = `moni-talk-benchmarks-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// --- Rankings & Settings Hint ---
+function computeRankings(all) {
+  const models = Object.keys(all).map(key => {
+    const d = all[key];
+    const storyTests = d.story?.tests?.filter(t => !t.error) || [];
+    const chatTests = d.chat?.tests?.filter(t => !t.error) || [];
+
+    const storyAvg = storyTests.length ? Math.round(storyTests.reduce((s, t) => s + (t.scores.overall || 0), 0) / storyTests.length) : 0;
+    const chatAvg = chatTests.length ? Math.round(chatTests.reduce((s, t) => s + (t.scores.overall || 0), 0) / chatTests.length) : 0;
+
+    const storyTPS = d.story?.autoScores?.avgTokensPerSec ? parseFloat(d.story.autoScores.avgTokensPerSec) : 0;
+    const chatTPS = d.chat?.autoScores?.avgTokensPerSec ? parseFloat(d.chat.autoScores.avgTokensPerSec) : 0;
+    const avgSpeed = (storyTPS + chatTPS) / 2;
+
+    const tagComp = ((d.story?.autoScores?.avgTagCompliance || 0) + (d.chat?.autoScores?.avgTagCompliance || 0)) / 2;
+
+    // User ratings
+    const userVals = [];
+    ['story', 'chat'].forEach(cat => {
+      const ratings = d[cat]?.userRatings || {};
+      Object.values(ratings).forEach(r => {
+        if (r.voice) userVals.push(r.voice);
+        if (r.creativity) userVals.push(r.creativity);
+        if (r.coherence) userVals.push(r.coherence);
+      });
+    });
+    const userScore = userVals.length ? (userVals.reduce((s, v) => s + v, 0) / userVals.length) * 20 : 0;
+    const hasUserRatings = userVals.length > 0;
+
+    return { key, storyAvg, chatAvg, avgSpeed, tagComp, userScore, hasUserRatings };
+  });
+
+  // Sort for per-category rankings
+  const byStory = [...models].sort((a, b) => b.storyAvg - a.storyAvg);
+  const byChat = [...models].sort((a, b) => b.chatAvg - a.chatAvg);
+  const bySpeed = [...models].sort((a, b) => b.avgSpeed - a.avgSpeed);
+
+  const maxSpeed = Math.max(...models.map(m => m.avgSpeed), 1);
+
+  return models.map(m => {
+    const storyRank = byStory.findIndex(x => x.key === m.key) + 1;
+    const chatRank = byChat.findIndex(x => x.key === m.key) + 1;
+    const speedRank = bySpeed.findIndex(x => x.key === m.key) + 1;
+    const speedNorm = Math.round((m.avgSpeed / maxSpeed) * 100);
+
+    const qualityScore = (m.storyAvg + m.chatAvg) / 2;
+    let overall;
+    if (m.hasUserRatings) {
+      // Quality 45% + Compliance 15% + Speed 15% + User 25%
+      overall = Math.round(qualityScore * 0.45 + m.tagComp * 0.15 + speedNorm * 0.15 + m.userScore * 0.25);
+    } else {
+      // Quality 55% + Compliance 20% + Speed 25%
+      overall = Math.round(qualityScore * 0.55 + m.tagComp * 0.2 + speedNorm * 0.25);
+    }
+
+    // Strengths / weaknesses
+    const strengths = [];
+    const weaknesses = [];
+    const total = models.length;
+    if (storyRank === 1 && m.storyAvg > 0) strengths.push('Best story mode');
+    if (chatRank === 1 && m.chatAvg > 0) strengths.push('Best chat mode');
+    if (speedRank === 1) strengths.push('Fastest');
+    if (m.tagComp >= 95) strengths.push('Excellent compliance');
+    if (m.hasUserRatings && m.userScore >= 80) strengths.push('Top rated');
+    if (storyRank === total && total > 1) weaknesses.push('Weakest story');
+    if (chatRank === total && total > 1) weaknesses.push('Weakest chat');
+    if (speedRank === total && total > 1) weaknesses.push('Slowest');
+    if (m.tagComp < 80) weaknesses.push('Poor compliance');
+
+    return { key: m.key, storyRank, chatRank, speedRank, overall, strengths, weaknesses, storyAvg: m.storyAvg, chatAvg: m.chatAvg, avgSpeed: m.avgSpeed, userScore: m.userScore, hasUserRatings: m.hasUserRatings };
+  }).sort((a, b) => b.overall - a.overall);
+}
+
+function getSettingsModelKey() {
+  // Read from form dropdowns (may not be saved yet)
+  const p = providerSelect.value;
+  if (p === 'ollama') return `ollama:${ollamaModelSelect.value}`;
+  if (p === 'gemini') return `gemini:${geminiModelSelect.value}`;
+  if (p === 'openrouter') return `openrouter:${orModelSelect.value}`;
+  return `puter:${puterModelSelect.value}`;
+}
+
+function renderSettingsBenchHint() {
+  const hint = $('benchSettingsHint');
+  if (!hint) return;
+
+  const all = loadBenchResults();
+  const modelKey = getSettingsModelKey();
+  const data = all[modelKey];
+
+  if (!data || Object.keys(all).length === 0) {
+    hint.innerHTML = '';
+    return;
+  }
+
+  const rankings = computeRankings(all);
+  const me = rankings.find(r => r.key === modelKey);
+  if (!me) { hint.innerHTML = ''; return; }
+
+  const total = rankings.length;
+  const overallClass = me.overall >= 85 ? 'good' : me.overall >= 70 ? 'ok' : 'poor';
+
+  let html = `<div class="bench-hint-card">`;
+  html += `<div class="bench-hint-score"><span class="bench-hint-badge ${overallClass}">${me.overall}/100</span> Overall</div>`;
+  html += `<div class="bench-hint-ranks">Story #${me.storyRank}/${total} | Chat #${me.chatRank}/${total} | Speed #${me.speedRank}/${total}</div>`;
+  if (me.hasUserRatings) {
+    html += `<div class="bench-hint-user">Your rating: ${(me.userScore / 20).toFixed(1)}/5</div>`;
+  }
+  if (me.strengths.length) html += `<div class="bench-hint-good">${me.strengths.join(' \u00B7 ')}</div>`;
+  if (me.weaknesses.length) html += `<div class="bench-hint-bad">${me.weaknesses.join(' \u00B7 ')}</div>`;
+  html += '</div>';
+  hint.innerHTML = html;
 }

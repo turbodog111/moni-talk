@@ -85,12 +85,16 @@ function init() {
     });
   }
 
-  $('globalSettingsBtn').addEventListener('click', openSettings);
-  $('chatSettingsBtn').addEventListener('click', openSettings);
+  $('globalSettingsBtn').addEventListener('click', () => { openSettings(); renderSettingsBenchHint(); });
+  $('chatSettingsBtn').addEventListener('click', () => { openSettings(); renderSettingsBenchHint(); });
   $('saveKeyBtn').addEventListener('click', saveSettings);
   $('cancelSettingsBtn').addEventListener('click', closeSettings);
   $('clearKeyBtn').addEventListener('click', clearKey);
-  providerSelect.addEventListener('change', () => toggleProviderFields(providerSelect.value));
+  providerSelect.addEventListener('change', () => { toggleProviderFields(providerSelect.value); setTimeout(renderSettingsBenchHint, 100); });
+  // Update bench hint when model selects change
+  [orModelSelect, puterModelSelect, geminiModelSelect, ollamaModelSelect].forEach(sel => {
+    sel.addEventListener('change', () => setTimeout(renderSettingsBenchHint, 50));
+  });
   settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) closeSettings(); });
 
   // Theme

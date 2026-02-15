@@ -252,6 +252,33 @@
 .bench-score-cell { font-weight: 600; color: #27ae60; }
 .bench-score-cell.failed { color: #c0392b; }
 
+/* Model Viewer */
+.bench-viewer { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 10px; background: var(--green-pale); border-radius: 6px; }
+.bench-viewer label { font-size: 12px; font-weight: 600; color: var(--gray-text); white-space: nowrap; }
+.bench-viewer select { flex: 1; padding: 5px 8px; border: 1px solid var(--gray-mid); border-radius: 6px; font-size: 13px; background: var(--bg); color: var(--text); }
+
+/* Settings Hint Card */
+.bench-hint-card { margin-top: 10px; padding: 10px 12px; background: var(--green-pale); border-radius: 8px; border: 1px solid var(--gray-mid); }
+.bench-hint-score { font-size: 14px; margin-bottom: 4px; }
+.bench-hint-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; }
+.bench-hint-badge.good { background: rgba(39,174,96,0.15); color: #27ae60; }
+.bench-hint-badge.ok { background: rgba(230,167,0,0.15); color: #b38600; }
+.bench-hint-badge.poor { background: rgba(192,57,43,0.15); color: #c0392b; }
+.bench-hint-ranks { font-size: 12px; color: var(--gray-text); margin-bottom: 2px; }
+.bench-hint-user { font-size: 12px; color: var(--gray-text); margin-bottom: 2px; }
+.bench-hint-good { font-size: 12px; color: #27ae60; }
+.bench-hint-bad { font-size: 12px; color: #c0392b; }
+
+/* Comparison Table Enhancements */
+.bench-overall-row { background: var(--green-pale); }
+.bench-overall-cell { font-size: 15px; }
+.bench-rank-row td { font-size: 12px; color: var(--gray-text); }
+.bench-section-row td { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--green-dark); padding-top: 12px !important; background: transparent; }
+.bench-star-display { color: #ccc; font-size: 14px; }
+.bench-star-display.active { color: #f0c040; }
+.bench-star-num { font-size: 12px; color: var(--gray-text); margin-left: 2px; }
+.bench-no-rating { font-size: 12px; color: var(--gray-text); font-style: italic; }
+
 /* Dark Mode */
 [data-theme="dark"] .bench-close { color: #aaa; }
 [data-theme="dark"] .bench-close:hover { background: #333; }
@@ -269,6 +296,12 @@
 [data-theme="dark"] .bench-table th { background: #1a2e23; color: var(--green-mid); }
 [data-theme="dark"] .bench-table td { border-bottom-color: #333; }
 [data-theme="dark"] .bench-progress-track { background: #333; }
+[data-theme="dark"] .bench-viewer { background: #1a2e23; }
+[data-theme="dark"] .bench-viewer select { background: #2a2a2a; border-color: #444; color: var(--text); }
+[data-theme="dark"] .bench-hint-card { background: #1a2e23; border-color: #333; }
+[data-theme="dark"] .bench-overall-row { background: #1a2e23; }
+[data-theme="dark"] .bench-section-row td { color: var(--green-mid); }
+[data-theme="dark"] .bench-star-display { color: #444; }
 
 /* === Tablet breakpoint === */
 @media (min-width: 601px) and (max-width: 1024px) {
