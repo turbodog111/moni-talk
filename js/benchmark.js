@@ -57,12 +57,15 @@ const STORY_TESTS = [
         formatScore = parsed ? 100 : 30;
       }
       scores.formatScore = formatScore;
+      // Duplicate affinity tags penalty
+      const affTagCount = (text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s][^\]]+\]/gi) || []).length;
+      scores.duplicateTags = affTagCount <= 1 ? 100 : 0;
       // Test-specific: Sayori or Monika mentioned, min 200 chars
       const mentionsSayori = /sayori/i.test(text);
       const mentionsMonika = /monika/i.test(text);
       scores.characterMention = (mentionsSayori || mentionsMonika) ? 100 : 0;
       scores.lengthOk = text.length >= 200 ? 100 : Math.round((text.length / 200) * 100);
-      scores.overall = Math.round((scores.tagCompliance + scores.formatScore + scores.characterMention + scores.lengthOk) / 4);
+      scores.overall = Math.round((scores.tagCompliance + scores.formatScore + scores.duplicateTags + scores.characterMention + scores.lengthOk) / 5);
       return scores;
     }
   },
@@ -110,7 +113,10 @@ const STORY_TESTS = [
       }
       scores.formatScore = formatScore;
       scores.affinityAccuracy = affinityAccuracy;
-      scores.overall = Math.round((tagCompliance + formatScore + affinityAccuracy) / 3);
+      // Duplicate affinity tags penalty
+      const affTagCount = (text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s][^\]]+\]/gi) || []).length;
+      scores.duplicateTags = affTagCount <= 1 ? 100 : 0;
+      scores.overall = Math.round((tagCompliance + formatScore + affinityAccuracy + scores.duplicateTags) / 4);
       return scores;
     }
   },
@@ -178,12 +184,15 @@ const STORY_TESTS = [
         formatScore = parsed ? 100 : 30;
       }
       scores.formatScore = formatScore;
+      // Duplicate affinity tags penalty
+      const affTagCount = (text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s][^\]]+\]/gi) || []).length;
+      scores.duplicateTags = affTagCount <= 1 ? 100 : 0;
       scores.characterMention = /monika/i.test(text) ? 100 : 0;
       // Mood appropriate: look for warm/romantic/sunset-related words
       const moodWords = /warm|sunset|golden|beautiful|gentle|close|heart|smile|blush|tender|peaceful|quiet/i;
       scores.moodAppropriate = moodWords.test(text) ? 100 : 30;
       scores.lengthOk = text.length >= 200 ? 100 : Math.round((text.length / 200) * 100);
-      scores.overall = Math.round((scores.tagCompliance + scores.formatScore + scores.characterMention + scores.moodAppropriate + scores.lengthOk) / 5);
+      scores.overall = Math.round((scores.tagCompliance + scores.formatScore + scores.duplicateTags + scores.characterMention + scores.moodAppropriate + scores.lengthOk) / 6);
       return scores;
     }
   }

@@ -22,6 +22,58 @@ function parseStateTags(raw, fallbackMood, fallbackIntensity, fallbackDrift) {
   return { mood: fallbackMood, moodIntensity: fallbackIntensity, drift: fallbackDrift, text: raw };
 }
 
+// ====== THINK-TAG STRIPPING ======
+// Strips <think>...</think> reasoning blocks from model output (e.g., Qwen3)
+function stripThinkTags(text) {
+  // Strip complete <think>...</think> blocks
+  let cleaned = text.replace(/<think>[\s\S]*?<\/think>\s*/g, '');
+  // Strip unclosed <think> block (model ran out of tokens mid-thought)
+  cleaned = cleaned.replace(/<think>[\s\S]*$/g, '');
+  // Strip orphaned </think> at start (opening tag was truncated/trimmed)
+  cleaned = cleaned.replace(/^[\s\S]*?<\/think>\s*/g, '');
+  return cleaned.trim();
+}
+
+// Streaming filter: suppresses <think> blocks from reaching the UI in real-time
+function createThinkFilter(onChunk) {
+  let buf = '', inside = false;
+  return {
+    chunk(text) {
+      buf += text;
+      while (true) {
+        if (inside) {
+          const end = buf.indexOf('</think>');
+          if (end === -1) return; // still in think block, hold everything
+          inside = false;
+          buf = buf.slice(end + 8);
+        } else {
+          // Handle orphaned </think> (stream started mid-thought)
+          const orphan = buf.indexOf('</think>');
+          const start = buf.indexOf('<think>');
+          if (orphan !== -1 && (start === -1 || orphan < start)) {
+            buf = buf.slice(orphan + 8);
+            continue;
+          }
+          if (start === -1) break;
+          if (start > 0) onChunk(buf.slice(0, start));
+          inside = true;
+          buf = buf.slice(start + 7);
+        }
+      }
+      // Emit buffered content, holding back potential partial tag
+      if (buf.length > 8) {
+        onChunk(buf.slice(0, -8));
+        buf = buf.slice(-8);
+      }
+    },
+    flush() {
+      if (!inside && buf) onChunk(buf);
+      buf = '';
+      inside = false;
+    }
+  };
+}
+
 // ====== TIME CONTEXT (computed, zero model cost) ======
 function buildTimeContext(chat) {
   const now = new Date();
@@ -161,21 +213,30 @@ function buildMessages(chat) {
 
 // ====== NON-STREAMING PROVIDER DISPATCH (used by callAI for journals) ======
 async function callProvider(chat) {
-  if (provider === 'gemini') return await callGemini(chat);
-  if (provider === 'ollama') return await callOllama(chat);
-  if (provider === 'puter') return await callPuter(chat);
-  return await callOpenRouter(chat);
+  let result;
+  if (provider === 'gemini') result = await callGemini(chat);
+  else if (provider === 'ollama') result = await callOllama(chat);
+  else if (provider === 'puter') result = await callPuter(chat);
+  else result = await callOpenRouter(chat);
+  return stripThinkTags(result);
 }
 
 // ====== STREAMING PROVIDER DISPATCH ======
 async function callProviderStreaming(chat, onChunk) {
-  if (provider === 'gemini') return await streamGemini(chat, onChunk);
-  if (provider === 'ollama') return await streamOllama(chat, onChunk);
-  if (provider === 'openrouter') return await streamOpenRouter(chat, onChunk);
-  // Puter: no streaming API, fall back to single callback
-  const result = await callPuter(chat);
-  onChunk(result);
-  return result;
+  const filter = createThinkFilter(onChunk);
+  let result;
+  if (provider === 'gemini') result = await streamGemini(chat, c => filter.chunk(c));
+  else if (provider === 'ollama') result = await streamOllama(chat, c => filter.chunk(c));
+  else if (provider === 'openrouter') result = await streamOpenRouter(chat, c => filter.chunk(c));
+  else {
+    // Puter: no streaming API, fall back to single callback
+    result = await callPuter(chat);
+    result = stripThinkTags(result);
+    onChunk(result);
+    return result;
+  }
+  filter.flush();
+  return stripThinkTags(result);
 }
 
 // ====== API: OPENROUTER (non-streaming, kept for callAI) ======
@@ -407,15 +468,15 @@ async function fetchOllamaModels() {
 
 // ====== RAW AI CALL (for journals etc. — non-streaming) ======
 async function callAI(messages, maxTokens = 600) {
+  let raw;
   if (provider === 'puter') {
     try {
       const r = await puter.ai.chat(messages, { model: puterModel, stream: false });
-      return extractPuterText(r).trim() || '';
+      raw = extractPuterText(r).trim() || '';
     } catch (err) {
       throw new Error(err?.message || 'Puter request failed.');
     }
-  }
-  if (provider === 'gemini') {
+  } else if (provider === 'gemini') {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${geminiKey}` },
@@ -423,9 +484,8 @@ async function callAI(messages, maxTokens = 600) {
     });
     if (!res.ok) throw new Error('Gemini API error');
     const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim() || '';
-  }
-  if (provider === 'ollama') {
+    raw = data.choices?.[0]?.message?.content?.trim() || '';
+  } else if (provider === 'ollama') {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 300000); // 5 min — slow models need time
     try {
@@ -451,20 +511,22 @@ async function callAI(messages, maxTokens = 600) {
       });
       if (!res.ok) throw new Error('Ollama error');
       const data = await res.json();
-      return data.message?.content?.trim() || '';
+      raw = data.message?.content?.trim() || '';
     } catch (err) {
       if (err.name === 'AbortError') throw new Error('Ollama request timed out.');
       throw new Error(err?.message || 'Ollama request failed. Is it running?');
     } finally {
       clearTimeout(timer);
     }
+  } else {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': window.location.href, 'X-Title': 'Moni-Talk' },
+      body: JSON.stringify({ model: selectedModel, messages, max_tokens: maxTokens, temperature: 0.9 })
+    });
+    if (!res.ok) throw new Error('API error');
+    const data = await res.json();
+    raw = data.choices?.[0]?.message?.content?.trim() || '';
   }
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': window.location.href, 'X-Title': 'Moni-Talk' },
-    body: JSON.stringify({ model: selectedModel, messages, max_tokens: maxTokens, temperature: 0.9 })
-  });
-  if (!res.ok) throw new Error('API error');
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content?.trim() || '';
+  return stripThinkTags(raw);
 }
