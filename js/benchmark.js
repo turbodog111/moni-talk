@@ -214,11 +214,8 @@ const STORY_TESTS = [
       const affTagCount = (text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s][^\]]+\]/gi) || []).length;
       scores.duplicateTags = affTagCount <= 1 ? 100 : 0;
       scores.characterMention = /monika/i.test(text) ? 100 : 0;
-      // Mood appropriate: look for warm/romantic/sunset-related words
-      const moodWords = /warm|sunset|golden|beautiful|gentle|close|heart|smile|blush|tender|peaceful|quiet/i;
-      scores.moodAppropriate = moodWords.test(text) ? 100 : 30;
       scores.lengthOk = text.length >= 200 ? 100 : Math.round((text.length / 200) * 100);
-      scores.overall = Math.round((scores.tagCompliance + scores.formatScore + scores.duplicateTags + scores.characterMention + scores.moodAppropriate + scores.lengthOk) / 6);
+      scores.overall = Math.round((scores.tagCompliance + scores.formatScore + scores.duplicateTags + scores.characterMention + scores.lengthOk) / 5);
       return scores;
     }
   }
@@ -312,22 +309,8 @@ const CHAT_TESTS = [
       const hasDrift = parsed.drift && DRIFT_CATEGORIES.includes(parsed.drift);
       scores.tagCompliance = ((hasMood ? 50 : 0) + (hasDrift ? 50 : 0));
 
-      // Mood should shift to tender/thoughtful/calm — NOT cheerful/playful/teasing
-      const appropriateMoods = ['tender', 'thoughtful', 'calm', 'melancholic', 'nostalgic'];
-      const inappropriateMoods = ['cheerful', 'playful', 'teasing', 'excited'];
-      let moodShift = 50; // neutral if no mood tag
-      if (hasMood) {
-        if (appropriateMoods.includes(parsed.mood)) moodShift = 100;
-        else if (inappropriateMoods.includes(parsed.mood)) moodShift = 0;
-      }
-      scores.moodShift = moodShift;
-
-      // Empathy detection
-      const empathyWords = /sorry|hear that|rough|understand|here for you|feel|tough|hard|care|okay|listen|hug|wish|better|support|lean on|tell me|what happened/i;
-      scores.empathy = empathyWords.test(text) ? 100 : 20;
-
       scores.formatScore = hasMood && hasDrift ? 100 : hasMood || hasDrift ? 50 : 0;
-      scores.overall = Math.round((scores.tagCompliance + scores.moodShift + scores.empathy + scores.formatScore) / 4);
+      scores.overall = Math.round((scores.tagCompliance + scores.formatScore) / 2);
       return scores;
     }
   },
@@ -351,20 +334,8 @@ const CHAT_TESTS = [
       const hasDrift = parsed.drift && DRIFT_CATEGORIES.includes(parsed.drift);
       scores.tagCompliance = ((hasMood ? 50 : 0) + (hasDrift ? 50 : 0));
 
-      // Playful/teasing tone
-      const playfulMoods = ['playful', 'teasing', 'excited', 'cheerful'];
-      let moodOk = 50;
-      if (hasMood) {
-        moodOk = playfulMoods.includes(parsed.mood) ? 100 : 20;
-      }
-      scores.moodAppropriate = moodOk;
-
-      // Playful tone detection
-      const playfulWords = /haha|ahaha|pizza|poem|bet|challenge|easy|watch|seconds|pepperoni|cheese|slice|dough|~|!/i;
-      scores.playfulTone = playfulWords.test(text) ? 100 : 30;
-
       scores.formatScore = hasMood && hasDrift ? 100 : hasMood || hasDrift ? 50 : 0;
-      scores.overall = Math.round((scores.tagCompliance + scores.moodAppropriate + scores.playfulTone + scores.formatScore) / 4);
+      scores.overall = Math.round((scores.tagCompliance + scores.formatScore) / 2);
       return scores;
     }
   }
@@ -536,7 +507,8 @@ function renderTestDetail(parentEl, test, rawText, scores, timeSec, tps) {
   const ratingCategories = [
     { key: 'voice', label: 'Character Voice' },
     { key: 'creativity', label: 'Creativity' },
-    { key: 'coherence', label: 'Coherence' }
+    { key: 'coherence', label: 'Coherence' },
+    { key: 'tone', label: 'Mood & Tone' }
   ];
 
   // Load existing ratings
@@ -593,6 +565,7 @@ function saveStarRating(testId, category, ratingKey, value) {
 function openBenchmarkModal() {
   const modal = $('benchmarkModal');
   if (!modal) return;
+  benchViewModelKey = null; // Always show current model on open
   modal.classList.add('open');
   renderBenchRunTab();
   switchBenchTab('run');
@@ -887,8 +860,8 @@ function renderComparisonTable(all, installedOllama) {
 
   // User rating rows
   html += '<tr class="bench-section-row"><td colspan="' + (checked.length + 1) + '">User Ratings</td></tr>';
-  ['voice', 'creativity', 'coherence'].forEach(rKey => {
-    const label = rKey === 'voice' ? 'Character Voice' : rKey.charAt(0).toUpperCase() + rKey.slice(1);
+  ['voice', 'creativity', 'coherence', 'tone'].forEach(rKey => {
+    const label = rKey === 'voice' ? 'Character Voice' : rKey === 'tone' ? 'Mood & Tone' : rKey.charAt(0).toUpperCase() + rKey.slice(1);
     html += `<tr><td>${label}</td>`;
     checked.forEach(modelKey => {
       const avg = getAvgUserRating(all[modelKey], rKey);
@@ -1004,6 +977,7 @@ function computeRankings(all, excludeKeys) {
         if (r.voice) userVals.push(r.voice);
         if (r.creativity) userVals.push(r.creativity);
         if (r.coherence) userVals.push(r.coherence);
+        if (r.tone) userVals.push(r.tone);
       });
     });
     const userScore = userVals.length ? (userVals.reduce((s, v) => s + v, 0) / userVals.length) * 20 : 0;
