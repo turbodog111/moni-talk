@@ -112,7 +112,7 @@ function buildPhaseInstruction(chat) {
   }
 
   if (!instruction) return '';
-  return `=== CURRENT SCENE: ${phase.label} ===\n${instruction}`;
+  return `=== CURRENT SCENE: ${phase.label} ===\nYou MUST write this scene as described below. The user's previous choice affects tone and affinity only — it does NOT override this scene.\n\n${instruction}`;
 }
 
 // Ensure phase is valid for the current day; re-init if stale or missing
