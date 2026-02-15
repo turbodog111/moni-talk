@@ -29,6 +29,32 @@ function getBenchViewKey() {
   return benchViewModelKey || getCurrentModelKey();
 }
 
+// --- Installed model detection ---
+let _installedOllamaCache = null;
+let _installedOllamaCacheTime = 0;
+const OLLAMA_CACHE_TTL = 30000; // 30s
+
+async function getInstalledOllamaModels() {
+  const now = Date.now();
+  if (_installedOllamaCache && (now - _installedOllamaCacheTime) < OLLAMA_CACHE_TTL) {
+    return _installedOllamaCache;
+  }
+  try {
+    const models = await fetchOllamaModels();
+    _installedOllamaCache = new Set(models.map(m => m.id));
+    _installedOllamaCacheTime = now;
+    return _installedOllamaCache;
+  } catch {
+    return _installedOllamaCache || new Set();
+  }
+}
+
+function isModelInstalled(modelKey, installedSet) {
+  if (!modelKey.startsWith('ollama:')) return true;
+  const name = modelKey.slice('ollama:'.length);
+  return installedSet.has(name);
+}
+
 // --- Test Definitions ---
 const STORY_TESTS = [
   {
@@ -575,6 +601,8 @@ function openBenchmarkModal() {
 function closeBenchmarkModal() {
   const modal = $('benchmarkModal');
   if (modal) modal.classList.remove('open');
+  const benchModal = document.querySelector('.bench-modal');
+  if (benchModal) benchModal.classList.remove('results-active');
 }
 
 function switchBenchTab(tab) {
@@ -582,16 +610,19 @@ function switchBenchTab(tab) {
   const resultsTab = $('benchTabResults');
   const runContent = $('benchRunContent');
   const resultsContent = $('benchResultsContent');
+  const modal = document.querySelector('.bench-modal');
   if (tab === 'run') {
     runTab.classList.add('active');
     resultsTab.classList.remove('active');
     runContent.style.display = '';
     resultsContent.style.display = 'none';
+    if (modal) modal.classList.remove('results-active');
   } else {
     runTab.classList.remove('active');
     resultsTab.classList.add('active');
     runContent.style.display = 'none';
     resultsContent.style.display = '';
+    if (modal) modal.classList.add('results-active');
     renderBenchResultsTab();
   }
 }
@@ -716,7 +747,7 @@ function renderTestList(containerId, tests, category) {
 }
 
 // --- Results Tab ---
-function renderBenchResultsTab() {
+async function renderBenchResultsTab() {
   const container = $('benchResultsContent');
   if (!container) return;
 
@@ -728,12 +759,19 @@ function renderBenchResultsTab() {
     return;
   }
 
+  const installedOllama = await getInstalledOllamaModels();
+
   let html = '<div class="bench-results-controls">';
   html += '<div class="bench-model-select">';
   html += '<label>Models to compare:</label>';
   html += '<div class="bench-model-chips">';
   modelKeys.forEach(key => {
-    html += `<label class="bench-chip-label"><input type="checkbox" class="benchModelCheck" value="${escapeHtml(key)}" checked> ${escapeHtml(key.split(':').slice(1).join(':') || key)}</label>`;
+    const installed = isModelInstalled(key, installedOllama);
+    const checked = installed ? ' checked' : '';
+    const chipClass = installed ? 'bench-chip-label' : 'bench-chip-label bench-chip-removed';
+    const rawLabel = key.split(':').slice(1).join(':') || key;
+    const suffix = installed ? '' : ' (removed)';
+    html += `<label class="${chipClass}"><input type="checkbox" class="benchModelCheck" value="${escapeHtml(key)}"${checked}> <span class="bench-chip-text">${escapeHtml(rawLabel)}</span>${suffix}</label>`;
   });
   html += '</div></div>';
   html += '<div class="bench-results-actions">';
@@ -746,7 +784,7 @@ function renderBenchResultsTab() {
 
   // Wire checkbox changes
   container.querySelectorAll('.benchModelCheck').forEach(cb => {
-    cb.addEventListener('change', () => renderComparisonTable(all));
+    cb.addEventListener('change', () => renderComparisonTable(all, installedOllama));
   });
 
   // Wire buttons
@@ -761,10 +799,10 @@ function renderBenchResultsTab() {
     }
   });
 
-  renderComparisonTable(all);
+  renderComparisonTable(all, installedOllama);
 }
 
-function renderComparisonTable(all) {
+function renderComparisonTable(all, installedOllama) {
   const tableContainer = $('benchComparisonTable');
   if (!tableContainer) return;
 
@@ -774,8 +812,17 @@ function renderComparisonTable(all) {
     return;
   }
 
-  // Compute rankings for overall scores
-  const rankings = computeRankings(all);
+  // Build set of removed (uninstalled) models to exclude from rankings
+  const removedKeys = new Set();
+  if (installedOllama) {
+    Object.keys(all).forEach(key => {
+      if (!isModelInstalled(key, installedOllama)) removedKeys.add(key);
+    });
+  }
+
+  // Compute rankings excluding removed models
+  const rankings = computeRankings(all, removedKeys);
+  const rankTotal = rankings.length;
 
   const metrics = [
     { key: 'story.autoScores.totalTime', label: 'Story Total Time (s)', fmt: v => v || '-' },
@@ -788,10 +835,21 @@ function renderComparisonTable(all) {
     { key: 'chat.autoScores.avgFormatScore', label: 'Chat Format Score', fmt: v => v != null ? v + '/100' : '-' }
   ];
 
-  let html = '<table class="bench-table"><thead><tr><th>Metric</th>';
+  function truncLabel(key) {
+    const raw = key.split(':').slice(1).join(':') || key;
+    if (raw.length > 20) return `<span title="${escapeHtml(raw)}">${escapeHtml(raw.slice(0, 18))}&hellip;</span>`;
+    return escapeHtml(raw);
+  }
+
+  function scoreColorClass(val) {
+    if (val >= 80) return 'bench-score-green';
+    if (val >= 60) return 'bench-score-amber';
+    return 'bench-score-red';
+  }
+
+  let html = '<div class="bench-table-wrapper"><table class="bench-table"><thead><tr><th>Metric</th>';
   checked.forEach(key => {
-    const label = key.split(':').slice(1).join(':') || key;
-    html += `<th>${escapeHtml(label)}</th>`;
+    html += `<th>${truncLabel(key)}</th>`;
   });
   html += '</tr></thead><tbody>';
 
@@ -799,7 +857,11 @@ function renderComparisonTable(all) {
   html += '<tr class="bench-overall-row"><td><strong>Overall Score</strong></td>';
   checked.forEach(modelKey => {
     const r = rankings.find(x => x.key === modelKey);
-    html += `<td class="bench-overall-cell"><strong>${r ? r.overall : '-'}</strong>/100</td>`;
+    if (r) {
+      html += `<td class="bench-overall-cell ${scoreColorClass(r.overall)}"><strong>${r.overall}</strong>/100</td>`;
+    } else {
+      html += '<td class="bench-overall-cell">-</td>';
+    }
   });
   html += '</tr>';
 
@@ -807,19 +869,19 @@ function renderComparisonTable(all) {
   html += '<tr class="bench-rank-row"><td>Story Rank</td>';
   checked.forEach(modelKey => {
     const r = rankings.find(x => x.key === modelKey);
-    html += `<td>#${r ? r.storyRank : '-'} of ${rankings.length}</td>`;
+    html += `<td>#${r ? r.storyRank : '-'} of ${rankTotal}</td>`;
   });
   html += '</tr>';
   html += '<tr class="bench-rank-row"><td>Chat Rank</td>';
   checked.forEach(modelKey => {
     const r = rankings.find(x => x.key === modelKey);
-    html += `<td>#${r ? r.chatRank : '-'} of ${rankings.length}</td>`;
+    html += `<td>#${r ? r.chatRank : '-'} of ${rankTotal}</td>`;
   });
   html += '</tr>';
   html += '<tr class="bench-rank-row"><td>Speed Rank</td>';
   checked.forEach(modelKey => {
     const r = rankings.find(x => x.key === modelKey);
-    html += `<td>#${r ? r.speedRank : '-'} of ${rankings.length}</td>`;
+    html += `<td>#${r ? r.speedRank : '-'} of ${rankTotal}</td>`;
   });
   html += '</tr>';
 
@@ -866,7 +928,8 @@ function renderComparisonTable(all) {
       const catData = all[modelKey]?.[cat];
       const result = catData?.tests?.find(r => r.testId === test.id);
       if (result && !result.error) {
-        html += `<td class="bench-score-cell">${result.scores.overall}/100</td>`;
+        const sc = result.scores.overall;
+        html += `<td class="bench-score-cell ${scoreColorClass(sc)}">${sc}/100</td>`;
       } else if (result?.error) {
         html += '<td class="bench-score-cell failed">Failed</td>';
       } else {
@@ -876,7 +939,7 @@ function renderComparisonTable(all) {
     html += '</tr>';
   });
 
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
   tableContainer.innerHTML = html;
 }
 
@@ -917,8 +980,9 @@ function exportBenchResults() {
 }
 
 // --- Rankings & Settings Hint ---
-function computeRankings(all) {
-  const models = Object.keys(all).map(key => {
+function computeRankings(all, excludeKeys) {
+  const keysToRank = excludeKeys ? Object.keys(all).filter(k => !excludeKeys.has(k)) : Object.keys(all);
+  const models = keysToRank.map(key => {
     const d = all[key];
     const storyTests = d.story?.tests?.filter(t => !t.error) || [];
     const chatTests = d.chat?.tests?.filter(t => !t.error) || [];

@@ -194,7 +194,8 @@
 [data-theme="dark"] .poem-attr { color: var(--gray-text); }
 
 /* === Benchmark Modal === */
-.bench-modal { max-width: 640px; width: 95vw; max-height: 85vh; display: flex; flex-direction: column; }
+.bench-modal { max-width: 640px; width: 95vw; max-height: 85vh; display: flex; flex-direction: column; transition: max-width 0.3s ease, width 0.3s ease; }
+.bench-modal.results-active { max-width: 95vw; width: 95vw; }
 .bench-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .bench-header h2 { margin: 0; }
 .bench-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--gray-text); padding: 4px 8px; border-radius: 4px; transition: background 0.2s; }
@@ -264,13 +265,25 @@
 .bench-results-actions { display: flex; gap: 8px; }
 
 /* Comparison Table */
-.bench-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.bench-table-wrapper { overflow-x: auto; margin-top: 8px; border: 1px solid var(--gray-mid); border-radius: 6px; }
+.bench-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .bench-table th, .bench-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--gray-mid); }
-.bench-table th { font-weight: 600; color: var(--green-dark); background: var(--green-pale); position: sticky; top: 0; }
+.bench-table th { font-weight: 600; color: var(--green-dark); background: var(--green-pale); position: sticky; top: 0; white-space: nowrap; min-width: 120px; }
+.bench-table th:first-child, .bench-table td:first-child { position: sticky; left: 0; z-index: 2; background: var(--bg); min-width: 150px; }
+.bench-table th:first-child { z-index: 3; background: var(--green-pale); }
 .bench-table td:first-child { font-weight: 500; white-space: nowrap; }
 .bench-test-row td:first-child { padding-left: 6px; }
+.bench-table tbody tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+.bench-table tbody tr:nth-child(even) td:first-child { background: var(--bg); }
 .bench-score-cell { font-weight: 600; color: #27ae60; }
 .bench-score-cell.failed { color: #c0392b; }
+.bench-score-green { color: #27ae60; }
+.bench-score-amber { color: #b38600; }
+.bench-score-red { color: #c0392b; }
+
+/* Removed model chip */
+.bench-chip-removed { opacity: 0.55; border-style: dashed !important; }
+.bench-chip-removed .bench-chip-text { text-decoration: line-through; }
 
 /* Model Viewer */
 .bench-viewer { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 10px; background: var(--green-pale); border-radius: 6px; }
@@ -314,7 +327,12 @@
 [data-theme="dark"] .bench-chip-label { border-color: #444; color: var(--text); }
 [data-theme="dark"] .bench-chip-label:hover { border-color: var(--green-mid); }
 [data-theme="dark"] .bench-table th { background: #1a2e23; color: var(--green-mid); }
+[data-theme="dark"] .bench-table th:first-child { background: #1a2e23; }
+[data-theme="dark"] .bench-table td:first-child { background: #1e1e1e; }
+[data-theme="dark"] .bench-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+[data-theme="dark"] .bench-table tbody tr:nth-child(even) td:first-child { background: #1e1e1e; }
 [data-theme="dark"] .bench-table td { border-bottom-color: #333; }
+[data-theme="dark"] .bench-table-wrapper { border-color: #333; }
 [data-theme="dark"] .bench-progress-track { background: #333; }
 [data-theme="dark"] .bench-viewer { background: #1a2e23; }
 [data-theme="dark"] .bench-viewer select { background: #2a2a2a; border-color: #444; color: var(--text); }
@@ -322,6 +340,11 @@
 [data-theme="dark"] .bench-overall-row { background: #1a2e23; }
 [data-theme="dark"] .bench-section-row td { color: var(--green-mid); }
 [data-theme="dark"] .bench-star-display { color: #444; }
+
+/* === Benchmark mobile fallback === */
+@media (max-width: 600px) {
+  .bench-modal.results-active { max-width: 98vw; width: 98vw; }
+}
 
 /* === Tablet breakpoint === */
 @media (min-width: 601px) and (max-width: 1024px) {
