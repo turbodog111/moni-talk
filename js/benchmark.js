@@ -1036,7 +1036,7 @@ function getSettingsModelKey() {
   return `puter:${puterModelSelect.value}`;
 }
 
-function renderSettingsBenchHint() {
+async function renderSettingsBenchHint() {
   const hint = $('benchSettingsHint');
   if (!hint) return;
 
@@ -1049,7 +1049,14 @@ function renderSettingsBenchHint() {
     return;
   }
 
-  const rankings = computeRankings(all);
+  // Exclude uninstalled models from rankings
+  const installedOllama = await getInstalledOllamaModels();
+  const excludeKeys = new Set();
+  Object.keys(all).forEach(key => {
+    if (!isModelInstalled(key, installedOllama)) excludeKeys.add(key);
+  });
+
+  const rankings = computeRankings(all, excludeKeys);
   const me = rankings.find(r => r.key === modelKey);
   if (!me) { hint.innerHTML = ''; return; }
 

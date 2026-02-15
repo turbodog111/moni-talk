@@ -67,6 +67,8 @@ async function refreshOllamaModels() {
   if (ollamaModel && models.some(m => m.id === ollamaModel)) {
     ollamaModelSelect.value = ollamaModel;
   }
+  // Update benchmark hint now that models are loaded
+  if (typeof renderSettingsBenchHint === 'function') renderSettingsBenchHint();
 }
 
 // ====== TOAST ======
