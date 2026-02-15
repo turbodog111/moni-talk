@@ -427,7 +427,7 @@ async function callAI(messages, maxTokens = 600) {
   }
   if (provider === 'ollama') {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 180000);
+    const timer = setTimeout(() => controller.abort(), 300000); // 5 min — slow models need time
     try {
       const res = await fetch(`${ollamaEndpoint}/api/chat`, {
         method: 'POST',

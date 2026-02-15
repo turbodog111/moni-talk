@@ -12,6 +12,8 @@ function renderChatList() {
     return (b.lastModified || b.created) - (a.lastModified || a.created);
   }).forEach(chat => {
     const rel = chat.mode === 'story' ? { label: 'Story Mode' } : chat.mode === 'room' ? { label: 'Room Mode' } : (RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2]);
+    const defaultTitle = chat.mode === 'story' ? 'Story Mode' : chat.mode === 'room' ? 'Room Mode' : `${rel.label} Monika`;
+    const displayTitle = chat.title || defaultTitle;
     const lastMsg = chat.messages[chat.messages.length - 1];
     let preview;
     if (!lastMsg) { preview = 'No messages yet'; }
@@ -31,14 +33,23 @@ function renderChatList() {
       <img class="chat-item-avatar" src="Monika PFP.png" alt="Monika">
       <div class="chat-item-info">
         <div class="chat-item-top">
-          <span class="chat-item-rel">${rel.label} Monika${moodText}</span>
+          <span class="chat-item-rel">${escapeHtml(displayTitle)}${moodText}</span>
           <span class="chat-item-date">${new Date(chat.created).toLocaleDateString()}</span>
         </div>
         <div class="chat-item-preview">${escapeHtml(preview)}</div>
       </div>
+      <button class="chat-item-rename" title="Rename">&#9998;</button>
       <button class="chat-item-star ${chat.starred ? 'starred' : ''}" title="Star">${starIcon}</button>
       <button class="chat-item-delete" title="Delete">&times;</button>`;
-    item.addEventListener('click', (e) => { if (!e.target.closest('.chat-item-delete') && !e.target.closest('.chat-item-star')) openChat(chat.id); });
+    item.addEventListener('click', (e) => { if (!e.target.closest('.chat-item-delete') && !e.target.closest('.chat-item-star') && !e.target.closest('.chat-item-rename')) openChat(chat.id); });
+    item.querySelector('.chat-item-rename').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const newTitle = prompt('Rename this conversation:', chat.title || defaultTitle);
+      if (newTitle !== null) {
+        chat.title = newTitle.trim() || null; // null clears back to default
+        saveChats(); renderChatList();
+      }
+    });
     item.querySelector('.chat-item-star').addEventListener('click', (e) => {
       e.stopPropagation();
       chat.starred = !chat.starred;
@@ -173,14 +184,14 @@ function getChat() { return chats.find(c => c.id === activeChatId) || null; }
 
 function updateChatHeader(chat) {
   if (chat.mode === 'story') {
-    $('chatHeaderName').textContent = 'Literature Club';
+    $('chatHeaderName').textContent = chat.title || 'Literature Club';
     const phase = STORY_PHASES[chat.storyPhase];
     const phaseLabel = phase ? ` \u2014 ${phase.label}` : '';
     chatHeaderSub.textContent = `Day ${chat.storyDay || 1}${phaseLabel}`;
     return;
   }
   if (chat.mode === 'room') {
-    $('chatHeaderName').textContent = 'Monika';
+    $('chatHeaderName').textContent = chat.title || 'Monika';
     const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
     const moodEmoji = getMoodEmoji(chat.mood || 'cheerful');
     const drift = chat.drift || 'casual';
@@ -188,7 +199,7 @@ function updateChatHeader(chat) {
     chatHeaderSub.innerHTML = `${rel.label} <span class="chat-header-mood">${moodEmoji} ${chat.mood || 'cheerful'}</span> <span class="chat-header-drift">${driftEmoji} ${drift}</span>`;
     return;
   }
-  $('chatHeaderName').textContent = 'Monika';
+  $('chatHeaderName').textContent = chat.title || 'Monika';
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
   const moodEmoji = getMoodEmoji(chat.mood || 'cheerful');
   const drift = chat.drift || 'casual';
@@ -236,7 +247,7 @@ function renderMessages() {
       if (msg.role === 'assistant') {
         const parsed = parseStoryResponse(msg.content);
         if (parsed.affinity) lastAffinity = parsed.affinity;
-        insertStoryNarrative(parsed.narrative, false);
+        insertStoryNarrative(parsed.narrative, false, msg.model || null);
       } else {
         // Hide [Continue] system messages from display
         if (msg.content === '[Continue]') return;
@@ -296,20 +307,27 @@ function renderMessages() {
       }
       // Strip legacy expression tags from old room mode messages
       if (chat.mode === 'room' && msg.role === 'assistant') content = stripRoomTags(content);
-      insertMessageEl(msg.role, content, false, imageUrl);
+      insertMessageEl(msg.role, content, false, imageUrl, msg.model || null);
     });
   }
   scrollToBottom();
 }
 
-function insertMessageEl(role, content, animate = true, imageUrl = null) {
+function formatModelLabel(modelKey) {
+  if (!modelKey) return '';
+  const parts = modelKey.split(':');
+  return parts.length > 2 ? parts.slice(1).join(':') : parts[1] || modelKey;
+}
+
+function insertMessageEl(role, content, animate = true, imageUrl = null, model = null) {
   const isM = role === 'assistant';
   const div = document.createElement('div');
   div.className = `message ${isM ? 'monika' : 'user'}`;
   if (!animate) div.style.animation = 'none';
   const av = isM ? `<img class="msg-avatar" src="Monika PFP.png" alt="Monika">` : `<div class="msg-avatar-letter">Y</div>`;
   const imgHtml = imageUrl ? `<img class="msg-image" src="${imageUrl}" alt="Shared image">` : '';
-  div.innerHTML = `${av}<div class="msg-content"><div class="msg-name">${isM ? 'Monika' : 'You'}</div>${imgHtml}<div class="msg-bubble">${isM ? renderMarkdown(content) : escapeHtml(content)}</div></div>`;
+  const modelTag = isM && model ? `<div class="msg-model">${escapeHtml(formatModelLabel(model))}</div>` : '';
+  div.innerHTML = `${av}<div class="msg-content"><div class="msg-name">${isM ? 'Monika' : 'You'}</div>${imgHtml}<div class="msg-bubble">${isM ? renderMarkdown(content) : escapeHtml(content)}</div>${modelTag}</div>`;
   chatArea.insertBefore(div, typingIndicator);
 }
 
@@ -418,7 +436,7 @@ async function sendMessage() {
     chat.moodIntensity = moodIntensity;
     chat.drift = drift;
     chat.lastActiveTime = Date.now();
-    chat.messages.push({ role: 'assistant', content: reply });
+    chat.messages.push({ role: 'assistant', content: reply, model: getCurrentModelKey() });
     saveChats();
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
     updateChatHeader(chat);

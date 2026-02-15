@@ -131,6 +131,22 @@
 .word-submit-btn:hover { background: var(--green-mid); }
 .word-submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* === Model Badge === */
+.msg-model { font-size: 10px; color: var(--gray-text); opacity: 0.6; padding: 2px 4px; margin-top: 2px; }
+.message.user .msg-model { text-align: right; }
+
+/* === Choices Generating Indicator === */
+.choices-generating { display: flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: 13px; color: var(--green-dark); background: var(--green-pale); border-radius: 8px; margin-bottom: 6px; }
+.choices-gen-dots { display: inline-flex; gap: 3px; }
+.choices-gen-dots span { width: 5px; height: 5px; background: var(--green-mid); border-radius: 50%; animation: choicesDotBounce 1.4s infinite ease-in-out; }
+.choices-gen-dots span:nth-child(2) { animation-delay: 0.16s; }
+.choices-gen-dots span:nth-child(3) { animation-delay: 0.32s; }
+@keyframes choicesDotBounce { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+
+/* === Chat Item Rename === */
+.chat-item-rename { background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; padding: 4px; border-radius: 50%; transition: color 0.2s; flex-shrink: 0; }
+.chat-item-rename:hover { color: var(--green-mid); }
+
 /* === Keyboard-open compact mode === */
 .keyboard-open .header { padding-top: 6px; padding-bottom: 6px; }
 .keyboard-open .header-avatar { width: 28px; height: 28px; }
@@ -169,6 +185,10 @@
 [data-theme="dark"] .image-attach-btn:hover { color: var(--green-mid); }
 [data-theme="dark"] .image-preview { background: #1a2e23; border-top-color: var(--gray-mid); }
 [data-theme="dark"] .image-preview img { border-color: var(--green-mid); }
+[data-theme="dark"] .choices-generating { background: #1a2e23; color: var(--green-mid); }
+[data-theme="dark"] .choices-gen-dots span { background: var(--green-mid); }
+[data-theme="dark"] .chat-item-rename { color: #555; }
+[data-theme="dark"] .chat-item-rename:hover { color: var(--green-mid); }
 [data-theme="dark"] .poem-block { background: #1a2e23; border-left-color: #48bb78; }
 [data-theme="dark"] .poem-text { color: var(--text); }
 [data-theme="dark"] .poem-attr { color: var(--gray-text); }

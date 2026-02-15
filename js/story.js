@@ -210,9 +210,22 @@ Choices:`;
 
 // Try AI choice generation in the background; swap in if successful before user clicks
 function tryAIChoices(narrative, phase, chat) {
-  // Race the AI call against a 12-second timeout
-  const timeout = new Promise(resolve => setTimeout(() => resolve(null), 12000));
+  // Show generating indicator on the choices
+  const choicesEl = chatArea.querySelector('.story-choices-inline');
+  if (choicesEl) {
+    const ind = document.createElement('div');
+    ind.className = 'choices-generating';
+    ind.id = 'choicesGeneratingIndicator';
+    ind.innerHTML = '<span class="choices-gen-dots"><span></span><span></span><span></span></span> Generating smarter choices\u2026';
+    choicesEl.prepend(ind);
+  }
+
+  // 90 seconds — slow local models (3-6 tok/s) need 30-60s for 200 tokens
+  const timeout = new Promise(resolve => setTimeout(() => resolve(null), 90000));
   Promise.race([generateStoryChoices(narrative, phase, chat.storyAffinity), timeout]).then(aiChoices => {
+    const ind = $('choicesGeneratingIndicator');
+    if (ind) ind.remove();
+
     if (aiChoices && aiChoices.length >= 2) {
       // Only swap if the inline choices are still showing (user hasn't clicked yet)
       const existing = chatArea.querySelector('.story-choices-inline');
@@ -222,15 +235,19 @@ function tryAIChoices(narrative, phase, chat) {
         renderStoryChoices(aiChoices);
       }
     }
-  }).catch(() => {}); // Silent fail — keep static choices
+  }).catch(() => {
+    const ind = $('choicesGeneratingIndicator');
+    if (ind) ind.remove();
+  });
 }
 
 // ====== UI HELPERS ======
-function insertStoryNarrative(text, animate = true) {
+function insertStoryNarrative(text, animate = true, model = null) {
   const div = document.createElement('div');
   div.className = 'message narrator';
   if (!animate) div.style.animation = 'none';
-  div.innerHTML = `<div class="msg-content"><div class="msg-bubble">${renderMarkdown(text)}</div></div>`;
+  const modelTag = model ? `<div class="msg-model">${escapeHtml(formatModelLabel(model))}</div>` : '';
+  div.innerHTML = `<div class="msg-content"><div class="msg-bubble">${renderMarkdown(text)}</div>${modelTag}</div>`;
   chatArea.insertBefore(div, typingIndicator);
 }
 
@@ -498,7 +515,7 @@ async function generateStoryBeat(chat) {
     updateAffinityPanel(chat.storyAffinity);
     updateRouteIndicator(chat);
 
-    chat.messages.push({ role: 'assistant', content: rawReply });
+    chat.messages.push({ role: 'assistant', content: rawReply, model: getCurrentModelKey() });
     updateVnSprites(narrative);
     scrollToBottom();
     updateContextBar();
