@@ -244,14 +244,41 @@ function parseStoryResponse(text) {
 }
 
 // ====== AI CHOICE GENERATION ======
-async function generateStoryChoices(narrative, phase, affinity, mcName) {
+async function generateStoryChoices(narrative, phase, chat) {
   // Use the full latest narrative — this is the scene the choices respond to
   const excerpt = narrative.length > 1200 ? '...' + narrative.slice(-1200) : narrative;
   const phaseLabel = phase ? phase.label : 'Scene';
-  const name = mcName || 'MC';
+  const name = chat.mcName || 'MC';
+  const day = chat.storyDay || 1;
+  const aff = chat.storyAffinity || {};
 
-  const prompt = `Given this scene from a Doki Doki Literature Club visual novel, write exactly 4 choices for what the player character (${name}) could do or say NEXT. The choices must directly respond to what just happened in the scene — reference specific dialogue, actions, or moments from the text.
+  // Build affinity context
+  function tierLabel(val) {
+    if (val >= 51) return 'romantic interest';
+    if (val >= 31) return 'friends';
+    if (val >= 16) return 'warming up';
+    return 'stranger';
+  }
+  const affinityCtx = ['sayori', 'natsuki', 'yuri', 'monika'].map(g => {
+    const val = aff[g] || 0;
+    return `${g.charAt(0).toUpperCase() + g.slice(1)}: ${val} (${tierLabel(val)})`;
+  }).join(', ');
 
+  // Build scene hint from phase instruction
+  let sceneHint = '';
+  if (phase && phase.instruction) {
+    sceneHint = phase.instruction.replace(/\{\{DAY\}\}/g, String(day));
+  } else if (phase) {
+    sceneHint = phase.label;
+  }
+
+  const prompt = `Given this scene from a Doki Doki Literature Club visual novel (Day ${day}), write exactly 4 choices for what the player character (${name}) could do or say NEXT. The choices must directly respond to what just happened in the scene — reference specific dialogue, actions, or moments from the text.
+
+Relationships — ${name}'s current affinity with each girl:
+${affinityCtx}
+Choices should reflect these relationships. A girl ${name} is close to warrants warmer/bolder options. A stranger warrants cautious/curious options.
+
+${sceneHint ? `Upcoming scene context: ${sceneHint}\nChoices should naturally lead into this next scene when possible.` : ''}
 Rules:
 - Choices must be grounded in the scene above. If a character just said or did something, choices should react to THAT.
 - Each choice: one sentence, under 80 characters.
@@ -298,7 +325,7 @@ function tryAIChoices(narrative, phase, chat) {
 
   // 90 seconds — slow local models (3-6 tok/s) need 30-60s for 200 tokens
   const timeout = new Promise(resolve => setTimeout(() => resolve(null), 90000));
-  Promise.race([generateStoryChoices(narrative, phase, chat.storyAffinity, chat.mcName), timeout]).then(aiChoices => {
+  Promise.race([generateStoryChoices(narrative, phase, chat), timeout]).then(aiChoices => {
     const ind = $('choicesGeneratingIndicator');
     if (ind) ind.remove();
 
