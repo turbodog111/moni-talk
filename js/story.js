@@ -80,30 +80,34 @@ function buildPhaseInstruction(chat) {
 
   let instruction = phase.instruction;
 
-  // Dynamic free_time instruction based on affinity
+  // Dynamic free_time instruction — focused on chosen companion
   if (!instruction && phaseKey === 'free_time') {
     const aff = chat.storyAffinity || {};
     const girls = ['sayori', 'natsuki', 'yuri', 'monika'];
-    const sorted = girls.map(g => ({ name: g, val: aff[g] || 0 })).sort((a, b) => b.val - a.val);
-    const highest = sorted[0];
-    const second = sorted[1];
     const capName = n => n.charAt(0).toUpperCase() + n.slice(1);
 
-    let freeTimeHint = `Day ${day} — Scene: Free time in the club! MC can choose who to spend time with. This is the key bonding phase — meaningful one-on-one conversation happens here.`;
+    // Check if the player has already chosen a companion
+    const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
+    const companionMatch = lastUserMsg?.content?.match(/^Spend time with (\w+)/i);
 
-    if (highest.val > 30) {
-      freeTimeHint += ` ${capName(highest.name)} actively seeks MC out — she finds an excuse to be near him or starts a conversation.`;
+    if (companionMatch) {
+      const companion = companionMatch[1];
+      const bgActivities = {
+        sayori: 'doodling in her notebook',
+        natsuki: 'reading manga in the closet',
+        yuri: 'reading by the window',
+        monika: 'writing at the front desk'
+      };
+      const others = girls
+        .filter(g => capName(g) !== companion)
+        .map(g => `${capName(g)} is ${bgActivities[g]}`)
+        .join('. ');
+
+      instruction = `Day ${day} — Scene: Free time in the club. MC spends one-on-one time with ${companion}. Write a focused bonding scene between MC and ${companion}. Show their personality in this private moment — what they talk about, how they interact, the small details that make this feel real. The other girls are nearby doing their own things: ${others}. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+    } else {
+      // Pre-choice fallback (shouldn't normally reach AI since choices are shown first)
+      instruction = `Day ${day} — Scene: Free time in the club! The girls are settling into their own activities. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
     }
-    if (second.val > 30 && highest.val > 30 && highest.val - second.val <= 5) {
-      freeTimeHint += ` ${capName(highest.name)} and ${capName(second.name)} are both competing for MC's attention — write a subtle tension/jealousy moment between them.`;
-    }
-    const lowGirls = sorted.filter(g => g.val < 15);
-    if (lowGirls.length > 0) {
-      const lowNames = lowGirls.map(g => capName(g.name)).join(' and ');
-      freeTimeHint += ` ${lowNames} ${lowGirls.length === 1 ? 'stays' : 'stay'} in the background doing ${lowGirls.length === 1 ? 'her' : 'their'} own thing — not ignoring MC, just not seeking him out.`;
-    }
-    freeTimeHint += ' Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.';
-    instruction = freeTimeHint;
   }
 
   // Dynamic wrap_up instruction (legacy — for old saves still on wrap_up)
@@ -116,16 +120,43 @@ function buildPhaseInstruction(chat) {
     instruction = `Scene: Monika announces the meeting is over for today. MC walks home with ${name}${isSayori ? ' (they always walk together as neighbors)' : ' (she offered to walk together)'}. A nice bonding moment on the walk. End your response with [END_OF_DAY] on its own line.`;
   }
 
-  // Dynamic walk_home instruction — parse companion from last user message
+  // Dynamic walk_home instruction — 2-beat atmospheric scene
   if (!instruction && phaseKey === 'walk_home') {
     let companion = 'Sayori';
-    const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
-    if (lastUserMsg && typeof lastUserMsg.content === 'string') {
-      const match = lastUserMsg.content.match(/^Walk home with (\w+)/i);
-      if (match) companion = match[1];
+    // Search all user messages for the walk-home choice (it may not be the most recent one on beat 1+)
+    for (let i = chat.messages.length - 1; i >= 0; i--) {
+      const m = chat.messages[i];
+      if (m.role === 'user' && typeof m.content === 'string') {
+        const match = m.content.match(/^Walk home with (\w+)/i);
+        if (match) { companion = match[1]; break; }
+      }
     }
     const isSayori = companion.toLowerCase() === 'sayori';
-    instruction = `Day ${day} — Scene: MC walks home with ${companion}${isSayori ? ' (they always walk together as neighbors)' : ''}. Write a meaningful bonding scene between MC and ${companion}. Show their personality and deepen their connection. End your response with [END_OF_DAY] on its own line.`;
+    const beat = chat.storyBeatInPhase || 0;
+
+    if (beat === 0) {
+      instruction = `Day ${day} — Scene: MC walks home with ${companion}${isSayori ? ' (they always walk together as neighbors)' : ''}.
+
+This is the most special scene of the day — write it with rich sensory detail and emotional depth.
+
+Set the scene: golden evening light, the school shrinking behind them, the rhythm of their footsteps on the sidewalk. Describe the world around them — the sky, the air, small details that make this moment feel alive.
+
+${companion} is different in this private setting — more relaxed, more real. Show how their personality comes through when it's just the two of them.
+
+Open a conversation that feels natural to the moment. Let them settle into each other's company.
+
+Do NOT include [END_OF_DAY]. Do NOT rush to a conclusion — this walk has just begun. Do NOT include any tags like [POETRY] or [CHOICE] in your response.`;
+    } else {
+      instruction = `Day ${day} — Scene: MC continues walking home with ${companion}${isSayori ? ' (neighbors)' : ''}.
+
+Deepen the moment. The conversation has found its groove — let it go somewhere meaningful. Maybe a shared laugh, a quiet confession, a comfortable silence that says more than words.
+
+Rich sensory detail: the light is changing, the world is settling into evening. Small details anchor the scene — a breeze, distant sounds, the way ${companion} looks in this light.
+
+Bring the walk to a warm, memorable close. This should feel like the moment the player remembers from today.
+
+End your response with [END_OF_DAY] on its own line.`;
+    }
   }
 
   if (!instruction) return '';
@@ -143,39 +174,83 @@ function buildPhaseInstruction(chat) {
   return `${header}\n\n${instruction}`;
 }
 
-// Build walk-home choices sorted by affinity with flavor text
+// Build walk-home choices sorted by affinity with activity-grounded flavor text
 function buildWalkHomeChoices(chat) {
   const aff = chat.storyAffinity || {};
   const girls = ['sayori', 'natsuki', 'yuri', 'monika'];
   const capName = n => n.charAt(0).toUpperCase() + n.slice(1);
   const sorted = girls.map(g => ({ name: g, val: aff[g] || 0 })).sort((a, b) => b.val - a.val);
 
+  const activities = {
+    sayori: "she's stuffing her notebook into her bag haphazardly",
+    natsuki: "she's carefully stacking her manga back into the closet",
+    yuri: "she's sliding a bookmark into her novel and gathering her things",
+    monika: "she's organizing the club papers into a neat folder"
+  };
+
   return sorted.map(g => {
     const name = capName(g.name);
+    const activity = activities[g.name];
     if (g.val >= 40) {
-      const flavor = {
-        sayori: "she's already bouncing toward you",
-        natsuki: "she's lingering by the door, pretending not to wait",
-        yuri: "she pauses at the door, hoping you'll join her",
-        monika: "she catches your eye with a warm smile"
+      const warmth = {
+        sayori: "she's already at your side, ready to go",
+        natsuki: "she lingers by the door, pretending she's not waiting for you",
+        yuri: "she pauses at the door and looks back at you hopefully",
+        monika: "she catches your eye and tilts her head toward the door"
       };
-      return `Walk home with ${name} — ${flavor[g.name]}`;
+      return `Walk home with ${name} — ${warmth[g.name]}`;
     } else if (g.val >= 20) {
-      const flavor = {
-        sayori: "she waves at you with her usual grin",
-        natsuki: "she glances your way before heading out",
-        yuri: "she's gathering her things slowly near you",
-        monika: "she's organizing her notes at the front desk"
-      };
-      return `Walk home with ${name} — ${flavor[g.name]}`;
+      return `Walk home with ${name} — ${activity}`;
     } else {
-      const flavor = {
-        sayori: "your neighbor — might as well walk together",
-        natsuki: "you could try catching up with her",
-        yuri: "she's quietly heading out alone",
-        monika: "she's still wrapping up club duties"
+      const distant = {
+        sayori: "your neighbor — she's heading out anyway",
+        natsuki: "she's already halfway out the door",
+        yuri: "she's quietly slipping out on her own",
+        monika: "she's still busy with club duties"
       };
-      return `Walk home with ${name} — ${flavor[g.name]}`;
+      return `Walk home with ${name} — ${distant[g.name]}`;
+    }
+  });
+}
+
+// Build free-time choices sorted by affinity with activity-grounded flavor text
+function buildFreeTimeChoices(chat) {
+  const aff = chat.storyAffinity || {};
+  const girls = ['sayori', 'natsuki', 'yuri', 'monika'];
+  const capName = n => n.charAt(0).toUpperCase() + n.slice(1);
+  const sorted = girls.map(g => ({ name: g, val: aff[g] || 0 })).sort((a, b) => b.val - a.val);
+
+  const activities = {
+    sayori: "she's doodling hearts in her notebook and humming to herself",
+    natsuki: "she's arranging her manga collection in the closet",
+    yuri: "she's curled up by the window, deep in a thick novel",
+    monika: "she's writing something in her journal at the front desk"
+  };
+
+  return sorted.map(g => {
+    const name = capName(g.name);
+    const activity = activities[g.name];
+    if (g.val >= 40) {
+      // High: she notices MC and brightens — active invitation vibe
+      const warmth = {
+        sayori: "she spots you and lights up, waving you over",
+        natsuki: "she glances up and quickly makes room beside her",
+        yuri: "she looks up and her face brightens when she sees you",
+        monika: "she notices you and closes her journal with a smile"
+      };
+      return `Spend time with ${name} — ${warmth[g.name]}`;
+    } else if (g.val >= 20) {
+      // Mid: approachable — neutral/friendly vibe
+      return `Spend time with ${name} — ${activity}`;
+    } else {
+      // Low: absorbed in her thing — MC would need to initiate
+      const absorbed = {
+        sayori: "she seems lost in her own little world",
+        natsuki: "she hasn't looked up from what she's doing",
+        yuri: "she's completely absorbed in her book",
+        monika: "she's focused intently on her writing"
+      };
+      return `Spend time with ${name} — ${absorbed[g.name]}`;
     }
   });
 }
@@ -484,6 +559,18 @@ async function selectStoryChoice(choice) {
     return;
   }
 
+  // "Spend time with X" — player chose a free-time companion
+  if (choice.startsWith('Spend time with ')) {
+    chat.messages.push({ role: 'user', content: choice });
+    saveChats();
+    insertMessageEl('user', choice);
+    scrollToBottom();
+    // Do NOT advancePhase — we're already IN free_time
+    updateContextBar();
+    await generateStoryBeat(chat);
+    return;
+  }
+
   // "Walk home with X" — player chose a companion
   if (choice.startsWith('Walk home with ')) {
     chat.messages.push({ role: 'user', content: choice });
@@ -729,6 +816,16 @@ async function generateStoryBeat(chat) {
       }
       advancePhase(chat);
       updatePhaseDisplay(chat);
+      // Special case: advancing TO free_time → show companion choices
+      if (chat.storyPhase === 'free_time') {
+        console.log('[STORY] → path 3-freetime: showing free-time choices');
+        const freeChoices = buildFreeTimeChoices(chat);
+        chat.lastChoices = freeChoices;
+        saveChats();
+        renderStoryChoices(freeChoices);
+        scrollToBottom();
+        return;
+      }
       const nextPhase = STORY_PHASES[chat.storyPhase];
       if (nextPhase && !nextPhase.noChoices && nextPhase.choices) {
         console.log('[STORY] → path 3a: maxBeats, advancing with next phase choices', nextPhase.choices);

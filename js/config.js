@@ -554,12 +554,7 @@ const STORY_PHASES = {
     maxBeats: 4,
     noChoices: false,
     instruction: null, // Built dynamically based on affinity in buildPhaseInstruction()
-    choices: [
-      'Sit with Sayori — she\'s waving you over with that big grin',
-      'Join Yuri by the window — she seems absorbed in her book',
-      'Check on Natsuki — she\'s in the corner with her manga collection',
-      'See what Monika is up to — she\'s at the front desk writing something'
-    ]
+    choices: null // Dynamically generated free-time companion choices
   },
   wrap_up: {
     label: 'Wrapping Up',
@@ -583,7 +578,7 @@ const STORY_PHASES = {
   },
   walk_home: {
     label: 'Walk Home',
-    maxBeats: 1,
+    maxBeats: 2,
     noChoices: false,
     forceEndOfDay: true,
     instruction: null, // Built dynamically based on chosen companion in buildPhaseInstruction()
