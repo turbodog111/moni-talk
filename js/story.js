@@ -86,9 +86,15 @@ function buildPhaseInstruction(chat) {
     const girls = ['sayori', 'natsuki', 'yuri', 'monika'];
     const capName = n => n.charAt(0).toUpperCase() + n.slice(1);
 
-    // Check if the player has already chosen a companion
-    const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
-    const companionMatch = lastUserMsg?.content?.match(/^Spend time with (\w+)/i);
+    // Search all user messages for the companion choice (may not be the most recent on beat 1+)
+    let companionMatch = null;
+    for (let i = chat.messages.length - 1; i >= 0; i--) {
+      const m = chat.messages[i];
+      if (m.role === 'user' && typeof m.content === 'string') {
+        const match = m.content.match(/^Spend time with (\w+)/i);
+        if (match) { companionMatch = match; break; }
+      }
+    }
 
     if (companionMatch) {
       const companion = companionMatch[1];
@@ -861,7 +867,7 @@ async function generateStoryBeat(chat) {
     renderStoryChoices(staticChoices);
     scrollToBottom();
     updatePhaseDisplay(chat);
-    if (phase && phase.choices) {
+    if (phase && !phase.noChoices) {
       tryAIChoices(narrative, phase, chat);
     }
 
