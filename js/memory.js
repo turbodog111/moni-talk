@@ -37,9 +37,38 @@ function saveMemories(mems) {
   queueSync();
 }
 
-function buildMemoryPrompt() {
+function buildMemoryPrompt(chat) {
   if (!memories || memories.length === 0) return '';
-  const facts = memories.map(m => `- ${m.fact}`).join('\n');
+
+  const MAX_INJECTED = 20;
+  let scored = memories.map(m => ({ ...m, score: 0 }));
+
+  // Always-relevant categories get a base score boost
+  scored.forEach(m => {
+    if (m.category === 'identity' || m.category === 'relationships') m.score += 10;
+  });
+
+  // Score by relevance to recent messages
+  if (chat && chat.messages && chat.messages.length > 0) {
+    const recentUserMsgs = chat.messages
+      .filter(m => m.role === 'user')
+      .slice(-5)
+      .map(m => (typeof m.content === 'string' ? m.content : '').toLowerCase())
+      .join(' ');
+    const words = recentUserMsgs.split(/\s+/).filter(w => w.length > 3);
+    scored.forEach(m => {
+      const factLower = m.fact.toLowerCase();
+      for (const w of words) {
+        if (factLower.includes(w)) { m.score += 3; break; }
+      }
+    });
+  }
+
+  // Sort by score desc, then by recency (newest first)
+  scored.sort((a, b) => b.score - a.score || (b.date || '').localeCompare(a.date || ''));
+  const selected = scored.slice(0, MAX_INJECTED);
+
+  const facts = selected.map(m => `- ${m.fact}`).join('\n');
   return `\n\nTHINGS YOU REMEMBER ABOUT THIS PERSON (from past conversations):\n${facts}\n- Reference these naturally when relevant — don't list them off or make it obvious you're recalling a database. Just know them, the way a real person remembers things about someone they care about.`;
 }
 

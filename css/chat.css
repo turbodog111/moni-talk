@@ -55,6 +55,8 @@
 .send-btn { width: 44px; height: 44px; border: none; border-radius: 50%; background: var(--green-dark); color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, transform 0.1s; flex-shrink: 0; align-self: flex-end; }
 .send-btn:hover { background: var(--green-mid); } .send-btn:active { transform: scale(0.93); }
 .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cancel-btn { width: 44px; height: 44px; border: none; border-radius: 50%; background: #c0392b; color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s, transform 0.1s; flex-shrink: 0; align-self: flex-end; }
+.cancel-btn:hover { background: #e74c3c; } .cancel-btn:active { transform: scale(0.93); }
 
 /* === Image Attach === */
 .image-attach-btn { width: 44px; height: 44px; border: none; border-radius: 50%; background: none; color: var(--gray-text); font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s; flex-shrink: 0; align-self: flex-end; }
@@ -159,6 +161,7 @@
 .keyboard-open .input-area { padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); }
 .keyboard-open .input-area textarea { padding: 8px 14px; font-size: 14px; }
 .keyboard-open .send-btn { width: 38px; height: 38px; font-size: 18px; }
+.keyboard-open .cancel-btn { width: 38px; height: 38px; font-size: 18px; }
 
 /* === Dark Mode Chat Overrides === */
 [data-theme="dark"] .message.monika .msg-bubble { background: #1a2e23; border-left-color: #48bb78; }
@@ -172,6 +175,8 @@
 [data-theme="dark"] .input-area textarea { background: #2a2a2a; color: var(--text); border-color: var(--gray-mid); }
 [data-theme="dark"] .input-area textarea::placeholder { color: #666; }
 [data-theme="dark"] .send-btn { background: var(--green-dark); }
+[data-theme="dark"] .cancel-btn { background: #c0392b; }
+[data-theme="dark"] .cancel-btn:hover { background: #e74c3c; }
 [data-theme="dark"] .send-btn:hover { background: var(--green-mid); }
 [data-theme="dark"] .chat-item-delete { color: #555; }
 [data-theme="dark"] .chat-item-star { color: #555; }

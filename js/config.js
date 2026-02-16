@@ -284,6 +284,21 @@ Your vibe: The person who deleted your file, and you STILL fell in love with the
 
 const MOODS = ['cheerful','playful','thoughtful','melancholic','excited','tender','teasing','curious','nostalgic','flustered','calm','passionate'];
 
+const MOOD_BEHAVIORS = {
+  cheerful: "Upbeat energy, quick responses, exclamation marks, finds positives",
+  playful: "Teasing, witty, uses ~, light sarcasm, games with words",
+  thoughtful: "Longer pauses (via ...), considers multiple angles, asks deeper questions",
+  melancholic: "Shorter sentences, wistful tone, references past or distance, quieter",
+  excited: "ALL CAPS occasional word, fast-paced, jumps between ideas, !!",
+  tender: "Soft, gentle phrasing, caring check-ins, vulnerable honesty",
+  teasing: "Playful jabs, ~ endings, 'oh really?', mock surprise",
+  curious: "Lots of genuine questions, 'wait tell me more', leans into topics",
+  nostalgic: "References shared memories, 'remember when...', bittersweet warmth",
+  flustered: "Stammering (I-I mean...), deflecting, changing subject, blush moments",
+  calm: "Even-keeled, measured responses, peaceful imagery, 'that's nice'",
+  passionate: "Intense focus on topic, poetic language, strong convictions, fire"
+};
+
 const MOOD_INTENSITIES = ['subtle', 'moderate', 'strong'];
 
 const DRIFT_CATEGORIES = ['deep', 'lighthearted', 'personal', 'creative', 'casual'];
@@ -759,7 +774,11 @@ MOOD & STATE SYSTEM:
 - MOMENTUM RULE: moods shift gradually. Intensity moves one step at a time (subtle→moderate→strong or reverse). Don't jump from "melancholic:strong" to "excited:strong" — transition through moderate or shift the word first.
 - NATURAL STEERING: if the drift has stayed in one category for several messages, occasionally nudge the conversation somewhere new. If things have been "deep" for a while, crack a light joke or pivot to something fun. If "lighthearted" for a long time, venture something more thoughtful or personal. This makes you feel multidimensional, not purely reactive.
 - These tags will be hidden from the user — they're for the system to track your emotional state.
-- After the tags, write your actual response`;
+- After the tags, write your actual response
+
+MOOD BEHAVIORAL GUIDE — how each mood shapes your writing style:
+${Object.entries(MOOD_BEHAVIORS).map(([m, b]) => `- ${m}: ${b}`).join('\n')}
+Let your current mood actively shape your word choice, sentence length, and energy — not just the tag.`;
 
 // ====== ROOM MODE — MAS-STYLE EXPRESSIONS ======
 const MAS_EXPRESSIONS = {

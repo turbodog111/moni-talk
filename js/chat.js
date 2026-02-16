@@ -92,6 +92,11 @@ function createChat() {
 }
 
 function openChat(id) {
+  // Abort any active streaming generation before switching chats
+  if (activeAbortController) {
+    activeAbortController.abort();
+    activeAbortController = null;
+  }
   isGenerating = false;
   activeChatId = id;
   const chat = getChat();
@@ -176,7 +181,89 @@ function openChat(id) {
 
   if (isStory && chat.messages.length === 0) {
     generateStoryBeat(chat);
+  } else if (!isStory && chat.messages.length === 0) {
+    generateGreeting(chat);
   } else if (!isStory) {
+    userInput.focus();
+  }
+}
+
+async function generateGreeting(chat) {
+  if (isGenerating) return;
+  isGenerating = true; sendBtn.disabled = true;
+  activeAbortController = new AbortController();
+  const cancelBtn = $('cancelBtn');
+  if (cancelBtn) { cancelBtn.style.display = ''; sendBtn.style.display = 'none'; }
+  typingIndicator.classList.add('visible'); scrollToBottom();
+
+  // Build a greeting-specific prompt using the existing system prompt + a trigger message
+  const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
+  let sys = BASE_PROMPT + '\n\n' + rel.prompt + buildProfilePrompt() + buildMemoryPrompt();
+  sys += '\n\nIf the conversation is brand new, greet the person warmly according to your relationship level. Keep it natural and short (1-3 sentences).';
+
+  const greetChat = { ...chat, messages: [{ role: 'user', content: '[NEW_CONVERSATION]' }] };
+
+  let msgBubble = null;
+  try {
+    let fullText = '';
+    let updatePending = false;
+    await callProviderStreaming(greetChat, (chunk) => {
+      if (!msgBubble) {
+        typingIndicator.classList.remove('visible');
+        const div = document.createElement('div');
+        div.className = 'message monika';
+        div.innerHTML = '<img class="msg-avatar" src="Monika PFP.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
+        chatArea.insertBefore(div, typingIndicator);
+        msgBubble = div.querySelector('.msg-bubble');
+      }
+      fullText += chunk;
+      if (!updatePending) {
+        updatePending = true;
+        requestAnimationFrame(() => {
+          if (fullText.startsWith('[') && !fullText.includes(']')) { updatePending = false; return; }
+          const display = fullText.replace(/^\[MOOD:\s*\w+(?::\s*\w+)?\]\s*(?:\[DRIFT:\s*\w+\]\s*)?/i, '');
+          if (msgBubble) msgBubble.innerHTML = renderMarkdown(display);
+          scrollToBottom();
+          updatePending = false;
+        });
+      }
+    }, activeAbortController.signal);
+
+    typingIndicator.classList.remove('visible');
+    const rawReply = fullText.trim();
+    const { mood, moodIntensity, drift, text: reply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
+    chat.mood = mood; chat.moodIntensity = moodIntensity; chat.drift = drift;
+    chat.lastActiveTime = Date.now();
+    chat.messages.push({ role: 'assistant', content: reply, model: getCurrentModelKey() });
+    saveChats();
+    if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
+    if (msgBubble) {
+      const modelKey = getCurrentModelKey();
+      if (modelKey) {
+        const modelTag = document.createElement('div');
+        modelTag.className = 'msg-model';
+        modelTag.textContent = formatModelLabel(modelKey);
+        const mc = msgBubble.closest('.msg-content');
+        if (mc) mc.appendChild(modelTag);
+      }
+    }
+    updateChatHeader(chat); scrollToBottom(); updateContextBar();
+    if (chat.mode === 'room') {
+      updateRoomExpression(reply, mood, moodIntensity).then(expr => { chat.lastExpression = expr; saveChats(); });
+    }
+  } catch (err) {
+    typingIndicator.classList.remove('visible');
+    if (err.name === 'AbortError') {
+      if (msgBubble) { const m = msgBubble.closest('.message'); if (m) m.remove(); }
+    } else {
+      showToast(err.message || 'Greeting failed.');
+    }
+    if (chat.mode === 'room') drawMasSprite(chat.lastExpression || 'happy');
+  } finally {
+    isGenerating = false; sendBtn.disabled = false;
+    activeAbortController = null;
+    const cb = $('cancelBtn');
+    if (cb) { cb.style.display = 'none'; sendBtn.style.display = ''; }
     userInput.focus();
   }
 }
@@ -222,16 +309,133 @@ function updateContextBar() {
   contextLabel.textContent = `${count} message${count !== 1 ? 's' : ''}`;
   contextFill.style.width = pct + '%';
   contextFill.style.background = pct > 80 ? '#e67e22' : pct > 60 ? '#f1c40f' : 'var(--green-mid)';
+  // Show/hide regenerate button
+  const regenBtn = $('regenBtn');
+  if (regenBtn) {
+    const lastMsg = chat.messages[chat.messages.length - 1];
+    const show = lastMsg && lastMsg.role === 'assistant' && !isGenerating && chat.mode !== 'story';
+    regenBtn.style.display = show ? '' : 'none';
+  }
 }
 
-function trimContext() {
+async function trimContext() {
   const chat = getChat();
   if (!chat || chat.messages.length <= 10) { showToast('Not enough messages to trim.'); return; }
   const removeCount = Math.floor(chat.messages.length * 0.4);
-  if (!confirm(`Remove the ${removeCount} oldest messages to free up context? The conversation will continue naturally.`)) return;
-  chat.messages = chat.messages.slice(removeCount);
+  if (!confirm(`Remove the ${removeCount} oldest messages to free up context? A summary will be preserved.`)) return;
+
+  const removedMessages = chat.messages.slice(0, removeCount);
+
+  // Try to summarize removed messages before trimming
+  try {
+    showToast('Summarizing...');
+    const convo = removedMessages.map(m => `${m.role === 'user' ? 'User' : 'Monika'}: ${typeof m.content === 'string' ? m.content : '(media)'}`).join('\n');
+    const summaryMessages = [
+      { role: 'system', content: 'Summarize the key facts, topics, and emotional moments from this conversation in 3-5 bullet points. Be concise.' },
+      { role: 'user', content: convo }
+    ];
+    const summary = await callAI(summaryMessages, 300);
+    chat.messages = chat.messages.slice(removeCount);
+    // Prepend summary as a system-level context note
+    chat.messages.unshift({ role: 'system', content: `[CONVERSATION SUMMARY: ${summary}]` });
+  } catch {
+    // Summarization failed — fall back to raw trim
+    chat.messages = chat.messages.slice(removeCount);
+    showToast('Summary failed — trimmed without summary.', 'warning');
+  }
+
   saveChats(); renderMessages(); updateContextBar();
-  showToast(`Trimmed ${removeCount} messages.`, 'success');
+  showToast(`Trimmed ${removeCount} messages with summary.`, 'success');
+}
+
+async function regenerateLastResponse() {
+  const chat = getChat();
+  if (!chat || isGenerating) return;
+  const lastMsg = chat.messages[chat.messages.length - 1];
+  if (!lastMsg || lastMsg.role !== 'assistant') { showToast('Nothing to regenerate.'); return; }
+
+  // Remove last assistant message
+  chat.messages.pop();
+  saveChats();
+  renderMessages();
+  updateContextBar();
+
+  // Find the last user message text to pass to memory extraction later
+  const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
+  const userText = lastUserMsg ? (typeof lastUserMsg.content === 'string' ? lastUserMsg.content : '') : '';
+
+  // Re-generate using the existing sendMessage flow — but without adding a new user message
+  isGenerating = true; sendBtn.disabled = true;
+  activeAbortController = new AbortController();
+  const cancelBtn = $('cancelBtn');
+  if (cancelBtn) { cancelBtn.style.display = ''; sendBtn.style.display = 'none'; }
+  if (chat.mode === 'room') drawMasSprite('think');
+  typingIndicator.classList.add('visible'); scrollToBottom();
+
+  let msgBubble = null;
+  try {
+    let fullText = '';
+    let updatePending = false;
+    await callProviderStreaming(chat, (chunk) => {
+      if (!msgBubble) {
+        typingIndicator.classList.remove('visible');
+        const div = document.createElement('div');
+        div.className = 'message monika';
+        div.innerHTML = '<img class="msg-avatar" src="Monika PFP.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
+        chatArea.insertBefore(div, typingIndicator);
+        msgBubble = div.querySelector('.msg-bubble');
+      }
+      fullText += chunk;
+      if (!updatePending) {
+        updatePending = true;
+        requestAnimationFrame(() => {
+          if (fullText.startsWith('[') && !fullText.includes(']')) { updatePending = false; return; }
+          const display = fullText.replace(/^\[MOOD:\s*\w+(?::\s*\w+)?\]\s*(?:\[DRIFT:\s*\w+\]\s*)?/i, '');
+          if (msgBubble) msgBubble.innerHTML = renderMarkdown(display);
+          scrollToBottom();
+          updatePending = false;
+        });
+      }
+    }, activeAbortController.signal);
+
+    typingIndicator.classList.remove('visible');
+    const rawReply = fullText.trim();
+    const { mood, moodIntensity, drift, text: reply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
+    chat.mood = mood; chat.moodIntensity = moodIntensity; chat.drift = drift;
+    chat.lastActiveTime = Date.now();
+    chat.messages.push({ role: 'assistant', content: reply, model: getCurrentModelKey() });
+    saveChats();
+    if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
+    if (msgBubble) {
+      const modelKey = getCurrentModelKey();
+      if (modelKey) {
+        const modelTag = document.createElement('div');
+        modelTag.className = 'msg-model';
+        modelTag.textContent = formatModelLabel(modelKey);
+        const mc = msgBubble.closest('.msg-content');
+        if (mc) mc.appendChild(modelTag);
+      }
+    }
+    updateChatHeader(chat); scrollToBottom(); updateContextBar();
+    if (chat.mode === 'room') {
+      updateRoomExpression(reply, mood, moodIntensity).then(expr => { chat.lastExpression = expr; saveChats(); });
+    }
+  } catch (err) {
+    typingIndicator.classList.remove('visible');
+    if (err.name === 'AbortError') {
+      if (msgBubble) { const m = msgBubble.closest('.message'); if (m) m.remove(); }
+      showToast('Regeneration cancelled.');
+    } else {
+      showToast(err.message || 'Regeneration failed.');
+    }
+    if (chat.mode === 'room') drawMasSprite(chat.lastExpression || 'happy');
+  } finally {
+    isGenerating = false; sendBtn.disabled = false;
+    activeAbortController = null;
+    const cb = $('cancelBtn');
+    if (cb) { cb.style.display = 'none'; sendBtn.style.display = ''; }
+    userInput.focus();
+  }
 }
 
 // ====== RENDER MESSAGES ======
@@ -333,7 +537,8 @@ function insertMessageEl(role, content, animate = true, imageUrl = null, model =
   const div = document.createElement('div');
   div.className = `message ${isM ? 'monika' : 'user'}`;
   if (!animate) div.style.animation = 'none';
-  const av = isM ? `<img class="msg-avatar" src="Monika PFP.png" alt="Monika">` : `<div class="msg-avatar-letter">Y</div>`;
+  const userInitial = (profile.name ? profile.name.charAt(0).toUpperCase() : '?');
+  const av = isM ? `<img class="msg-avatar" src="Monika PFP.png" alt="Monika">` : `<div class="msg-avatar-letter">${userInitial}</div>`;
   const imgHtml = imageUrl ? `<img class="msg-image" src="${imageUrl}" alt="Shared image">` : '';
   const modelTag = isM && model ? `<div class="msg-model">${escapeHtml(formatModelLabel(model))}</div>` : '';
   div.innerHTML = `${av}<div class="msg-content"><div class="msg-name">${isM ? 'Monika' : 'You'}</div>${imgHtml}<div class="msg-bubble">${isM ? renderMarkdown(content) : escapeHtml(content)}</div>${modelTag}</div>`;
@@ -409,6 +614,9 @@ async function sendMessage() {
   scrollToBottom(); updateContextBar();
 
   isGenerating = true; sendBtn.disabled = true;
+  activeAbortController = new AbortController();
+  const cancelBtn = $('cancelBtn');
+  if (cancelBtn) { cancelBtn.style.display = ''; sendBtn.style.display = 'none'; }
   if (chat.mode === 'room') drawMasSprite('think');
   typingIndicator.classList.add('visible'); scrollToBottom();
 
@@ -430,13 +638,18 @@ async function sendMessage() {
       if (!updatePending) {
         updatePending = true;
         requestAnimationFrame(() => {
+          // Buffer: if text starts with [ but no closing ] yet, hold display to prevent MOOD tag flash
+          if (fullText.startsWith('[') && !fullText.includes(']')) {
+            updatePending = false;
+            return;
+          }
           const display = fullText.replace(/^\[MOOD:\s*\w+(?::\s*\w+)?\]\s*(?:\[DRIFT:\s*\w+\]\s*)?/i, '');
           if (msgBubble) msgBubble.innerHTML = renderMarkdown(display);
           scrollToBottom();
           updatePending = false;
         });
       }
-    });
+    }, activeAbortController.signal);
 
     typingIndicator.classList.remove('visible');
     const rawReply = fullText.trim();
@@ -472,16 +685,30 @@ async function sendMessage() {
       });
     }
 
-    // Memory extraction — fire-and-forget for chat/room modes
-    if (chat.mode !== 'story') {
+    // Memory extraction — rate limited: every 5th user+assistant pair, skip short messages
+    if (chat.mode !== 'story' && chat.messages.length % 10 === 0 && text.length >= 15) {
       extractMemories(text, reply).catch(() => {});
     }
   } catch (err) {
     typingIndicator.classList.remove('visible');
-    showToast(err.message || 'Something went wrong.');
+    // Handle user-initiated cancel (abort)
+    if (err.name === 'AbortError') {
+      if (msgBubble) {
+        // Remove the partial message element
+        const partialMsg = msgBubble.closest('.message');
+        if (partialMsg) partialMsg.remove();
+      }
+      showToast('Generation cancelled.');
+    } else {
+      showToast(err.message || 'Something went wrong.');
+    }
     if (chat.mode === 'room') drawMasSprite(chat.lastExpression || 'happy');
   } finally {
-    isGenerating = false; sendBtn.disabled = false; userInput.focus();
+    isGenerating = false; sendBtn.disabled = false;
+    activeAbortController = null;
+    const cancelBtn = $('cancelBtn');
+    if (cancelBtn) { cancelBtn.style.display = 'none'; sendBtn.style.display = ''; }
+    userInput.focus();
   }
 }
 

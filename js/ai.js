@@ -134,6 +134,7 @@ function buildTimeContext(chat) {
 const CHARACTER_REMINDER = `[Character quick-ref: Sayori=coral pink hair+red bow, sky blue eyes, bubbly/cheerful childhood friend. Natsuki=pink bob+ribbon clips, fuchsia eyes, tsundere with sharp tongue. Yuri=long dark purple hair, soft violet eyes, shy bookworm. Monika=chestnut ponytail+white bow, emerald green eyes, confident club president. Write their dialogue in-character.]`;
 
 const STORY_MSG_LIMIT = 30; // Keep last 30 messages to protect system prompt from being pushed out
+const CHAT_MSG_LIMIT = 50;  // Keep last 50 messages for chat/room mode API calls (UI keeps all)
 
 function buildMessages(chat) {
   if (chat.mode === 'story') {
@@ -194,7 +195,7 @@ function buildMessages(chat) {
     return msgs;
   }
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
-  let sys = BASE_PROMPT + '\n\n' + rel.prompt + buildProfilePrompt() + buildMemoryPrompt();
+  let sys = BASE_PROMPT + '\n\n' + rel.prompt + buildProfilePrompt() + buildMemoryPrompt(chat);
 
   const mood = chat.mood || 'cheerful';
   const intensity = chat.moodIntensity || 'moderate';
@@ -205,10 +206,16 @@ function buildMessages(chat) {
   if (timeCtx) sys += `\n${timeCtx}`;
   sys += `\nLet your mood and drift evolve naturally from here.`;
 
+  // Trim to last N messages for API — all remain visible in UI
+  let recentChatMessages = chat.messages;
+  if (recentChatMessages.length > CHAT_MSG_LIMIT) {
+    recentChatMessages = recentChatMessages.slice(-CHAT_MSG_LIMIT);
+  }
+
   // Strip legacy expression tags from old room mode messages
   // Handle multimodal messages (content arrays with images)
   const supportsVision = ['gemini', 'openrouter', 'puter'].includes(provider);
-  const msgs = chat.messages.map(m => {
+  const msgs = recentChatMessages.map(m => {
     let content = m.content;
     // Handle multimodal content arrays
     if (Array.isArray(content)) {
@@ -244,12 +251,12 @@ async function callProvider(chat) {
 }
 
 // ====== STREAMING PROVIDER DISPATCH ======
-async function callProviderStreaming(chat, onChunk) {
+async function callProviderStreaming(chat, onChunk, signal) {
   const filter = createThinkFilter(onChunk);
   let result;
-  if (provider === 'gemini') result = await streamGemini(chat, c => filter.chunk(c));
-  else if (provider === 'ollama') result = await streamOllama(chat, c => filter.chunk(c));
-  else if (provider === 'openrouter') result = await streamOpenRouter(chat, c => filter.chunk(c));
+  if (provider === 'gemini') result = await streamGemini(chat, c => filter.chunk(c), signal);
+  else if (provider === 'ollama') result = await streamOllama(chat, c => filter.chunk(c), signal);
+  else if (provider === 'openrouter') result = await streamOpenRouter(chat, c => filter.chunk(c), signal);
   else {
     // Puter: no streaming API, fall back to single callback
     result = await callPuter(chat);
@@ -371,11 +378,13 @@ async function callOllama(chat) {
 }
 
 // ====== STREAMING: OLLAMA (NDJSON) ======
-async function streamOllama(chat, onChunk) {
+async function streamOllama(chat, onChunk, externalSignal) {
   const isStory = chat.mode === 'story';
   const timeout = isStory ? 300000 : 180000; // 5 min story, 3 min chat
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
+  // Forward external abort signal (e.g. cancel button) to our controller
+  if (externalSignal) externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
 
   let res;
   try {
@@ -431,8 +440,8 @@ async function streamOllama(chat, onChunk) {
 }
 
 // ====== STREAMING: SSE (shared for Gemini/OpenRouter) ======
-async function streamSSE(url, headers, body, onChunk) {
-  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify({ ...body, stream: true }) });
+async function streamSSE(url, headers, body, onChunk, signal) {
+  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify({ ...body, stream: true }), signal });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     if (res.status === 401 || res.status === 403) throw new Error('Invalid API key.');
@@ -458,21 +467,21 @@ async function streamSSE(url, headers, body, onChunk) {
   return full.trim() || '';
 }
 
-async function streamGemini(chat, onChunk) {
+async function streamGemini(chat, onChunk, signal) {
   return await streamSSE(
     'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
     { 'Content-Type': 'application/json', 'Authorization': `Bearer ${geminiKey}` },
     { model: geminiModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 2000 : 400, temperature: chat.mode === 'story' ? 0.85 : 0.8 },
-    onChunk
+    onChunk, signal
   );
 }
 
-async function streamOpenRouter(chat, onChunk) {
+async function streamOpenRouter(chat, onChunk, signal) {
   return await streamSSE(
     'https://openrouter.ai/api/v1/chat/completions',
     { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': window.location.href, 'X-Title': 'Moni-Talk' },
     { model: selectedModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 1500 : 400, temperature: chat.mode === 'story' ? 0.85 : 0.8 },
-    onChunk
+    onChunk, signal
   );
 }
 

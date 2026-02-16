@@ -68,6 +68,8 @@ function init() {
   $('saveProfileBtn').addEventListener('click', saveProfile);
   $('chatBackBtn').addEventListener('click', () => { activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); teardownRoomMode(); closeVnPanel(); showScreen('chatList'); renderChatList(); });
   $('trimBtn').addEventListener('click', trimContext);
+  $('regenBtn').addEventListener('click', regenerateLastResponse);
+  $('cancelBtn').addEventListener('click', () => { if (activeAbortController) activeAbortController.abort(); });
   $('storyRetryBtn').addEventListener('click', forceStoryRetry);
 
   userInput.addEventListener('input', () => { userInput.style.height = 'auto'; userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px'; });

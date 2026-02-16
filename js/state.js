@@ -21,6 +21,7 @@ let deletedChatIds = new Set(JSON.parse(localStorage.getItem('moni_talk_deleted_
 let currentTheme = localStorage.getItem('moni_talk_theme') || 'system';
 let memories = JSON.parse(localStorage.getItem('moni_talk_memories') || '[]');
 let pendingImage = null;
+let activeAbortController = null; // AbortController for current streaming generation
 
 // ====== DOM ======
 const $ = id => document.getElementById(id);
