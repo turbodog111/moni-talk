@@ -265,10 +265,9 @@ function renderMessages() {
     const last = chat.messages[chat.messages.length - 1];
     if (last?.role === 'assistant') {
       const parsed = parseStoryResponse(last.content);
-      const isWrapPhase = chat.storyPhase === 'wrap_up' || chat.storyPhase === 'd1_wrap_up';
       const curPhase = STORY_PHASES[chat.storyPhase];
-      // Phase-aware: only honor END_OF_DAY in wrap phases, POETRY in poem_sharing
-      if (parsed.isEndOfDay && isWrapPhase) {
+      // Phase-aware: only honor END_OF_DAY in wrap/walk_home phases, POETRY in poem_sharing
+      if (parsed.isEndOfDay && isEndOfDayPhase(chat.storyPhase)) {
         renderStoryChoices(['End of day — read diaries']);
       } else if (parsed.hasPoetry && curPhase && curPhase.triggerPoetry) {
         showWordPicker();

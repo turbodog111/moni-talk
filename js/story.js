@@ -49,6 +49,10 @@ function resetNewChatScreen() {
 }
 
 // ====== PHASE HELPERS ======
+function isEndOfDayPhase(p) {
+  return p === 'wrap_up' || p === 'd1_wrap_up' || p === 'walk_home';
+}
+
 function initPhaseForDay(chat) {
   const day = chat.storyDay || 1;
   const seq = getPhaseSequence(day);
@@ -72,6 +76,7 @@ function buildPhaseInstruction(chat) {
   const phaseKey = chat.storyPhase;
   const phase = STORY_PHASES[phaseKey];
   if (!phase) return '';
+  const day = chat.storyDay || 1;
 
   let instruction = phase.instruction;
 
@@ -84,7 +89,7 @@ function buildPhaseInstruction(chat) {
     const second = sorted[1];
     const capName = n => n.charAt(0).toUpperCase() + n.slice(1);
 
-    let freeTimeHint = 'Scene: Free time in the club! MC can choose who to spend time with. This is the key bonding phase — meaningful one-on-one conversation happens here.';
+    let freeTimeHint = `Day ${day} — Scene: Free time in the club! MC can choose who to spend time with. This is the key bonding phase — meaningful one-on-one conversation happens here.`;
 
     if (highest.val > 30) {
       freeTimeHint += ` ${capName(highest.name)} actively seeks MC out — she finds an excuse to be near him or starts a conversation.`;
@@ -101,7 +106,7 @@ function buildPhaseInstruction(chat) {
     instruction = freeTimeHint;
   }
 
-  // Dynamic wrap_up instruction based on highest affinity
+  // Dynamic wrap_up instruction (legacy — for old saves still on wrap_up)
   if (!instruction && phaseKey === 'wrap_up') {
     const aff = chat.storyAffinity || {};
     const girls = ['sayori', 'natsuki', 'yuri', 'monika'];
@@ -111,14 +116,82 @@ function buildPhaseInstruction(chat) {
     instruction = `Scene: Monika announces the meeting is over for today. MC walks home with ${name}${isSayori ? ' (they always walk together as neighbors)' : ' (she offered to walk together)'}. A nice bonding moment on the walk. End your response with [END_OF_DAY] on its own line.`;
   }
 
+  // Dynamic walk_home instruction — parse companion from last user message
+  if (!instruction && phaseKey === 'walk_home') {
+    let companion = 'Sayori';
+    const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
+    if (lastUserMsg && typeof lastUserMsg.content === 'string') {
+      const match = lastUserMsg.content.match(/^Walk home with (\w+)/i);
+      if (match) companion = match[1];
+    }
+    const isSayori = companion.toLowerCase() === 'sayori';
+    instruction = `Day ${day} — Scene: MC walks home with ${companion}${isSayori ? ' (they always walk together as neighbors)' : ''}. Write a meaningful bonding scene between MC and ${companion}. Show their personality and deepen their connection. End your response with [END_OF_DAY] on its own line.`;
+  }
+
   if (!instruction) return '';
-  return `=== CURRENT SCENE: ${phase.label} ===\nYou MUST write this scene as described below. The user's previous choice affects tone and affinity only — it does NOT override this scene.\n\n${instruction}`;
+
+  // Replace {{DAY}} tokens
+  if (instruction) instruction = instruction.replace(/\{\{DAY\}\}/g, String(day));
+
+  // Build scene header with day awareness
+  let header = `=== CURRENT SCENE: ${phase.label} (Day ${day}) ===\nThis is DAY ${day} of the story.`;
+  if (day > 1) {
+    header += ` MC has been in the club for ${day - 1} day(s). He knows all the girls. Do NOT write first-meeting scenes.`;
+  }
+  header += `\nYou MUST write this scene as described below. The user's previous choice affects tone and affinity only — it does NOT override this scene.`;
+
+  return `${header}\n\n${instruction}`;
+}
+
+// Build walk-home choices sorted by affinity with flavor text
+function buildWalkHomeChoices(chat) {
+  const aff = chat.storyAffinity || {};
+  const girls = ['sayori', 'natsuki', 'yuri', 'monika'];
+  const capName = n => n.charAt(0).toUpperCase() + n.slice(1);
+  const sorted = girls.map(g => ({ name: g, val: aff[g] || 0 })).sort((a, b) => b.val - a.val);
+
+  return sorted.map(g => {
+    const name = capName(g.name);
+    if (g.val >= 40) {
+      const flavor = {
+        sayori: "she's already bouncing toward you",
+        natsuki: "she's lingering by the door, pretending not to wait",
+        yuri: "she pauses at the door, hoping you'll join her",
+        monika: "she catches your eye with a warm smile"
+      };
+      return `Walk home with ${name} — ${flavor[g.name]}`;
+    } else if (g.val >= 20) {
+      const flavor = {
+        sayori: "she waves at you with her usual grin",
+        natsuki: "she glances your way before heading out",
+        yuri: "she's gathering her things slowly near you",
+        monika: "she's organizing her notes at the front desk"
+      };
+      return `Walk home with ${name} — ${flavor[g.name]}`;
+    } else {
+      const flavor = {
+        sayori: "your neighbor — might as well walk together",
+        natsuki: "you could try catching up with her",
+        yuri: "she's quietly heading out alone",
+        monika: "she's still wrapping up club duties"
+      };
+      return `Walk home with ${name} — ${flavor[g.name]}`;
+    }
+  });
 }
 
 // Ensure phase is valid for the current day; re-init if stale or missing
 function ensurePhase(chat) {
   if (!chat.storyPhase) {
     initPhaseForDay(chat);
+    return;
+  }
+  // Migration: old saves on wrap_up for day 2+ → meeting_end
+  if (chat.storyPhase === 'wrap_up' && (chat.storyDay || 1) > 1) {
+    console.log('[STORY-MIGRATION] Migrating wrap_up → meeting_end for day', chat.storyDay);
+    chat.storyPhase = 'meeting_end';
+    chat.storyBeatInPhase = 0;
+    saveChats();
     return;
   }
   const seq = getPhaseSequence(chat.storyDay || 1);
@@ -381,10 +454,24 @@ async function selectStoryChoice(choice) {
     return;
   }
 
+  // "Walk home with X" — player chose a companion
+  if (choice.startsWith('Walk home with ')) {
+    chat.messages.push({ role: 'user', content: choice });
+    saveChats();
+    insertMessageEl('user', choice);
+    scrollToBottom();
+    // Advance meeting_end → walk_home
+    advancePhase(chat);
+    updatePhaseDisplay(chat);
+    updateContextBar();
+    await generateStoryBeat(chat);
+    return;
+  }
+
   // "Begin next day" from replay — advance day only if closeJournal didn't already run
   if (choice === 'Begin next day') {
     const lastMsg = chat.messages[chat.messages.length - 1];
-    const isStillWrapUp = chat.storyPhase === 'wrap_up' || chat.storyPhase === 'd1_wrap_up';
+    const isStillWrapUp = isEndOfDayPhase(chat.storyPhase);
     if (isStillWrapUp && lastMsg?.role === 'assistant' && /\[END_OF_DAY\]/i.test(lastMsg.content)) {
       chat.storyDay = (chat.storyDay || 1) + 1;
       initPhaseForDay(chat);
@@ -434,7 +521,7 @@ function liveStripTags(text) {
 // ====== DAY TRANSITION RECOVERY ======
 function validateDayTransition(chat) {
   const phase = STORY_PHASES[chat.storyPhase];
-  const isWrapPhase = chat.storyPhase === 'wrap_up' || chat.storyPhase === 'd1_wrap_up';
+  const isWrapPhase = isEndOfDayPhase(chat.storyPhase);
   const seq = getPhaseSequence(chat.storyDay || 1);
 
   // Recovery: phase is wrap-up but storyDay was already incremented (partial closeJournal)
@@ -578,9 +665,9 @@ async function generateStoryBeat(chat) {
     // Increment beat counter
     chat.storyBeatInPhase = (chat.storyBeatInPhase || 0) + 1;
     const phase = STORY_PHASES[chat.storyPhase];
-    const isWrapPhase = chat.storyPhase === 'wrap_up' || chat.storyPhase === 'd1_wrap_up';
+    const isWrapPhase = isEndOfDayPhase(chat.storyPhase);
 
-    // 1. Handle end of day — ONLY honor [END_OF_DAY] during wrap-up phases
+    // 1. Handle end of day — ONLY honor [END_OF_DAY] during wrap-up/walk_home phases
     if ((isEndOfDay && isWrapPhase) || (phase && phase.forceEndOfDay && chat.storyBeatInPhase >= phase.maxBeats)) {
       console.log('[STORY] → path 1: end of day (showing diary choice)');
       chat.lastChoices = ['End of day — read diaries'];
@@ -600,6 +687,16 @@ async function generateStoryBeat(chat) {
 
     // 3. Check if we've hit maxBeats — advance to next phase
     if (phase && chat.storyBeatInPhase >= phase.maxBeats) {
+      // Special case: meeting_end → show walk-home choices instead of advancing
+      if (chat.storyPhase === 'meeting_end') {
+        console.log('[STORY] → path 3-meeting: showing walk-home choices');
+        const walkChoices = buildWalkHomeChoices(chat);
+        chat.lastChoices = walkChoices;
+        saveChats();
+        renderStoryChoices(walkChoices);
+        scrollToBottom();
+        return;
+      }
       advancePhase(chat);
       updatePhaseDisplay(chat);
       const nextPhase = STORY_PHASES[chat.storyPhase];

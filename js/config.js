@@ -498,7 +498,7 @@ const STORY_PHASES = {
     label: 'Morning',
     maxBeats: 1,
     noChoices: false,
-    instruction: `Scene: New school day begins. MC walks to school with Sayori (their daily routine as neighbors). Brief morning interaction — maybe she overslept, maybe they chat about something from yesterday. Keep it short and charming. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+    instruction: `Scene: Day {{DAY}} morning — MC walks to school with Sayori (their daily routine as neighbors). Brief morning interaction — maybe she overslept, maybe they chat about something from yesterday. Keep it short and charming. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
     choices: [
       'Tease Sayori about oversleeping again',
       'Ask Sayori if anything interesting happened yesterday',
@@ -510,7 +510,7 @@ const STORY_PHASES = {
     label: 'Arriving at Club',
     maxBeats: 1,
     noChoices: false,
-    instruction: `Scene: After classes end, MC heads to the Literature Club. Describe who's already there and what they're doing when he walks in. Brief greetings from the girls. Keep it short. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+    instruction: `Scene: Day {{DAY}} — After classes end, MC heads to the Literature Club. Describe who's already there and what they're doing when he walks in. Brief greetings from the girls. Keep it short. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
     choices: [
       'Greet whoever catches your eye first',
       'Head to your usual spot and settle in',
@@ -523,13 +523,13 @@ const STORY_PHASES = {
     maxBeats: 1,
     noChoices: true,
     triggerPoetry: true,
-    instruction: `Scene: Monika announces it's time to share poems today. Build a brief moment of anticipation as everyone gets ready. Then output [POETRY] on its own line. Do NOT describe MC's poem — the system handles poem creation.`
+    instruction: `Day {{DAY}} — Scene: Monika announces it's time to share poems today. Build a brief moment of anticipation as everyone gets ready. Then output [POETRY] on its own line. Do NOT describe MC's poem — the system handles poem creation.`
   },
   poem_reactions: {
     label: 'Poem Reactions',
     maxBeats: 2,
     noChoices: false,
-    instruction: `Scene: The girls react to MC's poem. The girl whose style matched most is excited and wants to discuss it. Other girls share their honest reactions too — some impressed, some offering critique. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+    instruction: `Day {{DAY}} — Scene: The girls react to MC's poem. The girl whose style matched most is excited and wants to discuss it. Other girls share their honest reactions too — some impressed, some offering critique. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
     choices: [
       'Discuss your poem with Yuri — her literary insight could be fascinating',
       'See what Natsuki thought — she seems to have strong opinions',
@@ -541,7 +541,7 @@ const STORY_PHASES = {
     label: 'Club Activity',
     maxBeats: 3,
     noChoices: false,
-    instruction: `Scene: The club does an activity — group discussion, reading exercise, writing prompt, or literary debate. Monika leads it. Each girl shows their unique personality and literary taste through the activity. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+    instruction: `Day {{DAY}} — Scene: The club does an activity — group discussion, reading exercise, writing prompt, or literary debate. Monika leads it. Each girl shows their unique personality and literary taste through the activity. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
     choices: [
       'Side with Yuri\'s deeper interpretation of the topic',
       'Back up Natsuki\'s argument — she makes a good point',
@@ -566,7 +566,27 @@ const STORY_PHASES = {
     maxBeats: 2,
     noChoices: false,
     forceEndOfDay: true,
-    instruction: null, // Built dynamically based on affinity in buildPhaseInstruction()
+    instruction: null, // Legacy — kept for old saves
+    choices: [
+      'Chat about something lighthearted on the walk home',
+      'Bring up something that happened in the club today',
+      'Enjoy the quiet moment together',
+      'Ask what they\'re looking forward to at the next meeting'
+    ]
+  },
+  meeting_end: {
+    label: 'Meeting End',
+    maxBeats: 1,
+    noChoices: false,
+    instruction: `Day {{DAY}} — Scene: Monika announces the club meeting is over for today. She thanks everyone for coming and reminds them about tomorrow. The girls start packing up. Brief closing moment — keep it short. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+    choices: null // Dynamically generated walk-home choices
+  },
+  walk_home: {
+    label: 'Walk Home',
+    maxBeats: 1,
+    noChoices: false,
+    forceEndOfDay: true,
+    instruction: null, // Built dynamically based on chosen companion in buildPhaseInstruction()
     choices: [
       'Chat about something lighthearted on the walk home',
       'Bring up something that happened in the club today',
@@ -578,8 +598,8 @@ const STORY_PHASES = {
 
 const PHASE_SEQUENCES = {
   day1: ['d1_before_club', 'd1_arriving', 'd1_introductions', 'd1_cupcakes', 'd1_settling', 'd1_activity', 'd1_wrap_up'],
-  poem_day: ['morning', 'club_arrival', 'poem_sharing', 'poem_reactions', 'free_time', 'wrap_up'],
-  regular_day: ['morning', 'club_arrival', 'club_activity', 'free_time', 'wrap_up']
+  poem_day: ['morning', 'club_arrival', 'poem_sharing', 'poem_reactions', 'free_time', 'meeting_end', 'walk_home'],
+  regular_day: ['morning', 'club_arrival', 'club_activity', 'free_time', 'meeting_end', 'walk_home']
 };
 
 function isPoemDay(day) {

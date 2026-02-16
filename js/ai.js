@@ -143,10 +143,14 @@ function buildMessages(chat) {
     const phaseInstruction = buildPhaseInstruction(chat);
 
     const milestoneNote = buildMilestoneNote(chat);
+    const dayContinuity = day > 1
+      ? `\n\n=== DAY CONTINUITY (CRITICAL) ===\nThis is DAY ${day}. MC has been a club member for ${day - 1} day(s). He knows Sayori, Natsuki, Yuri, and Monika. Do NOT write first-meeting introductions. Girls behave per their affinity tiers.`
+      : '';
     const systemPrompt = STORY_PROMPT_BASE
       + `\n\n${AFFINITY_BEHAVIOR_TIERS}`
       + (phaseInstruction ? `\n\n${phaseInstruction}` : '')
       + (milestoneNote ? `\n\n${milestoneNote}` : '')
+      + dayContinuity
       + `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}\n${buildAffinityDirective(aff)}`;
 
     // Trim to last N messages to prevent context overflow
