@@ -244,16 +244,19 @@ function parseStoryResponse(text) {
 }
 
 // ====== AI CHOICE GENERATION ======
-async function generateStoryChoices(narrative, phase, affinity) {
+async function generateStoryChoices(narrative, phase, affinity, mcName) {
   // Use the full latest narrative — this is the scene the choices respond to
   const excerpt = narrative.length > 1200 ? '...' + narrative.slice(-1200) : narrative;
   const phaseLabel = phase ? phase.label : 'Scene';
+  const name = mcName || 'MC';
 
-  const prompt = `Given this scene from a Doki Doki Literature Club visual novel, write exactly 4 choices for what MC could do or say NEXT. The choices must directly respond to what just happened in the scene — reference specific dialogue, actions, or moments from the text.
+  const prompt = `Given this scene from a Doki Doki Literature Club visual novel, write exactly 4 choices for what the player character (${name}) could do or say NEXT. The choices must directly respond to what just happened in the scene — reference specific dialogue, actions, or moments from the text.
 
 Rules:
 - Choices must be grounded in the scene above. If a character just said or did something, choices should react to THAT.
-- Each choice: one sentence, under 80 characters, written from MC's perspective.
+- Each choice: one sentence, under 80 characters.
+- Write in IMPERATIVE or SECOND PERSON ("Tell Sayori...", "Ask about...", "Compliment her..."). Do NOT use first person ("I").
+- ${name} IS the player character — NEVER refer to ${name} in third person. The player IS ${name}.
 - Vary the tone: mix bold, cautious, funny, and sincere options.
 - Format: numbered 1. 2. 3. 4. — output ONLY the 4 choices, nothing else.
 
@@ -295,7 +298,7 @@ function tryAIChoices(narrative, phase, chat) {
 
   // 90 seconds — slow local models (3-6 tok/s) need 30-60s for 200 tokens
   const timeout = new Promise(resolve => setTimeout(() => resolve(null), 90000));
-  Promise.race([generateStoryChoices(narrative, phase, chat.storyAffinity), timeout]).then(aiChoices => {
+  Promise.race([generateStoryChoices(narrative, phase, chat.storyAffinity, chat.mcName), timeout]).then(aiChoices => {
     const ind = $('choicesGeneratingIndicator');
     if (ind) ind.remove();
 
