@@ -431,6 +431,35 @@ function liveStripTags(text) {
     .trim();
 }
 
+// ====== DAY TRANSITION RECOVERY ======
+function validateDayTransition(chat) {
+  const phase = STORY_PHASES[chat.storyPhase];
+  const isWrapPhase = chat.storyPhase === 'wrap_up' || chat.storyPhase === 'd1_wrap_up';
+  const seq = getPhaseSequence(chat.storyDay || 1);
+
+  // Recovery: phase is wrap-up but storyDay was already incremented (partial closeJournal)
+  // Detect: wrap phase doesn't belong to current day's sequence
+  if (isWrapPhase && !seq.includes(chat.storyPhase)) {
+    console.log('[STORY-RECOVERY] Phase is wrap-up but not in current day sequence — re-initializing phase for day', chat.storyDay);
+    initPhaseForDay(chat);
+    saveChats();
+  }
+
+  // Recovery: storyBeatInPhase unreasonably high (> maxBeats + 2)
+  if (phase && chat.storyBeatInPhase > phase.maxBeats + 2) {
+    console.log('[STORY-RECOVERY] storyBeatInPhase', chat.storyBeatInPhase, 'exceeds maxBeats', phase.maxBeats, '+ 2 — resetting to 0');
+    chat.storyBeatInPhase = 0;
+    saveChats();
+  }
+
+  // Recovery: stale "Begin next day" in lastChoices from old code
+  if (chat.lastChoices && chat.lastChoices.includes('Begin next day')) {
+    console.log('[STORY-RECOVERY] Converting stale "Begin next day" choice to "End of day — read diaries"');
+    chat.lastChoices = chat.lastChoices.map(c => c === 'Begin next day' ? 'End of day — read diaries' : c);
+    saveChats();
+  }
+}
+
 // ====== GENERATE STORY BEAT (phase-aware, streaming) ======
 async function generateStoryBeat(chat) {
   console.log('[STORY] generateStoryBeat called', { phase: chat.storyPhase, beat: chat.storyBeatInPhase, isGenerating, msgCount: chat.messages.length });
@@ -440,6 +469,7 @@ async function generateStoryBeat(chat) {
 
   // Ensure phase is initialized and valid
   ensurePhase(chat);
+  validateDayTransition(chat);
 
   isGenerating = true;
   typingIndicator.classList.add('visible');
@@ -504,6 +534,18 @@ async function generateStoryBeat(chat) {
     // Final clean render (replaces streamed text with properly parsed narrative)
     typingIndicator.classList.remove('visible');
     if (streamBubble) streamBubble.innerHTML = renderMarkdown(narrative);
+
+    // Append model attribution tag
+    if (streamDiv) {
+      const modelKey = getCurrentModelKey();
+      if (modelKey) {
+        const modelTag = document.createElement('div');
+        modelTag.className = 'msg-model';
+        modelTag.textContent = formatModelLabel(modelKey);
+        const msgContent = streamDiv.querySelector('.msg-content');
+        if (msgContent) msgContent.appendChild(modelTag);
+      }
+    }
 
     // Day is JS-authoritative — ignore model's day tag, use our tracked day
     updateChatHeader(chat);

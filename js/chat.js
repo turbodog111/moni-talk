@@ -269,7 +269,7 @@ function renderMessages() {
       const curPhase = STORY_PHASES[chat.storyPhase];
       // Phase-aware: only honor END_OF_DAY in wrap phases, POETRY in poem_sharing
       if (parsed.isEndOfDay && isWrapPhase) {
-        renderStoryChoices(['Begin next day']);
+        renderStoryChoices(['End of day — read diaries']);
       } else if (parsed.hasPoetry && curPhase && curPhase.triggerPoetry) {
         showWordPicker();
       } else {
@@ -439,6 +439,19 @@ async function sendMessage() {
     chat.messages.push({ role: 'assistant', content: reply, model: getCurrentModelKey() });
     saveChats();
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
+
+    // Append model attribution tag
+    if (msgBubble) {
+      const modelKey = getCurrentModelKey();
+      if (modelKey) {
+        const modelTag = document.createElement('div');
+        modelTag.className = 'msg-model';
+        modelTag.textContent = formatModelLabel(modelKey);
+        const msgContent = msgBubble.closest('.msg-content');
+        if (msgContent) msgContent.appendChild(modelTag);
+      }
+    }
+
     updateChatHeader(chat);
     scrollToBottom(); updateContextBar();
 
