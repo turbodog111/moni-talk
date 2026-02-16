@@ -251,6 +251,15 @@ function renderMessages() {
       } else {
         // Hide [Continue] system messages from display
         if (msg.content === '[Continue]') return;
+        // Day break — show visual separator instead of the raw message
+        const dayBreakMatch = msg.content.match(/^\[DAY_BREAK:(\d+)\]/);
+        if (dayBreakMatch) {
+          const dayDiv = document.createElement('div');
+          dayDiv.className = 'story-day-separator';
+          dayDiv.innerHTML = `<span>Day ${dayBreakMatch[1]}</span>`;
+          chatArea.insertBefore(dayDiv, typingIndicator);
+          return;
+        }
         const display = msg.content.startsWith('[Poem words:')
           ? msg.content.replace(/\[Poem words: ([^\]]+)\].*/, 'Wrote a poem with: $1')
           : msg.content;

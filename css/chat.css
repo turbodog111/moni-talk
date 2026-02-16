@@ -106,6 +106,10 @@
 .message.narrator .msg-bubble { background: transparent; box-shadow: none; padding: 4px 8px; line-height: 1.7; border-radius: 0; }
 .message.narrator .msg-content { width: 100%; }
 
+.story-day-separator { display: flex; align-items: center; gap: 16px; padding: 16px 0; width: 100%; }
+.story-day-separator::before, .story-day-separator::after { content: ''; flex: 1; height: 1px; background: var(--gray-mid); }
+.story-day-separator span { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--green-dark); white-space: nowrap; }
+
 /* === Affinity Panel === */
 .affinity-panel { display: none; padding: 8px 16px 6px; background: var(--green-pale); border-bottom: 1px solid var(--gray-mid); flex-shrink: 0; }
 .affinity-panel.visible { display: block; }

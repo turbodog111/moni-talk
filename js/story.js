@@ -510,8 +510,8 @@ async function selectStoryChoice(choice) {
       updateVnDay(chat.storyDay);
       updatePhaseDisplay(chat);
     }
-    // Push a user turn so the model has something to respond to on the new day
-    chat.messages.push({ role: 'user', content: '[Continue]' });
+    // Push a clear day-break message so the model knows a new day has started
+    chat.messages.push({ role: 'user', content: `[DAY_BREAK:${chat.storyDay}] A new day begins. It is now Day ${chat.storyDay}. The previous day is over — start a fresh morning scene.` });
     saveChats();
     await generateStoryBeat(chat);
     return;
