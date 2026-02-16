@@ -87,6 +87,47 @@ function init() {
     });
   }
 
+  // Paste image from clipboard
+  document.addEventListener('paste', (e) => {
+    if (!screens.chat.classList.contains('active')) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        handleImageAttach(item.getAsFile());
+        return;
+      }
+    }
+  });
+
+  // Drag & drop image onto chat area
+  chatArea.addEventListener('dragover', (e) => {
+    if (e.dataTransfer?.types?.includes('Files')) {
+      e.preventDefault();
+      chatArea.classList.add('drag-over');
+    }
+  });
+  chatArea.addEventListener('dragleave', (e) => {
+    if (!chatArea.contains(e.relatedTarget)) chatArea.classList.remove('drag-over');
+  });
+  chatArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    chatArea.classList.remove('drag-over');
+    const file = e.dataTransfer?.files?.[0];
+    if (file && file.type.startsWith('image/')) handleImageAttach(file);
+  });
+
+  // Copy message text delegation
+  chatArea.addEventListener('click', (e) => {
+    const btn = e.target.closest('.msg-copy-btn');
+    if (!btn) return;
+    const msgEl = btn.closest('.message');
+    if (!msgEl) return;
+    const text = msgEl.dataset.text || msgEl.querySelector('.msg-bubble')?.textContent || '';
+    navigator.clipboard.writeText(text).then(() => showToast('Copied!', 'success')).catch(() => showToast('Copy failed.'));
+  });
+
   $('globalSettingsBtn').addEventListener('click', () => { openSettings(); renderSettingsBenchHint(); });
   $('chatSettingsBtn').addEventListener('click', () => { openSettings(); renderSettingsBenchHint(); });
   $('saveKeyBtn').addEventListener('click', saveSettings);

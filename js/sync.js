@@ -83,11 +83,26 @@ async function syncFromCloud() {
       } else {
         const lm = local.lastModified || local.created || 0;
         const cm = cc.lastModified || cc.created || 0;
-        if (cm > lm) merged.set(cc.id, cc);
+        const winner = cm > lm ? cc : local;
+        const loser = cm > lm ? local : cc;
+        // Union-merge starred: if either has true, keep true
+        if (loser.starred && !winner.starred) winner.starred = true;
+        // Preserve custom title from either copy if winner's is null
+        if (!winner.title && loser.title) winner.title = loser.title;
+        merged.set(cc.id, winner);
       }
     }
     chats = Array.from(merged.values());
     saveChatsLocal();
+
+    // Push merged deletedChatIds back to cloud immediately to prevent reappearance
+    const deletedArr = [...deletedChatIds];
+    const cleanupPromises = [puter.kv.set('moni_deleted_ids', JSON.stringify(deletedArr))];
+    // Clean up orphaned KV entries for deleted chat IDs
+    for (const delId of deletedArr) {
+      cleanupPromises.push(puter.kv.del('moni_chat_' + delId).catch(() => {}));
+    }
+    await Promise.all(cleanupPromises);
 
     // Pull profile
     const cloudProfile = parseKV(await puter.kv.get('moni_profile'));

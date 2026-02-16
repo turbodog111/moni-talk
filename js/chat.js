@@ -1,3 +1,24 @@
+// ====== STREAMING DISPLAY HELPER ======
+function getStreamingDisplay(fullText) {
+  // If text starts with '[', check all leading bracket tags are complete
+  let i = 0;
+  while (i < fullText.length && fullText[i] === '[') {
+    const close = fullText.indexOf(']', i);
+    if (close === -1) return null; // Incomplete tag — hold display
+    i = close + 1;
+    // Skip whitespace between tags
+    while (i < fullText.length && /\s/.test(fullText[i])) i++;
+  }
+  // Strip all leading [TAG...] sequences generically
+  let display = fullText.replace(/^(\[[^\]]*\]\s*)+/, '');
+  // If [POEM] appears without [/POEM], truncate to content before the poem block
+  const poemOpen = display.indexOf('[POEM]');
+  if (poemOpen !== -1 && display.indexOf('[/POEM]') === -1) {
+    display = display.slice(0, poemOpen);
+  }
+  return display;
+}
+
 // ====== CHAT LIST ======
 function renderChatList() {
   chatListBody.innerHTML = '';
@@ -220,8 +241,8 @@ async function generateGreeting(chat) {
       if (!updatePending) {
         updatePending = true;
         requestAnimationFrame(() => {
-          if (fullText.startsWith('[') && !fullText.includes(']')) { updatePending = false; return; }
-          const display = fullText.replace(/^\[MOOD:\s*\w+(?::\s*\w+)?\]\s*(?:\[DRIFT:\s*\w+\]\s*)?/i, '');
+          const display = getStreamingDisplay(fullText);
+          if (display === null) { updatePending = false; return; }
           if (msgBubble) msgBubble.innerHTML = renderMarkdown(display);
           scrollToBottom();
           updatePending = false;
@@ -234,7 +255,7 @@ async function generateGreeting(chat) {
     const { mood, moodIntensity, drift, text: reply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
     chat.mood = mood; chat.moodIntensity = moodIntensity; chat.drift = drift;
     chat.lastActiveTime = Date.now();
-    chat.messages.push({ role: 'assistant', content: reply, model: getCurrentModelKey() });
+    chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
     if (msgBubble) {
@@ -389,8 +410,8 @@ async function regenerateLastResponse() {
       if (!updatePending) {
         updatePending = true;
         requestAnimationFrame(() => {
-          if (fullText.startsWith('[') && !fullText.includes(']')) { updatePending = false; return; }
-          const display = fullText.replace(/^\[MOOD:\s*\w+(?::\s*\w+)?\]\s*(?:\[DRIFT:\s*\w+\]\s*)?/i, '');
+          const display = getStreamingDisplay(fullText);
+          if (display === null) { updatePending = false; return; }
           if (msgBubble) msgBubble.innerHTML = renderMarkdown(display);
           scrollToBottom();
           updatePending = false;
@@ -403,7 +424,7 @@ async function regenerateLastResponse() {
     const { mood, moodIntensity, drift, text: reply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
     chat.mood = mood; chat.moodIntensity = moodIntensity; chat.drift = drift;
     chat.lastActiveTime = Date.now();
-    chat.messages.push({ role: 'assistant', content: reply, model: getCurrentModelKey() });
+    chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
     if (msgBubble) {
@@ -440,7 +461,7 @@ async function regenerateLastResponse() {
 
 // ====== RENDER MESSAGES ======
 function renderMessages() {
-  chatArea.querySelectorAll('.message, .story-choices-inline, .story-day-separator').forEach(el => el.remove());
+  chatArea.querySelectorAll('.message, .story-choices-inline, .story-day-separator, .chat-date-separator').forEach(el => el.remove());
   const chat = getChat();
   if (!chat) return;
   hideStoryChoices();
@@ -508,7 +529,20 @@ function renderMessages() {
       renderStoryChoices(['Continue']);
     }
   } else {
+    let lastDateStr = null;
     chat.messages.forEach(msg => {
+      // Date separator between messages from different days
+      if (msg.timestamp) {
+        const d = new Date(msg.timestamp);
+        const dateStr = d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+        if (dateStr !== lastDateStr) {
+          lastDateStr = dateStr;
+          const sep = document.createElement('div');
+          sep.className = 'chat-date-separator';
+          sep.innerHTML = `<span>${dateStr}</span>`;
+          chatArea.insertBefore(sep, typingIndicator);
+        }
+      }
       let content = msg.content;
       let imageUrl = null;
       // Handle multimodal messages (content arrays with images)
@@ -520,7 +554,7 @@ function renderMessages() {
       }
       // Strip legacy expression tags from old room mode messages
       if (chat.mode === 'room' && msg.role === 'assistant') content = stripRoomTags(content);
-      insertMessageEl(msg.role, content, false, imageUrl, msg.model || null);
+      insertMessageEl(msg.role, content, false, imageUrl, msg.model || null, msg.timestamp || null);
     });
   }
   scrollToBottom();
@@ -532,7 +566,7 @@ function formatModelLabel(modelKey) {
   return parts.length > 2 ? parts.slice(1).join(':') : parts[1] || modelKey;
 }
 
-function insertMessageEl(role, content, animate = true, imageUrl = null, model = null) {
+function insertMessageEl(role, content, animate = true, imageUrl = null, model = null, timestamp = null) {
   const isM = role === 'assistant';
   const div = document.createElement('div');
   div.className = `message ${isM ? 'monika' : 'user'}`;
@@ -541,7 +575,10 @@ function insertMessageEl(role, content, animate = true, imageUrl = null, model =
   const av = isM ? `<img class="msg-avatar" src="Monika PFP.png" alt="Monika">` : `<div class="msg-avatar-letter">${userInitial}</div>`;
   const imgHtml = imageUrl ? `<img class="msg-image" src="${imageUrl}" alt="Shared image">` : '';
   const modelTag = isM && model ? `<div class="msg-model">${escapeHtml(formatModelLabel(model))}</div>` : '';
-  div.innerHTML = `${av}<div class="msg-content"><div class="msg-name">${isM ? 'Monika' : 'You'}</div>${imgHtml}<div class="msg-bubble">${isM ? renderMarkdown(content) : escapeHtml(content)}</div>${modelTag}</div>`;
+  const timeHtml = timestamp ? `<span class="msg-time">${new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>` : '';
+  const copyBtn = `<button class="msg-copy-btn" title="Copy text">&#128203;</button>`;
+  div.innerHTML = `${av}<div class="msg-content"><div class="msg-name">${isM ? 'Monika' : 'You'}${timeHtml}</div>${imgHtml}<div class="msg-bubble">${isM ? renderMarkdown(content) : escapeHtml(content)}</div>${copyBtn}${modelTag}</div>`;
+  div.dataset.text = content;
   chatArea.insertBefore(div, typingIndicator);
 }
 
@@ -608,7 +645,7 @@ async function sendMessage() {
     msgContent = text;
   }
 
-  chat.messages.push({ role: 'user', content: msgContent });
+  chat.messages.push({ role: 'user', content: msgContent, timestamp: Date.now() });
   saveChats(); insertMessageEl('user', text || '(shared an image)', false, attachedImage);
   userInput.value = ''; userInput.style.height = 'auto';
   scrollToBottom(); updateContextBar();
@@ -638,12 +675,8 @@ async function sendMessage() {
       if (!updatePending) {
         updatePending = true;
         requestAnimationFrame(() => {
-          // Buffer: if text starts with [ but no closing ] yet, hold display to prevent MOOD tag flash
-          if (fullText.startsWith('[') && !fullText.includes(']')) {
-            updatePending = false;
-            return;
-          }
-          const display = fullText.replace(/^\[MOOD:\s*\w+(?::\s*\w+)?\]\s*(?:\[DRIFT:\s*\w+\]\s*)?/i, '');
+          const display = getStreamingDisplay(fullText);
+          if (display === null) { updatePending = false; return; }
           if (msgBubble) msgBubble.innerHTML = renderMarkdown(display);
           scrollToBottom();
           updatePending = false;
@@ -658,7 +691,7 @@ async function sendMessage() {
     chat.moodIntensity = moodIntensity;
     chat.drift = drift;
     chat.lastActiveTime = Date.now();
-    chat.messages.push({ role: 'assistant', content: reply, model: getCurrentModelKey() });
+    chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
 

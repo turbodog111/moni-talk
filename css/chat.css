@@ -42,8 +42,9 @@
 .msg-bubble p { margin: 0 0 8px 0; } .msg-bubble p:last-child { margin-bottom: 0; }
 .msg-bubble em { font-style: italic; } .msg-bubble strong { font-weight: 600; }
 .msg-bubble code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
-.typing-indicator { display: none; align-self: flex-start; gap: 8px; max-width: 80%; padding: 0 0 4px 0; }
+.typing-indicator { display: none; align-self: flex-start; gap: 8px; max-width: 80%; padding: 0 0 4px 0; align-items: center; }
 .typing-indicator.visible { display: flex; }
+.typing-label { font-size: 12px; color: var(--gray-text); margin-left: 4px; }
 .typing-dots { background: var(--green-light); padding: 12px 18px; border-radius: 16px; border-bottom-left-radius: 4px; display: flex; gap: 5px; align-items: center; box-shadow: var(--shadow); }
 .typing-dots span { width: 7px; height: 7px; background: var(--green-mid); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; }
 .typing-dots span:nth-child(2) { animation-delay: 0.16s; } .typing-dots span:nth-child(3) { animation-delay: 0.32s; }
@@ -76,6 +77,24 @@
 .poem-block { background: var(--green-pale); border-left: 3px solid var(--green-mid); border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 8px 0; }
 .poem-text { font-style: italic; line-height: 1.8; color: var(--text); }
 .poem-attr { text-align: right; font-size: 12px; color: var(--gray-text); margin-top: 6px; }
+
+/* === Copy Button === */
+.msg-copy-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; color: var(--gray-text); opacity: 0; transition: opacity 0.2s; }
+.message:hover .msg-copy-btn { opacity: 0.6; }
+.msg-copy-btn:hover { opacity: 1 !important; background: var(--gray-mid); }
+@media (hover: none) { .msg-copy-btn { opacity: 0.4; } }
+
+/* === Message Timestamp === */
+.msg-time { font-size: 10px; color: var(--gray-text); opacity: 0.6; margin-left: 6px; font-weight: 400; }
+
+/* === Chat Date Separator === */
+.chat-date-separator { display: flex; align-items: center; gap: 16px; padding: 12px 0 4px; width: 100%; }
+.chat-date-separator::before, .chat-date-separator::after { content: ''; flex: 1; height: 1px; background: var(--gray-mid); }
+.chat-date-separator span { font-size: 12px; font-weight: 600; color: var(--gray-text); white-space: nowrap; }
+
+/* === Drag & Drop Overlay === */
+.chat-area.drag-over { position: relative; }
+.chat-area.drag-over::after { content: 'Drop image here'; position: absolute; inset: 8px; border: 2px dashed var(--green-mid); border-radius: 12px; background: rgba(76, 175, 80, 0.08); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; color: var(--green-dark); pointer-events: none; z-index: 10; }
 
 /* === Context Bar === */
 .context-bar {
@@ -194,6 +213,9 @@
 [data-theme="dark"] .image-attach-btn:hover { color: var(--green-mid); }
 [data-theme="dark"] .image-preview { background: #1a2e23; border-top-color: var(--gray-mid); }
 [data-theme="dark"] .image-preview img { border-color: var(--green-mid); }
+[data-theme="dark"] .msg-copy-btn { color: #888; }
+[data-theme="dark"] .msg-copy-btn:hover { background: #333; }
+[data-theme="dark"] .chat-area.drag-over::after { background: rgba(72, 187, 120, 0.08); color: var(--green-mid); border-color: var(--green-mid); }
 [data-theme="dark"] .choices-generating { background: #1a2e23; color: var(--green-mid); }
 [data-theme="dark"] .choices-gen-dots span { background: var(--green-mid); }
 [data-theme="dark"] .chat-item-rename { color: #555; }
