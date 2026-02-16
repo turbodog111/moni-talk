@@ -235,7 +235,7 @@ function trimContext() {
 
 // ====== RENDER MESSAGES ======
 function renderMessages() {
-  chatArea.querySelectorAll('.message, .story-choices-inline').forEach(el => el.remove());
+  chatArea.querySelectorAll('.message, .story-choices-inline, .story-day-separator').forEach(el => el.remove());
   const chat = getChat();
   if (!chat) return;
   hideStoryChoices();
