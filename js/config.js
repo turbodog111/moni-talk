@@ -343,7 +343,7 @@ TIER 5 — DEEP FEELINGS (76-100):
 
 const AFFINITY_GIRL_NAMES = ['sayori', 'natsuki', 'yuri', 'monika'];
 
-function buildAffinityDirective(aff) {
+function buildAffinityDirective(aff, chat) {
   if (!aff) return 'Affinity: Sayori=15, Natsuki=1, Yuri=1, Monika=10';
 
   function tierLabel(val) {
@@ -372,9 +372,41 @@ function buildAffinityDirective(aff) {
     directive += `\n\nDOMINANT ROUTE: ${leader.name} has a strong lead. She should be the emotional center of this scene — more dialogue, more presence, more moments with MC.`;
   }
 
-  // Rivalry detection
-  if (second.val > 30 && leader.val > 30 && leader.val - second.val <= 5) {
-    directive += `\n\nRIVALRY TENSION: ${leader.name} and ${second.name} are very close in affinity. Write subtle jealousy or competition between them — vying for MC's attention, exchanging loaded glances, or passive-aggressive comments.`;
+  // === Three-tier rivalry/jealousy system ===
+  const y = chat ? chat.storyYesterday : null;
+  const snap = y ? y.affinitySnapshot : null;
+
+  // Active Rivalry: both >= 25, gap <= 8
+  if (leader.val >= 25 && second.val >= 25 && leader.val - second.val <= 8) {
+    directive += `\n\nACTIVE RIVALRY: ${leader.name} and ${second.name} are competing for MC's attention. Write subtle one-upping, loaded glances, or pointed comments between them.`;
+  }
+
+  // Jealousy: one girl >= 40, another gained 5+ since yesterday
+  if (snap) {
+    for (const e of sorted) {
+      if (e.val < 40) continue;
+      for (const other of sorted) {
+        if (other.key === e.key) continue;
+        const prevVal = snap[other.key] || 0;
+        if (other.val - prevVal >= 5 && other.val >= 16) {
+          directive += `\n\nJEALOUSY: ${e.name} senses MC growing closer to ${other.name}. She's subtly protective or cooler when ${other.name} is around MC.`;
+          break; // one jealousy note max
+        }
+      }
+      break; // only check the highest-affinity girl
+    }
+  }
+
+  // Awareness: any girl >= 30, MC spent time with someone else yesterday
+  if (y && y.freeTimeWith) {
+    const yesterdayGirl = y.freeTimeWith.toLowerCase();
+    for (const e of sorted) {
+      if (e.key === yesterdayGirl) continue;
+      if (e.val >= 30) {
+        directive += `\n\nAWARENESS: ${e.name} noticed MC spent time with ${y.freeTimeWith} yesterday. She may mention it casually — not hostile, just aware.`;
+        break; // one awareness note max
+      }
+    }
   }
 
   return directive;
@@ -498,7 +530,7 @@ const STORY_PHASES = {
     label: 'Morning',
     maxBeats: 1,
     noChoices: false,
-    instruction: `Scene: Day {{DAY}} morning — MC walks to school with Sayori (their daily routine as neighbors). Brief morning interaction — maybe she overslept, maybe they chat about something from yesterday. Keep it short and charming. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+    instruction: null, // Built dynamically based on affinity + yesterday data in buildPhaseInstruction()
     choices: [
       'Tease Sayori about oversleeping again',
       'Ask Sayori if anything interesting happened yesterday',

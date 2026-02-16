@@ -143,15 +143,26 @@ function buildMessages(chat) {
     const phaseInstruction = buildPhaseInstruction(chat);
 
     const milestoneNote = buildMilestoneNote(chat);
-    const dayContinuity = day > 1
-      ? `\n\n=== DAY CONTINUITY (CRITICAL) ===\nThis is DAY ${day}. MC has been a club member for ${day - 1} day(s). He knows Sayori, Natsuki, Yuri, and Monika. Do NOT write first-meeting introductions. Girls behave per their affinity tiers.`
-      : '';
+    let dayContinuity = '';
+    if (day > 1) {
+      dayContinuity = `\n\n=== DAY CONTINUITY (CRITICAL) ===\nThis is DAY ${day}. MC has been a club member for ${day - 1} day(s). He knows Sayori, Natsuki, Yuri, and Monika. Do NOT write first-meeting introductions. Girls behave per their affinity tiers.`;
+      const y = chat.storyYesterday;
+      if (y && y.day === day - 1) {
+        const parts = [];
+        if (y.freeTimeWith) parts.push(`spent free time with ${y.freeTimeWith}`);
+        if (y.walkHomeWith) parts.push(`walked home with ${y.walkHomeWith}`);
+        if (parts.length) {
+          dayContinuity += `\nYESTERDAY: MC ${parts.join(' and ')}.`;
+          dayContinuity += `\nCharacters may reference this naturally — a brief callback, not heavy recap. The girl MC spent time with might be slightly warmer today; others might have noticed.`;
+        }
+      }
+    }
     // Keep phase instruction out of the main system prompt — it goes at the END
     const systemPrompt = STORY_PROMPT_BASE
       + `\n\n${AFFINITY_BEHAVIOR_TIERS}`
       + (milestoneNote ? `\n\n${milestoneNote}` : '')
       + dayContinuity
-      + `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}\n${buildAffinityDirective(aff)}`;
+      + `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}\n${buildAffinityDirective(aff, chat)}`;
 
     // Trim to last N messages to prevent context overflow
     let recentMessages = chat.messages;

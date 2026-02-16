@@ -173,6 +173,28 @@
   transform: translateX(-50%);
 }
 
+/* VN Dynamics Panel */
+.vn-dynamics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vn-dynamics-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border-left: 3px solid;
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.vn-dynamics-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
 /* VN Scene Info */
 .vn-scene-info {
   padding: 10px 14px;

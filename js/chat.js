@@ -165,6 +165,7 @@ function openChat(id) {
     updateVnDay(chat.storyDay || 1);
     updatePhaseDisplay(chat);
     updateRouteIndicator(chat);
+    updateDynamicsPanel(chat);
     renderCheckpointList(chat);
   }
   hideAffinityPanel();

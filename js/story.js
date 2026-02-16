@@ -116,6 +116,59 @@ function buildPhaseInstruction(chat) {
     }
   }
 
+  // Dynamic morning instruction — high-affinity girls may join the walk
+  if (!instruction && phaseKey === 'morning') {
+    const aff = chat.storyAffinity || {};
+    const capName = n => n.charAt(0).toUpperCase() + n.slice(1);
+    const y = chat.storyYesterday;
+
+    // Find girls other than Sayori with affinity >= 40
+    const qualifiers = ['natsuki', 'yuri', 'monika']
+      .filter(g => (aff[g] || 0) >= 40)
+      .sort((a, b) => (aff[b] || 0) - (aff[a] || 0));
+
+    // Prefer yesterday's walk-home companion if she qualifies
+    if (y && y.walkHomeWith && qualifiers.length > 0) {
+      const walkGirl = y.walkHomeWith.toLowerCase();
+      if (qualifiers.includes(walkGirl) && qualifiers[0] !== walkGirl) {
+        // Move her to front
+        const idx = qualifiers.indexOf(walkGirl);
+        qualifiers.splice(idx, 1);
+        qualifiers.unshift(walkGirl);
+      }
+    }
+
+    // Build yesterday callback hint
+    let yesterdayHint = '';
+    if (y) {
+      const parts = [];
+      if (y.freeTimeWith) parts.push(`spent free time with ${y.freeTimeWith}`);
+      if (y.walkHomeWith) parts.push(`walked home with ${y.walkHomeWith}`);
+      if (parts.length) yesterdayHint = ` Yesterday, MC ${parts.join(' and ')}. A brief natural callback to yesterday is welcome — not a recap, just a small reference.`;
+    }
+
+    // Encounter descriptions per girl
+    const encounters = {
+      monika: `${capName('monika')} is walking the same route this morning — she falls into step alongside MC with a smile`,
+      yuri: `${capName('yuri')} is standing at the crossroads with a book, and looks up surprised when she sees MC`,
+      natsuki: `${capName('natsuki')} is coming out of the convenience store with a bag of snacks when she spots MC`
+    };
+
+    if (qualifiers.length > 0) {
+      const mainGirl = qualifiers[0];
+      let encounterText = `${encounters[mainGirl]}.`;
+      if (qualifiers.length > 1) {
+        const secondGirl = qualifiers[1];
+        encounterText += ` Then ${encounters[secondGirl]}.`;
+      }
+
+      instruction = `Day ${day} — Scene: Morning walk to school. MC walks with Sayori (their daily neighbor routine). ${encounterText} Write a brief, charming morning scene. Show the dynamic between the girls and MC — Sayori is comfortable and familiar, while ${capName(mainGirl)} being here is a newer development that reflects their growing bond.${yesterdayHint} Keep it short and natural. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+    } else {
+      // Standard Sayori-only morning
+      instruction = `Day ${day} — Scene: Morning walk to school. MC walks with Sayori (their daily neighbor routine). Brief morning interaction — maybe she overslept, maybe they chat about the day ahead.${yesterdayHint} Keep it short and charming. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+    }
+  }
+
   // Dynamic wrap_up instruction (legacy — for old saves still on wrap_up)
   if (!instruction && phaseKey === 'wrap_up') {
     const aff = chat.storyAffinity || {};
@@ -170,6 +223,10 @@ End your response with [END_OF_DAY] on its own line.`;
   // Replace {{DAY}} tokens
   if (instruction) instruction = instruction.replace(/\{\{DAY\}\}/g, String(day));
 
+  // Append phase-specific rivalry hint if active
+  const rivalryHint = buildPhaseRivalryHint(chat, phaseKey);
+  if (rivalryHint) instruction += '\n\n' + rivalryHint;
+
   // Build scene header with day awareness
   let header = `=== CURRENT SCENE: ${phase.label} (Day ${day}) ===\nThis is DAY ${day} of the story.`;
   if (day > 1) {
@@ -178,6 +235,27 @@ End your response with [END_OF_DAY] on its own line.`;
   header += `\nYou MUST write this scene as described below. The user's previous choice affects tone and affinity only — it does NOT override this scene.`;
 
   return `${header}\n\n${instruction}`;
+}
+
+// Phase-specific rivalry hint — only fires when active rivalry exists
+function buildPhaseRivalryHint(chat, phaseKey) {
+  const aff = chat.storyAffinity || {};
+  const sorted = AFFINITY_GIRL_NAMES
+    .map(g => ({ name: g.charAt(0).toUpperCase() + g.slice(1), key: g, val: aff[g] || 0 }))
+    .sort((a, b) => b.val - a.val);
+  const leader = sorted[0];
+  const second = sorted[1];
+
+  // Only fire for active rivalry: both >= 25, gap <= 8
+  if (!(leader.val >= 25 && second.val >= 25 && leader.val - second.val <= 8)) return '';
+
+  const hints = {
+    club_activity: `RIVALRY NOTE: ${leader.name} and ${second.name} subtly compete during the activity — trying to impress MC or outshine each other.`,
+    free_time: `RIVALRY NOTE: The girl MC didn't choose (${leader.name} or ${second.name}) may react with mild disappointment or a pointed comment.`,
+    meeting_end: `RIVALRY NOTE: As the meeting ends, there's subtle tension about who MC will walk home with — ${leader.name} and ${second.name} are both aware of the stakes.`
+  };
+
+  return hints[phaseKey] || '';
 }
 
 // Build walk-home choices sorted by affinity with activity-grounded flavor text
@@ -596,6 +674,7 @@ async function selectStoryChoice(choice) {
     const lastMsg = chat.messages[chat.messages.length - 1];
     const isStillWrapUp = isEndOfDayPhase(chat.storyPhase);
     if (isStillWrapUp && lastMsg?.role === 'assistant' && /\[END_OF_DAY\]/i.test(lastMsg.content)) {
+      if (!chat.storyYesterday) chat.storyYesterday = buildYesterdaySummary(chat);
       chat.storyDay = (chat.storyDay || 1) + 1;
       initPhaseForDay(chat);
       chat.lastChoices = null;
@@ -603,8 +682,17 @@ async function selectStoryChoice(choice) {
       updateVnDay(chat.storyDay);
       updatePhaseDisplay(chat);
     }
+    // Build yesterday hint for the day-break message
+    const y = chat.storyYesterday;
+    let yesterdayHint = '';
+    if (y) {
+      const parts = [];
+      if (y.freeTimeWith) parts.push(`spent free time with ${y.freeTimeWith}`);
+      if (y.walkHomeWith) parts.push(`walked home with ${y.walkHomeWith}`);
+      if (parts.length) yesterdayHint = ` Yesterday, MC ${parts.join(' and ')}.`;
+    }
     // Push a clear day-break message so the model knows a new day has started
-    chat.messages.push({ role: 'user', content: `[DAY_BREAK:${chat.storyDay}] A new day begins. It is now Day ${chat.storyDay}. The previous day is over — start a fresh morning scene.` });
+    chat.messages.push({ role: 'user', content: `[DAY_BREAK:${chat.storyDay}] A new day begins. It is now Day ${chat.storyDay}. The previous day is over — start a fresh morning scene.${yesterdayHint}` });
     saveChats();
     await generateStoryBeat(chat);
     return;
@@ -779,6 +867,7 @@ async function generateStoryBeat(chat) {
     detectMilestones(chat, prev, chat.storyAffinity);
     updateAffinityPanel(chat.storyAffinity);
     updateRouteIndicator(chat);
+    updateDynamicsPanel(chat);
 
     chat.messages.push({ role: 'assistant', content: rawReply, model: getCurrentModelKey() });
     updateVnSprites(narrative);
@@ -968,7 +1057,8 @@ function createCheckpoint(chat, isAuto = false) {
     affinity: { ...chat.storyAffinity },
     mcName: chat.mcName || 'MC',
     messages: chat.messages.map(m => ({ role: m.role, content: m.content })),
-    milestonesCrossed: { ...(chat.milestonesCrossed || {}) }
+    milestonesCrossed: { ...(chat.milestonesCrossed || {}) },
+    storyYesterday: chat.storyYesterday || null
   };
 
   chatCPs.push(cp);
@@ -998,6 +1088,7 @@ function loadCheckpoint(chat, cpId) {
   chat.mcName = cp.mcName;
   chat.messages = cp.messages.map(m => ({ role: m.role, content: m.content }));
   chat.milestonesCrossed = { ...(cp.milestonesCrossed || {}) };
+  chat.storyYesterday = cp.storyYesterday || null;
   chat.lastChoices = null;
 
   saveChats();
@@ -1058,6 +1149,7 @@ function renderCheckpointList(chat) {
         updatePhaseDisplay(chat);
         updateAffinityPanel(chat.storyAffinity);
         updateRouteIndicator(chat);
+        updateDynamicsPanel(chat);
         renderMessages();
         updateContextBar();
         showToast('Checkpoint loaded!', 'success');

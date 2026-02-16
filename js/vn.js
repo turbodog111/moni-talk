@@ -198,18 +198,156 @@ function renderJournalEntries(entries) {
   });
 }
 
+// Build a summary of today's key choices before advancing the day
+function buildYesterdaySummary(chat) {
+  const day = chat.storyDay || 1;
+  const aff = chat.storyAffinity || {};
+  let freeTimeWith = null;
+  let walkHomeWith = null;
+
+  // Scan messages backwards until we hit a previous DAY_BREAK marker
+  for (let i = chat.messages.length - 1; i >= 0; i--) {
+    const m = chat.messages[i];
+    if (m.role === 'user' && typeof m.content === 'string') {
+      if (/^\[DAY_BREAK:/.test(m.content)) break; // hit previous day boundary
+      if (!freeTimeWith) {
+        const ft = m.content.match(/^Spend time with (\w+)/i);
+        if (ft) freeTimeWith = ft[1];
+      }
+      if (!walkHomeWith) {
+        const wh = m.content.match(/^Walk home with (\w+)/i);
+        if (wh) walkHomeWith = wh[1];
+      }
+    }
+  }
+
+  return {
+    day: day,
+    freeTimeWith: freeTimeWith || null,
+    walkHomeWith: walkHomeWith || null,
+    affinitySnapshot: { ...aff }
+  };
+}
+
 function closeJournal() {
   $('journalOverlay').classList.remove('open');
   const chat = getChat();
   if (!chat) return;
+  chat.storyYesterday = buildYesterdaySummary(chat);
   chat.storyDay = (chat.storyDay || 1) + 1;
   initPhaseForDay(chat);
   chat.lastChoices = null; // Clear stale choices from previous day
+  // Build yesterday hint for the day-break message
+  const y = chat.storyYesterday;
+  let yesterdayHint = '';
+  if (y) {
+    const parts = [];
+    if (y.freeTimeWith) parts.push(`spent free time with ${y.freeTimeWith}`);
+    if (y.walkHomeWith) parts.push(`walked home with ${y.walkHomeWith}`);
+    if (parts.length) yesterdayHint = ` Yesterday, MC ${parts.join(' and ')}.`;
+  }
   // Push a clear day-break message so the model knows a new day has started
-  chat.messages.push({ role: 'user', content: `[DAY_BREAK:${chat.storyDay}] A new day begins. It is now Day ${chat.storyDay}. The previous day is over — start a fresh morning scene.` });
+  chat.messages.push({ role: 'user', content: `[DAY_BREAK:${chat.storyDay}] A new day begins. It is now Day ${chat.storyDay}. The previous day is over — start a fresh morning scene.${yesterdayHint}` });
   updateChatHeader(chat);
   updateVnDay(chat.storyDay);
   updatePhaseDisplay(chat);
+  updateDynamicsPanel(chat);
   saveChats();
   generateStoryBeat(chat);
+}
+
+// ====== DYNAMICS PANEL ======
+function updateDynamicsPanel(chat) {
+  const section = $('dynamicsSection');
+  const list = $('vnDynamicsList');
+  if (!section || !list) return;
+
+  if (!chat || chat.mode !== 'story') {
+    section.style.display = 'none';
+    return;
+  }
+
+  const day = chat.storyDay || 1;
+  const aff = chat.storyAffinity || {};
+  const y = chat.storyYesterday;
+  const snap = y ? y.affinitySnapshot : null;
+
+  // Hide before Day 2
+  if (day < 2) {
+    section.style.display = 'none';
+    return;
+  }
+
+  const colors = { sayori: '#FF91A4', natsuki: '#FF69B4', yuri: '#9370DB', monika: '#3CB371' };
+  const capName = n => n.charAt(0).toUpperCase() + n.slice(1);
+  const items = [];
+
+  const sorted = AFFINITY_GIRL_NAMES
+    .map(g => ({ name: capName(g), key: g, val: aff[g] || 0 }))
+    .sort((a, b) => b.val - a.val);
+  const leader = sorted[0];
+  const second = sorted[1];
+
+  // Active Rivalry
+  if (leader.val >= 25 && second.val >= 25 && leader.val - second.val <= 8) {
+    items.push({
+      icon: '\u2694\uFE0F',
+      text: `${leader.name} & ${second.name} — Competing for MC's attention`,
+      gradient: `linear-gradient(90deg, ${colors[leader.key]}33, ${colors[second.key]}33)`,
+      border: colors[leader.key]
+    });
+  }
+
+  // Jealousy
+  if (snap) {
+    for (const e of sorted) {
+      if (e.val < 40) break;
+      for (const other of sorted) {
+        if (other.key === e.key) continue;
+        const prevVal = snap[other.key] || 0;
+        if (other.val - prevVal >= 5 && other.val >= 16) {
+          items.push({
+            icon: '\uD83D\uDC40',
+            text: `${e.name} notices MC getting closer to ${other.name}`,
+            gradient: `linear-gradient(90deg, ${colors[e.key]}33, ${colors[other.key]}22)`,
+            border: colors[e.key]
+          });
+          break;
+        }
+      }
+      break;
+    }
+  }
+
+  // Tier labels for girls >= 16
+  function tierDesc(val) {
+    if (val >= 76) return 'Deep feelings for MC';
+    if (val >= 51) return 'Romantic feelings for MC';
+    if (val >= 31) return 'Close friends with MC';
+    if (val >= 16) return 'Warming up to MC';
+    return null;
+  }
+
+  for (const e of sorted) {
+    const desc = tierDesc(e.val);
+    if (!desc) continue;
+    const icon = e.val >= 51 ? '\u2764\uFE0F' : e.val >= 31 ? '\uD83D\uDC9B' : '\u2728';
+    items.push({
+      icon: icon,
+      text: `${e.name} — ${desc}`,
+      gradient: `linear-gradient(90deg, ${colors[e.key]}22, transparent)`,
+      border: colors[e.key]
+    });
+  }
+
+  if (items.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = '';
+  list.innerHTML = items.map(item =>
+    `<div class="vn-dynamics-item" style="border-left-color:${item.border};background:${item.gradient};">` +
+    `<span class="vn-dynamics-icon">${item.icon}</span> ${item.text}</div>`
+  ).join('');
 }
