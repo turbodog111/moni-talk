@@ -146,9 +146,9 @@ function buildMessages(chat) {
     const dayContinuity = day > 1
       ? `\n\n=== DAY CONTINUITY (CRITICAL) ===\nThis is DAY ${day}. MC has been a club member for ${day - 1} day(s). He knows Sayori, Natsuki, Yuri, and Monika. Do NOT write first-meeting introductions. Girls behave per their affinity tiers.`
       : '';
+    // Keep phase instruction out of the main system prompt — it goes at the END
     const systemPrompt = STORY_PROMPT_BASE
       + `\n\n${AFFINITY_BEHAVIOR_TIERS}`
-      + (phaseInstruction ? `\n\n${phaseInstruction}` : '')
       + (milestoneNote ? `\n\n${milestoneNote}` : '')
       + dayContinuity
       + `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}\n${buildAffinityDirective(aff)}`;
@@ -166,13 +166,20 @@ function buildMessages(chat) {
 
     // Inject condensed character reminder every ~20 messages to keep model on track
     if (chat.messages.length > 10) {
-      // Insert reminder as a system message near the end of history
       msgs.splice(-2, 0, { role: 'system', content: CHARACTER_REMINDER });
     }
 
     if (chat.messages.length === 0) {
       msgs.push({ role: 'user', content: `Begin the story. My name is ${mcName}.` });
     }
+
+    // Inject phase instruction as the FINAL system message — right before generation.
+    // This is the most influential position in the context window for small models
+    // that tend to follow recent context over distant system prompts.
+    if (phaseInstruction) {
+      msgs.push({ role: 'system', content: phaseInstruction + `\n\nREMINDER: Write ONLY this scene. Do NOT skip ahead to later parts of the day. Do NOT summarize the whole day. Stay in this moment.` });
+    }
+
     return msgs;
   }
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
