@@ -125,15 +125,19 @@ async function showEndOfDay(chat) {
 
 async function generateJournals(chat) {
   const dayNum = chat.storyDay || 1;
-  const todayMsgs = chat.messages.slice(-12);
+  const mcName = chat.mcName || 'MC';
+  const todayMsgs = chat.messages.slice(-20);
   const summary = todayMsgs.map(m => {
-    if (m.role === 'assistant') return parseStoryResponse(m.content).narrative.slice(0, 200);
+    if (m.role === 'assistant') return parseStoryResponse(m.content).narrative.slice(0, 400);
     return 'Player chose: ' + m.content.slice(0, 80);
   }).join('\n');
   const aff = chat.storyAffinity || {};
   const journalPrompt = `You are writing private diary/journal entries for each of the 4 Doki Doki Literature Club girls after Day ${dayNum} of the Literature Club.
 
-Based on today's events, write each girl's HONEST private thoughts. These should be raw, personal, and unfiltered — showing how they truly feel about MC and the day's events. Feelings and attraction should be MORE APPARENT here than in their public behavior. A girl with low affinity may barely mention MC; a girl with high affinity may be thinking about him constantly.
+Based on today's events, write each girl's HONEST private thoughts. These should be raw, personal, and unfiltered — showing how they truly feel about ${mcName} and the day's events. Feelings and attraction should be MORE APPARENT here than in their public behavior. A girl with low affinity may barely mention ${mcName}; a girl with high affinity may be thinking about him constantly.
+
+IMPORTANT: Refer to the player ONLY as "${mcName}" — never "MC", never a shortened version of their name, always exactly "${mcName}".
+Reference SPECIFIC events, conversations, and moments from the day — not vague generic feelings. What exactly happened that stuck with them?
 
 Today's events:
 ${summary}
@@ -146,7 +150,7 @@ CHARACTER WRITING STYLES:
 - Yuri: Eloquent, introspective, uses metaphors, overthinks interactions
 - Monika: Self-aware, perceptive, reflects on the day with clarity and warmth
 
-Write in this EXACT format (2-3 sentences each):
+Write in this EXACT format (4-6 sentences each):
 [JOURNAL:Sayori]
 (entry)
 [JOURNAL:Natsuki]
@@ -160,7 +164,7 @@ Write in this EXACT format (2-3 sentences each):
     { role: 'system', content: journalPrompt },
     { role: 'user', content: 'Write the journal entries for today.' }
   ];
-  const raw = await callAI(msgs, 600);
+  const raw = await callAI(msgs, 1200);
   return parseJournals(raw);
 }
 

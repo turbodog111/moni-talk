@@ -375,6 +375,12 @@ async function selectStoryChoice(choice) {
     return;
   }
 
+  // "End of day — read diaries" — user is ready to see the journal overlay
+  if (choice === 'End of day — read diaries') {
+    await showEndOfDay(chat);
+    return;
+  }
+
   // "Begin next day" from replay — advance day only if closeJournal didn't already run
   if (choice === 'Begin next day') {
     const lastMsg = chat.messages[chat.messages.length - 1];
@@ -534,10 +540,11 @@ async function generateStoryBeat(chat) {
 
     // 1. Handle end of day — ONLY honor [END_OF_DAY] during wrap-up phases
     if ((isEndOfDay && isWrapPhase) || (phase && phase.forceEndOfDay && chat.storyBeatInPhase >= phase.maxBeats)) {
-      console.log('[STORY] → path 1: end of day');
-      chat.lastChoices = null; // Clear so reload doesn't show stale choices
+      console.log('[STORY] → path 1: end of day (showing diary choice)');
+      chat.lastChoices = ['End of day — read diaries'];
       saveChats();
-      await showEndOfDay(chat);
+      renderStoryChoices(['End of day — read diaries']);
+      scrollToBottom();
       return;
     }
 
