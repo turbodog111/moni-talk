@@ -573,7 +573,7 @@ const STORY_PHASES = {
     label: 'Meeting End',
     maxBeats: 1,
     noChoices: false,
-    instruction: `Day {{DAY}} — Scene: Monika announces the club meeting is over for today. She thanks everyone for coming and reminds them about tomorrow. The girls start packing up. Brief closing moment — keep it short. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+    instruction: `Day {{DAY}} — Scene: Monika announces the club meeting is over for today. She thanks everyone for coming and reminds them about tomorrow. The girls begin packing up their things — gathering bags, closing books, putting away supplies. IMPORTANT: Keep everyone still in the clubroom and in the middle of getting ready to leave. Do NOT narrate anyone actually walking out the door or departing — the player will choose who to walk home with next, so all four girls must still be present and available when this scene ends. Brief closing moment — keep it short. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
     choices: null // Dynamically generated walk-home choices
   },
   walk_home: {
