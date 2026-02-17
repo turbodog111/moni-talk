@@ -225,8 +225,9 @@
 [data-theme="dark"] .poem-attr { color: var(--gray-text); }
 
 /* === TTS Toggle === */
-.tts-toggle { font-size: 18px; transition: color 0.2s; }
+.tts-toggle { font-size: 18px; transition: color 0.2s, opacity 0.2s; }
 .tts-toggle.tts-playing { animation: ttsPulse 1.2s ease-in-out infinite; color: var(--green-mid); }
+.tts-toggle.tts-muted { opacity: 0.4; }
 @keyframes ttsPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 /* === TTS Settings === */

@@ -179,12 +179,14 @@ function init() {
     });
   }
 
-  // TTS toggle button
+  // TTS toggle button — mute/unmute (not full disable)
   $('ttsToggleBtn').addEventListener('click', () => {
     if (ttsPlaying) { stopTTS(); return; }
-    ttsEnabled = !ttsEnabled;
-    localStorage.setItem('moni_talk_tts_enabled', ttsEnabled);
+    // Toggle muted state — keep ttsEnabled true but skip playback when muted
+    ttsMuted = !ttsMuted;
+    localStorage.setItem('moni_talk_tts_muted', ttsMuted);
     updateTTSIcon();
+    showToast(ttsMuted ? 'Voice muted' : 'Voice unmuted', 'success');
   });
   // TTS test connection
   $('ttsTestBtn').addEventListener('click', () => {

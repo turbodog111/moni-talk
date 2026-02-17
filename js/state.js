@@ -24,6 +24,7 @@ let pendingImage = null;
 let activeAbortController = null; // AbortController for current streaming generation
 let ttsEnabled = localStorage.getItem('moni_talk_tts_enabled') === 'true';
 let ttsEndpoint = localStorage.getItem('moni_talk_tts_endpoint') || 'http://localhost:8880';
+let ttsMuted = localStorage.getItem('moni_talk_tts_muted') === 'true';
 
 // ====== DOM ======
 const $ = id => document.getElementById(id);

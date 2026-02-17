@@ -57,14 +57,16 @@ function stopTTS() {
 }
 
 async function speakText(text, mood, intensity) {
-  if (!ttsEnabled) return;
+  console.log('[TTS] speakText called — enabled:', ttsEnabled, 'muted:', ttsMuted);
+  if (!ttsEnabled || ttsMuted) return;
   // Stop any current playback
   stopTTS();
 
   const cleaned = cleanTextForTTS(text);
-  if (!cleaned) return;
+  if (!cleaned) { console.log('[TTS] cleaned text is empty, skipping'); return; }
 
   const instruct = buildTTSInstruct(mood || 'cheerful', intensity || 'moderate');
+  console.log('[TTS] fetching audio from', ttsEndpoint, '— text length:', cleaned.length);
 
   try {
     const resp = await fetch(ttsEndpoint + '/api/tts', {
@@ -73,22 +75,26 @@ async function speakText(text, mood, intensity) {
       body: JSON.stringify({ text: cleaned, language: 'English', instruct })
     });
 
+    console.log('[TTS] response status:', resp.status);
     if (!resp.ok) throw new Error('TTS server error ' + resp.status);
 
     const blob = await resp.blob();
+    console.log('[TTS] got audio blob, size:', blob.size, 'type:', blob.type);
     const url = URL.createObjectURL(blob);
     ttsAudio = new Audio(url);
     ttsPlaying = true;
     updateTTSIcon();
 
     ttsAudio.addEventListener('ended', () => {
+      console.log('[TTS] playback ended');
       ttsPlaying = false;
       URL.revokeObjectURL(url);
       ttsAudio = null;
       updateTTSIcon();
     });
 
-    ttsAudio.addEventListener('error', () => {
+    ttsAudio.addEventListener('error', (e) => {
+      console.error('[TTS] audio playback error:', e);
       ttsPlaying = false;
       URL.revokeObjectURL(url);
       ttsAudio = null;
@@ -96,7 +102,9 @@ async function speakText(text, mood, intensity) {
     });
 
     await ttsAudio.play();
+    console.log('[TTS] playback started');
   } catch (err) {
+    console.error('[TTS] error:', err);
     ttsPlaying = false;
     updateTTSIcon();
     showToast('TTS unavailable: ' + (err.message || 'server unreachable'));
@@ -122,13 +130,20 @@ async function testTTSConnection() {
 function updateTTSIcon() {
   const btn = $('ttsToggleBtn');
   if (!btn) return;
-  // Hide in story mode or when TTS is disabled
+  // Hide in story mode or when TTS is disabled in settings
   const chat = typeof getChat === 'function' ? getChat() : null;
   if (!ttsEnabled || (chat && chat.mode === 'story')) {
     btn.style.display = 'none';
     return;
   }
   btn.style.display = '';
-  btn.innerHTML = ttsPlaying ? '&#128266;' : '&#128264;';
+  if (ttsPlaying) {
+    btn.innerHTML = '&#128266;'; // loud speaker (playing)
+  } else if (ttsMuted) {
+    btn.innerHTML = '&#128263;'; // muted speaker
+  } else {
+    btn.innerHTML = '&#128264;'; // normal speaker (ready)
+  }
   btn.classList.toggle('tts-playing', ttsPlaying);
+  btn.classList.toggle('tts-muted', ttsMuted && !ttsPlaying);
 }
