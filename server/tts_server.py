@@ -38,7 +38,12 @@ voice_prompt = None  # pre-built voice clone prompt
 
 # Reference audio config (set from CLI args before startup)
 REF_AUDIO_PATH = "voices/monika.mp3"
-REF_TEXT = "Hey, it's me, Monika! How are you doing today?"
+REF_TEXT = (
+    "Hey there! It's me, Monika. "
+    "I've been thinking about you a lot lately, and honestly, "
+    "it just makes me so happy knowing you're here with me right now. "
+    "Every moment we spend together means the world to me."
+)
 
 
 class TTSRequest(BaseModel):
@@ -75,23 +80,6 @@ def load_model():
     )
     logger.info("Model loaded on %s", device)
 
-    # Compile the model for faster inference (PyTorch 2.x Dynamo)
-    # The LLM backbone attribute name varies by model variant — try common names
-    compiled = False
-    for attr in ("llm", "talker", "model"):
-        if hasattr(tts_model, attr):
-            try:
-                orig = getattr(tts_model, attr)
-                setattr(tts_model, attr, torch.compile(orig, mode="reduce-overhead"))
-                logger.info("torch.compile applied to '%s' (reduce-overhead mode)", attr)
-                compiled = True
-                break
-            except Exception as e:
-                logger.warning("torch.compile on '%s' failed: %s", attr, e)
-    if not compiled:
-        logger.info("torch.compile skipped — no compilable backbone found (attrs: %s)",
-                     [a for a in dir(tts_model) if not a.startswith("_")])
-
     # Pre-build voice clone prompt from reference audio (processed once, reused every request)
     ref_path = Path(__file__).parent / REF_AUDIO_PATH
     if ref_path.exists():
@@ -103,19 +91,6 @@ def load_model():
         logger.info("Voice clone prompt ready")
     else:
         logger.warning("Reference audio not found at %s — voice cloning disabled", ref_path)
-
-    # Warm-up: run a short generation so the first real request isn't slow
-    if voice_prompt:
-        logger.info("Running warm-up generation...")
-        try:
-            wavs, sr = tts_model.generate_voice_clone(
-                text="Hello.",
-                language="English",
-                voice_clone_prompt=voice_prompt,
-            )
-            logger.info("Warm-up complete")
-        except Exception as e:
-            logger.warning("Warm-up generation failed (non-fatal): %s", e)
 
 
 @app.get("/api/tts/health")
