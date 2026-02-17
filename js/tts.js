@@ -30,6 +30,12 @@ const TTS_VOICE_PROFILES = {
     desc: 'Cheerful and adorable with a higher, softer tone. Endearing and youthful.',
     instruct: 'A sweet, adorable young woman with a cute, higher-pitched voice. Natural American English. Cheerful and endearing with youthful charm.',
     seed: 314
+  },
+  jarvis: {
+    label: 'Jarvis (Dev)',
+    desc: 'Smooth, composed male assistant. Dry wit with calm authority.',
+    instruct: 'A smooth, composed man with a clear, refined baritone voice. British English. Calm and authoritative with subtle dry wit, like an intelligent personal assistant.',
+    seed: 777
   }
 };
 
