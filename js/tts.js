@@ -32,6 +32,8 @@ function buildTTSInstruct(mood, intensity) {
   return TTS_VOICE_BASE + ' ' + adjusted;
 }
 
+const TTS_MAX_CHARS = 200;
+
 function cleanTextForTTS(text) {
   let t = text;
   // Strip [POEM]...[/POEM] blocks entirely
@@ -44,6 +46,13 @@ function cleanTextForTTS(text) {
   t = t.replace(/`(.+?)`/g, '$1');
   // Collapse whitespace
   t = t.replace(/\s+/g, ' ').trim();
+  // Truncate to first ~2 sentences to keep generation fast
+  if (t.length > TTS_MAX_CHARS) {
+    // Try to break at a sentence boundary
+    const truncated = t.slice(0, TTS_MAX_CHARS);
+    const lastSentence = truncated.search(/[.!?]\s[^.!?]*$/);
+    t = lastSentence > 40 ? truncated.slice(0, lastSentence + 1) : truncated;
+  }
   return t;
 }
 

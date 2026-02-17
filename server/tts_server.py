@@ -45,18 +45,24 @@ class TTSRequest(BaseModel):
 def load_model():
     global tts_model
     logger.info("Loading Qwen3-TTS-VoiceDesign model...")
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    # Pick the best available GPU (prefer cuda:1 = 4070 Super if present)
+    if torch.cuda.is_available():
+        device = "cuda:1" if torch.cuda.device_count() > 1 else "cuda:0"
+    else:
+        device = "cpu"
     kwargs = {
         "device_map": device,
         "dtype": torch.bfloat16,
     }
-    # Use flash_attention_2 if available (reduces VRAM, optional)
+    # Use PyTorch native SDPA (includes Flash Attention kernel) — no extra package needed
+    # Falls back gracefully if not supported
     try:
         import flash_attn  # noqa: F401
         kwargs["attn_implementation"] = "flash_attention_2"
-        logger.info("FlashAttention-2 detected, using it")
+        logger.info("Using flash_attention_2 (external package)")
     except ImportError:
-        logger.info("FlashAttention-2 not installed, using default attention")
+        kwargs["attn_implementation"] = "sdpa"
+        logger.info("Using PyTorch native SDPA (built-in Flash Attention)")
     tts_model = Qwen3TTSModel.from_pretrained(
         "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
         **kwargs,
