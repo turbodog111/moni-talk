@@ -35,6 +35,10 @@ app.add_middleware(
 tts_model: Qwen3TTSModel | None = None
 
 
+# Fixed seed for voice consistency — same instruct + seed = same voice timbre
+VOICE_SEED = 42
+
+
 class TTSRequest(BaseModel):
     text: str
     language: str = "English"
@@ -83,6 +87,10 @@ def synthesize(req: TTSRequest):
         raise HTTPException(400, "Empty text")
 
     try:
+        # Set fixed seed so the voice sounds the same across sentences
+        torch.manual_seed(VOICE_SEED)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(VOICE_SEED)
         wavs, sr = tts_model.generate_voice_design(
             text=req.text,
             language=req.language,
