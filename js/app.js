@@ -194,6 +194,18 @@ function init() {
     if (input) ttsEndpoint = input.value.trim().replace(/\/+$/, '') || 'http://localhost:8880';
     testTTSConnection();
   });
+  // TTS voice select — update description on change
+  $('ttsVoiceSelect').addEventListener('change', (e) => {
+    updateTTSVoiceDesc(e.target.value);
+  });
+  // TTS voice preview
+  $('ttsPreviewBtn').addEventListener('click', () => {
+    const sel = $('ttsVoiceSelect');
+    if (!sel) return;
+    const input = $('ttsEndpointInput');
+    if (input) ttsEndpoint = input.value.trim().replace(/\/+$/, '') || 'http://localhost:8880';
+    previewVoice(sel.value);
+  });
   updateTTSIcon();
 
   // Benchmark

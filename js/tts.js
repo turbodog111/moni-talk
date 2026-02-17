@@ -1,6 +1,41 @@
 // ====== TTS (Text-to-Speech) ======
 
-const TTS_VOICE_BASE = 'A warm, confident young woman with a clear, articulate voice. Natural American English. Slightly playful with genuine warmth.';
+const TTS_VOICE_PROFILES = {
+  classic: {
+    label: 'Classic',
+    desc: 'Warm and confident with a clear, articulate voice. Slightly playful with genuine warmth.',
+    instruct: 'A warm, confident young woman with a clear, articulate voice. Natural American English. Slightly playful with genuine warmth.',
+    seed: 42
+  },
+  soft: {
+    label: 'Soft & Gentle',
+    desc: 'Quiet and intimate, like a whispered conversation. Soothing and delicate.',
+    instruct: 'A soft-spoken, gentle young woman with a quiet, intimate voice. Natural American English. Delicate and soothing, as if speaking closely and privately.',
+    seed: 88
+  },
+  bright: {
+    label: 'Bright & Energetic',
+    desc: 'Upbeat and lively with a higher register. Bubbly and expressive.',
+    instruct: 'A bright, energetic young woman with a lively, expressive voice. Natural American English. Upbeat and bubbly with a slightly higher pitch.',
+    seed: 137
+  },
+  cool: {
+    label: 'Cool & Composed',
+    desc: 'Calm and measured with a deeper tone. Poised and elegant.',
+    instruct: 'A calm, composed young woman with a smooth, slightly deeper voice. Natural American English. Poised, elegant, and self-assured with measured delivery.',
+    seed: 256
+  },
+  sweet: {
+    label: 'Sweet & Cute',
+    desc: 'Cheerful and adorable with a higher, softer tone. Endearing and youthful.',
+    instruct: 'A sweet, adorable young woman with a cute, higher-pitched voice. Natural American English. Cheerful and endearing with youthful charm.',
+    seed: 314
+  }
+};
+
+function getVoiceProfile() {
+  return TTS_VOICE_PROFILES[ttsVoice] || TTS_VOICE_PROFILES.classic;
+}
 
 const TTS_MOOD_INSTRUCTS = {
   cheerful:    'Speak cheerfully with bright energy.',
@@ -24,14 +59,15 @@ let ttsQueue = [];       // queued audio URLs to play next
 let ttsCancelled = false; // flag to abort sentence pipeline
 
 function buildTTSInstruct(mood, intensity) {
+  const profile = getVoiceProfile();
   const moodText = TTS_MOOD_INSTRUCTS[mood] || TTS_MOOD_INSTRUCTS.cheerful;
   let adjusted = moodText;
   if (intensity === 'strong') {
     adjusted = 'Very strongly ' + moodText.charAt(0).toLowerCase() + moodText.slice(1);
   }
   // subtle = no mood modifier at all
-  if (intensity === 'subtle') return TTS_VOICE_BASE;
-  return TTS_VOICE_BASE + ' ' + adjusted;
+  if (intensity === 'subtle') return profile.instruct;
+  return profile.instruct + ' ' + adjusted;
 }
 
 function cleanTextForTTS(text) {
@@ -72,14 +108,48 @@ function stopTTS() {
 
 // Fetch audio for a single chunk of text
 async function fetchTTSAudio(text, instruct) {
+  const profile = getVoiceProfile();
   const resp = await fetch(ttsEndpoint + '/api/tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, language: 'English', instruct })
+    body: JSON.stringify({ text, language: 'English', instruct, seed: profile.seed })
   });
   if (!resp.ok) throw new Error('TTS server error ' + resp.status);
   const blob = await resp.blob();
   return URL.createObjectURL(blob);
+}
+
+// Preview a voice profile with a short sample
+async function previewVoice(profileKey) {
+  const profile = TTS_VOICE_PROFILES[profileKey];
+  if (!profile) return;
+  stopTTS();
+  ttsLoading = true;
+  updateTTSIcon();
+  try {
+    const resp = await fetch(ttsEndpoint + '/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Hey, it\'s me, Monika! How are you doing today?',
+        language: 'English',
+        instruct: profile.instruct,
+        seed: profile.seed
+      })
+    });
+    if (!resp.ok) throw new Error('TTS server error ' + resp.status);
+    const blob = await resp.blob();
+    ttsLoading = false;
+    const url = URL.createObjectURL(blob);
+    await playAudioUrl(url);
+  } catch (err) {
+    showToast('Preview failed: ' + (err.message || 'server unreachable'));
+  } finally {
+    ttsLoading = false;
+    ttsPlaying = false;
+    ttsAudio = null;
+    updateTTSIcon();
+  }
 }
 
 // Play a single audio URL, returns a promise that resolves when playback ends

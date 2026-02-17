@@ -248,6 +248,13 @@
     <div class="tts-settings-row">
       <label class="toggle-label"><input type="checkbox" id="ttsEnabledCheck"> Enable Monika's voice</label>
     </div>
+    <label for="ttsVoiceSelect">Voice Style</label>
+    <div class="tts-voice-row">
+      <select id="ttsVoiceSelect"></select>
+      <button class="btn btn-secondary btn-sm" id="ttsPreviewBtn">Preview</button>
+    </div>
+    <div class="hint" id="ttsVoiceDesc"></div>
+    <div class="field-gap"></div>
     <label for="ttsEndpointInput">TTS Server</label>
     <input type="text" id="ttsEndpointInput" placeholder="http://localhost:8880" autocomplete="off">
     <div class="hint">Run the TTS server in WSL2. See server/ folder for setup.</div>

@@ -20,6 +20,18 @@ function openSettings() {
   if (ttsCheck) ttsCheck.checked = ttsEnabled;
   const ttsInput = $('ttsEndpointInput');
   if (ttsInput) ttsInput.value = ttsEndpoint;
+  // Populate voice profiles dropdown
+  const voiceSel = $('ttsVoiceSelect');
+  if (voiceSel && typeof TTS_VOICE_PROFILES !== 'undefined') {
+    voiceSel.innerHTML = '';
+    for (const [key, profile] of Object.entries(TTS_VOICE_PROFILES)) {
+      const o = document.createElement('option');
+      o.value = key; o.textContent = profile.label;
+      voiceSel.appendChild(o);
+    }
+    voiceSel.value = ttsVoice;
+    updateTTSVoiceDesc(ttsVoice);
+  }
   settingsModal.classList.add('open');
 }
 function closeSettings() { settingsModal.classList.remove('open'); }
@@ -57,6 +69,11 @@ function saveSettings() {
     ttsEndpoint = ttsInput.value.trim().replace(/\/+$/, '') || 'http://localhost:8880';
     localStorage.setItem('moni_talk_tts_endpoint', ttsEndpoint);
   }
+  const voiceSel = $('ttsVoiceSelect');
+  if (voiceSel) {
+    ttsVoice = voiceSel.value;
+    localStorage.setItem('moni_talk_tts_voice', ttsVoice);
+  }
   if (typeof updateTTSIcon === 'function') updateTTSIcon();
   closeSettings(); showToast('Settings saved!', 'success');
 }
@@ -86,6 +103,13 @@ async function refreshOllamaModels() {
   }
   // Update benchmark hint now that models are loaded
   if (typeof renderSettingsBenchHint === 'function') renderSettingsBenchHint();
+}
+
+function updateTTSVoiceDesc(key) {
+  const el = $('ttsVoiceDesc');
+  if (!el || typeof TTS_VOICE_PROFILES === 'undefined') return;
+  const profile = TTS_VOICE_PROFILES[key];
+  el.textContent = profile ? profile.desc : '';
 }
 
 // ====== TOAST ======

@@ -234,6 +234,8 @@
 
 /* === TTS Settings === */
 .tts-settings-row { margin-bottom: 8px; }
+.tts-voice-row { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+.tts-voice-row select { flex: 1; }
 .toggle-label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; color: var(--text); }
 .toggle-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--green-dark); cursor: pointer; }
 
