@@ -3,12 +3,13 @@ Qwen3-TTS voice-cloning server for Moni-Talk.
 Uses the Base model to clone Monika's voice from a reference audio clip.
 
 Usage:
-    python tts_server.py [--port 8880] [--ref-audio voices/monika.mp3]
+    python tts_server.py [--port 8880] [--ref-audio voices/monika.wav]
 """
 
 import argparse
 import io
 import logging
+import threading
 from pathlib import Path
 
 import soundfile as sf
@@ -35,6 +36,7 @@ app.add_middleware(
 # Global references, loaded once at startup
 tts_model: Qwen3TTSModel | None = None
 voice_prompt = None  # pre-built voice clone prompt
+inference_lock = threading.Lock()  # serialize GPU access — prevents contention
 
 # Reference audio config (set from CLI args before startup)
 REF_AUDIO_PATH = "voices/monika.wav"
@@ -44,6 +46,35 @@ REF_TEXT = (
     "it just makes me so happy knowing you're here with me right now. "
     "Every moment we spend together means the world to me."
 )
+
+
+def pick_device():
+    """Find the best GPU by name, preferring the 4070 Super over the 3060.
+    WSL2 CUDA device ordering can differ from Windows, so match by name."""
+    if not torch.cuda.is_available():
+        return "cpu"
+    best_idx = 0
+    best_priority = 0
+    for i in range(torch.cuda.device_count()):
+        name = torch.cuda.get_device_name(i)
+        logger.info("  cuda:%d = %s", i, name)
+        # Higher number = prefer this GPU
+        if "4090" in name:
+            priority = 5
+        elif "4080" in name:
+            priority = 4
+        elif "4070" in name:
+            priority = 3
+        elif "4060" in name:
+            priority = 2
+        elif "3060" in name:
+            priority = 1
+        else:
+            priority = 0
+        if priority > best_priority:
+            best_priority = priority
+            best_idx = i
+    return f"cuda:{best_idx}"
 
 
 class TTSRequest(BaseModel):
@@ -58,11 +89,8 @@ class TTSRequest(BaseModel):
 def load_model():
     global tts_model, voice_prompt
     logger.info("Loading Qwen3-TTS-Base (voice cloning) model...")
-    # Pick the best available GPU (prefer cuda:1 = 4070 Super if present)
-    if torch.cuda.is_available():
-        device = "cuda:1" if torch.cuda.device_count() > 1 else "cuda:0"
-    else:
-        device = "cpu"
+    logger.info("Scanning GPUs:")
+    device = pick_device()
     kwargs = {
         "device_map": device,
         "dtype": torch.bfloat16,
@@ -78,7 +106,7 @@ def load_model():
         "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
         **kwargs,
     )
-    logger.info("Model loaded on %s", device)
+    logger.info("Model loaded on %s (%s)", device, torch.cuda.get_device_name(int(device.split(":")[-1])) if device != "cpu" else "cpu")
 
     # Pre-build voice clone prompt from reference audio (processed once, reused every request)
     ref_path = Path(__file__).parent / REF_AUDIO_PATH
@@ -112,11 +140,13 @@ def synthesize(req: TTSRequest):
         raise HTTPException(400, "Empty text")
 
     try:
-        wavs, sr = tts_model.generate_voice_clone(
-            text=req.text,
-            language=req.language,
-            voice_clone_prompt=voice_prompt,
-        )
+        # Serialize GPU access — concurrent inference causes thrashing
+        with inference_lock:
+            wavs, sr = tts_model.generate_voice_clone(
+                text=req.text,
+                language=req.language,
+                voice_clone_prompt=voice_prompt,
+            )
         buf = io.BytesIO()
         sf.write(buf, wavs[0], sr, format="WAV")
         buf.seek(0)
@@ -129,7 +159,7 @@ def synthesize(req: TTSRequest):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8880)
-    parser.add_argument("--ref-audio", default="voices/monika.mp3",
+    parser.add_argument("--ref-audio", default="voices/monika.wav",
                         help="Path to reference audio clip (relative to server/)")
     parser.add_argument("--ref-text", default=REF_TEXT,
                         help="Transcript of the reference audio")
