@@ -37,7 +37,7 @@ tts_model: Qwen3TTSModel | None = None
 voice_prompt = None  # pre-built voice clone prompt
 
 # Reference audio config (set from CLI args before startup)
-REF_AUDIO_PATH = "voices/monika.mp3"
+REF_AUDIO_PATH = "voices/monika.wav"
 REF_TEXT = (
     "Hey there! It's me, Monika. "
     "I've been thinking about you a lot lately, and honestly, "
