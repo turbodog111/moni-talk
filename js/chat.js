@@ -1,3 +1,10 @@
+// ====== MOOD COLORS (for chat side panel mood ring) ======
+const MOOD_COLORS = {
+  cheerful: '#4CAF50', playful: '#FF9800', thoughtful: '#5C6BC0', melancholic: '#5B8DEE',
+  excited: '#FFD700', tender: '#F48FB1', teasing: '#FF7043', curious: '#26C6DA',
+  nostalgic: '#CE93D8', flustered: '#EF5350', calm: '#81C784', passionate: '#D32F2F'
+};
+
 // ====== STREAMING DISPLAY HELPER ======
 function getStreamingDisplay(fullText) {
   // If text starts with '[', check all leading bracket tags are complete
@@ -159,11 +166,12 @@ function openChat(id) {
     saveChats();
   }
 
-  // Migration: mood intensity, drift, lastActiveTime for existing chats
+  // Migration: mood intensity, drift, lastActiveTime, moodHistory for existing chats
   if (!isStory) {
     if (!chat.moodIntensity) chat.moodIntensity = 'moderate';
     if (!chat.drift) chat.drift = 'casual';
     if (!chat.lastActiveTime) chat.lastActiveTime = chat.lastModified || chat.created;
+    if (!chat.moodHistory) chat.moodHistory = [];
     saveChats();
   }
 
@@ -175,6 +183,7 @@ function openChat(id) {
   screens.chat.classList.toggle('vn-mode', isStory);
   screens.chat.classList.toggle('room-mode', isRoom);
   $('vnPanelBtn').style.display = isStory ? '' : 'none';
+  $('chatPanelBtn').style.display = (!isStory) ? '' : 'none';
   showScreen('chat');
 
   // Teardown room mode if switching away
@@ -185,6 +194,7 @@ function openChat(id) {
   hideStoryChoices();
   hideWordPicker();
   closeVnPanel();
+  closeChatPanel();
 
   if (isStory) {
     if (chat.storyAffinity) updateAffinityPanel(chat.storyAffinity);
@@ -254,6 +264,7 @@ async function generateGreeting(chat) {
     const rawReply = fullText.trim();
     const { mood, moodIntensity, drift, text: reply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
     chat.mood = mood; chat.moodIntensity = moodIntensity; chat.drift = drift;
+    pushMoodHistory(chat, mood, moodIntensity, drift);
     chat.lastActiveTime = Date.now();
     chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
@@ -337,6 +348,8 @@ function updateContextBar() {
     const show = lastMsg && lastMsg.role === 'assistant' && !isGenerating && chat.mode !== 'story';
     regenBtn.style.display = show ? '' : 'none';
   }
+  updateEditButton();
+  updateChatPanel(chat);
 }
 
 async function trimContext() {
@@ -423,6 +436,7 @@ async function regenerateLastResponse() {
     const rawReply = fullText.trim();
     const { mood, moodIntensity, drift, text: reply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
     chat.mood = mood; chat.moodIntensity = moodIntensity; chat.drift = drift;
+    pushMoodHistory(chat, mood, moodIntensity, drift);
     chat.lastActiveTime = Date.now();
     chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
@@ -558,6 +572,7 @@ function renderMessages() {
     });
   }
   scrollToBottom();
+  updateEditButton();
 }
 
 function formatModelLabel(modelKey) {
@@ -577,7 +592,8 @@ function insertMessageEl(role, content, animate = true, imageUrl = null, model =
   const modelTag = isM && model ? `<div class="msg-model">${escapeHtml(formatModelLabel(model))}</div>` : '';
   const timeHtml = timestamp ? `<span class="msg-time">${new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>` : '';
   const copyBtn = `<button class="msg-copy-btn" title="Copy text">&#128203;</button>`;
-  div.innerHTML = `${av}<div class="msg-content"><div class="msg-name">${isM ? 'Monika' : 'You'}${timeHtml}</div>${imgHtml}<div class="msg-bubble">${isM ? renderMarkdown(content) : escapeHtml(content)}</div>${copyBtn}${modelTag}</div>`;
+  const editBtn = !isM ? `<button class="msg-edit-btn" title="Edit message">&#9998;</button>` : '';
+  div.innerHTML = `${av}<div class="msg-content"><div class="msg-name">${isM ? 'Monika' : 'You'}${timeHtml}</div>${imgHtml}<div class="msg-bubble">${isM ? renderMarkdown(content) : escapeHtml(content)}</div>${copyBtn}${editBtn}${modelTag}</div>`;
   div.dataset.text = content;
   chatArea.insertBefore(div, typingIndicator);
 }
@@ -690,6 +706,7 @@ async function sendMessage() {
     chat.mood = mood;
     chat.moodIntensity = moodIntensity;
     chat.drift = drift;
+    pushMoodHistory(chat, mood, moodIntensity, drift);
     chat.lastActiveTime = Date.now();
     chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
@@ -742,6 +759,212 @@ async function sendMessage() {
     const cancelBtn = $('cancelBtn');
     if (cancelBtn) { cancelBtn.style.display = 'none'; sendBtn.style.display = ''; }
     userInput.focus();
+  }
+}
+
+// ====== EDIT MESSAGE ======
+function updateEditButton() {
+  // Hide all edit buttons first
+  chatArea.querySelectorAll('.msg-edit-btn').forEach(btn => btn.classList.remove('visible'));
+  const chat = getChat();
+  if (!chat || chat.mode === 'story' || isGenerating) return;
+  // Find the last user message that is followed by an assistant response
+  const msgs = chat.messages;
+  if (msgs.length < 2) return;
+  const lastMsg = msgs[msgs.length - 1];
+  const secondLast = msgs[msgs.length - 2];
+  if (lastMsg.role !== 'assistant' || secondLast.role !== 'user') return;
+  // Find the last .message.user element in the chat area
+  const userMsgEls = chatArea.querySelectorAll('.message.user');
+  if (userMsgEls.length === 0) return;
+  const lastUserEl = userMsgEls[userMsgEls.length - 1];
+  const editBtn = lastUserEl.querySelector('.msg-edit-btn');
+  if (editBtn) editBtn.classList.add('visible');
+}
+
+function startEditMessage(msgEl) {
+  const chat = getChat();
+  if (!chat || isGenerating) return;
+  const bubble = msgEl.querySelector('.msg-bubble');
+  if (!bubble || bubble.classList.contains('editing')) return;
+
+  // Find the message index — it's the second-to-last message
+  const msgIdx = chat.messages.length - 2;
+  const msg = chat.messages[msgIdx];
+  if (!msg || msg.role !== 'user') return;
+
+  // Get text content — handle multimodal
+  let originalText;
+  if (Array.isArray(msg.content)) {
+    const textPart = msg.content.find(p => p.type === 'text');
+    originalText = textPart ? textPart.text : '';
+  } else {
+    originalText = msg.content;
+  }
+
+  const originalHtml = bubble.innerHTML;
+  bubble.classList.add('editing');
+  bubble.innerHTML = `<textarea class="msg-edit-textarea">${escapeHtml(originalText)}</textarea><div class="msg-edit-actions"><button class="msg-edit-cancel">Cancel</button><button class="msg-edit-save">Save & Regenerate</button></div>`;
+
+  const textarea = bubble.querySelector('.msg-edit-textarea');
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+  bubble.querySelector('.msg-edit-cancel').addEventListener('click', () => {
+    bubble.classList.remove('editing');
+    bubble.innerHTML = originalHtml;
+    updateEditButton();
+  });
+
+  bubble.querySelector('.msg-edit-save').addEventListener('click', () => {
+    const newText = textarea.value.trim();
+    if (!newText) { showToast('Message cannot be empty.'); return; }
+
+    // Update message content
+    if (Array.isArray(msg.content)) {
+      const textPart = msg.content.find(p => p.type === 'text');
+      if (textPart) textPart.text = newText;
+    } else {
+      msg.content = newText;
+    }
+
+    // Remove assistant response
+    chat.messages.pop();
+    saveChats();
+    renderMessages();
+
+    // Regenerate
+    regenerateLastResponse();
+  });
+}
+
+// ====== MOOD HISTORY ======
+function pushMoodHistory(chat, mood, intensity, drift) {
+  if (!chat || chat.mode === 'story') return;
+  if (!chat.moodHistory) chat.moodHistory = [];
+  const last = chat.moodHistory[chat.moodHistory.length - 1];
+  // Only push if something changed
+  if (last && last.mood === mood && last.intensity === intensity && last.drift === drift) return;
+  chat.moodHistory.push({ mood, intensity, drift, time: Date.now() });
+  if (chat.moodHistory.length > 20) chat.moodHistory = chat.moodHistory.slice(-20);
+}
+
+// ====== CHAT SIDE PANEL ======
+function toggleChatPanel() {
+  const panel = $('chatSidePanel');
+  const backdrop = $('chatPanelBackdrop');
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  backdrop.classList.toggle('open', !isOpen);
+  if (!isOpen) {
+    const chat = getChat();
+    if (chat) updateChatPanel(chat);
+  }
+}
+
+function closeChatPanel() {
+  const panel = $('chatSidePanel');
+  const backdrop = $('chatPanelBackdrop');
+  if (panel) panel.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+}
+
+const MEMORY_CATEGORY_ICONS = {
+  identity: '\u{1F464}', preferences: '\u2764\uFE0F', events: '\u{1F4C5}',
+  relationships: '\u{1F465}', feelings: '\u{1F49C}', other: '\u{1F4DD}'
+};
+
+function updateChatPanel(chat) {
+  if (!chat || chat.mode === 'story') return;
+  const panel = $('chatSidePanel');
+  if (!panel) return;
+
+  // --- Mood Ring ---
+  const mood = chat.mood || 'cheerful';
+  const intensity = chat.moodIntensity || 'moderate';
+  const drift = chat.drift || 'casual';
+  const color = MOOD_COLORS[mood] || '#4CAF50';
+  const emoji = getMoodEmoji(mood);
+  const driftEmoji = DRIFT_EMOJIS[drift] || '\u2615';
+
+  const ring = $('moodRing');
+  if (ring) {
+    ring.style.borderColor = color;
+    const glowStrength = intensity === 'strong' ? 20 : intensity === 'moderate' ? 12 : 6;
+    ring.style.boxShadow = `0 0 ${glowStrength}px ${color}40`;
+  }
+  const ringEmoji = $('moodRingEmoji');
+  if (ringEmoji) ringEmoji.textContent = emoji;
+  const ringLabel = $('moodRingLabel');
+  if (ringLabel) ringLabel.textContent = `${mood} (${intensity})`;
+  const ringDrift = $('moodRingDrift');
+  if (ringDrift) ringDrift.textContent = `${driftEmoji} ${drift}`;
+
+  // --- Mood Journal ---
+  const journal = $('moodJournal');
+  if (journal) {
+    const history = chat.moodHistory || [];
+    if (history.length === 0) {
+      journal.innerHTML = '<div class="mood-journal-empty">No mood changes yet</div>';
+    } else {
+      journal.innerHTML = history.slice(-10).reverse().map(h => {
+        const e = getMoodEmoji(h.mood);
+        const t = new Date(h.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        return `<div class="mood-journal-entry"><span class="mood-journal-emoji">${e}</span><span class="mood-journal-text"><strong>${h.mood}</strong> ${h.intensity}</span><span class="mood-journal-time">${t}</span></div>`;
+      }).join('');
+    }
+  }
+
+  // --- Memories ---
+  const memList = $('memoryList');
+  if (memList) {
+    if (!memories || memories.length === 0) {
+      memList.innerHTML = '<div class="memory-list-empty">No memories yet</div>';
+    } else {
+      const grouped = {};
+      memories.forEach(m => {
+        const cat = m.category || 'other';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(m);
+      });
+      let html = '';
+      for (const [cat, mems] of Object.entries(grouped)) {
+        const icon = MEMORY_CATEGORY_ICONS[cat] || '\u{1F4DD}';
+        html += `<div class="memory-category"><div class="memory-category-header"><span class="memory-category-icon">${icon}</span>${cat}</div>`;
+        mems.forEach(m => {
+          html += `<div class="memory-item"><span class="memory-fact">${escapeHtml(m.fact)}</span><span class="memory-date">${m.date || ''}</span><button class="memory-delete" data-fact="${escapeHtml(m.fact)}" title="Forget">&times;</button></div>`;
+        });
+        html += '</div>';
+      }
+      memList.innerHTML = html;
+    }
+  }
+
+  // --- Relationship ---
+  const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
+  const relLabel = $('relPanelLabel');
+  const relFill = $('relPanelFill');
+  if (relLabel) relLabel.textContent = rel.label;
+  if (relFill) {
+    const pct = ((chat.relationship || 0) / 5) * 100;
+    relFill.style.width = pct + '%';
+    const colors = ['#9E9E9E', '#78909C', '#4CAF50', '#66BB6A', '#43A047', '#E91E63'];
+    relFill.style.background = colors[chat.relationship] || '#4CAF50';
+  }
+
+  // --- Chat Stats ---
+  const stats = $('chatStats');
+  if (stats) {
+    const total = chat.messages.length;
+    const userMsgs = chat.messages.filter(m => m.role === 'user').length;
+    const startDate = new Date(chat.created).toLocaleDateString();
+    const daysSince = Math.floor((Date.now() - chat.created) / (1000 * 60 * 60 * 24));
+    stats.innerHTML = `
+      <div class="chat-stat-row"><span class="chat-stat-label">Total messages</span><span class="chat-stat-value">${total}</span></div>
+      <div class="chat-stat-row"><span class="chat-stat-label">Your messages</span><span class="chat-stat-value">${userMsgs}</span></div>
+      <div class="chat-stat-row"><span class="chat-stat-label">Started</span><span class="chat-stat-value">${startDate}</span></div>
+      <div class="chat-stat-row"><span class="chat-stat-label">Days active</span><span class="chat-stat-value">${daysSince || 'Today'}</span></div>`;
   }
 }
 

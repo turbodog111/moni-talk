@@ -54,6 +54,24 @@ function init() {
   $('vnPanelBtn').addEventListener('click', toggleVnPanel);
   $('vnPanelClose').addEventListener('click', closeVnPanel);
   $('vnPanelBackdrop').addEventListener('click', closeVnPanel);
+  $('chatPanelBtn').addEventListener('click', toggleChatPanel);
+  $('chatPanelClose').addEventListener('click', closeChatPanel);
+  $('chatPanelBackdrop').addEventListener('click', closeChatPanel);
+  // Memory delete delegation
+  $('memoryList').addEventListener('click', (e) => {
+    const delBtn = e.target.closest('.memory-delete');
+    if (!delBtn) return;
+    const fact = delBtn.dataset.fact;
+    if (!fact) return;
+    const idx = memories.findIndex(m => m.fact === fact);
+    if (idx !== -1) {
+      memories.splice(idx, 1);
+      saveMemories(memories);
+      const chat = getChat();
+      if (chat) updateChatPanel(chat);
+      showToast('Memory forgotten.', 'success');
+    }
+  });
   $('cpSaveBtn').addEventListener('click', () => {
     const chat = getChat();
     if (!chat || chat.mode !== 'story') return;
@@ -66,7 +84,7 @@ function init() {
   $('profileBtn').addEventListener('click', () => { loadProfile(); showScreen('profile'); });
   $('profileBackBtn').addEventListener('click', () => showScreen('chatList'));
   $('saveProfileBtn').addEventListener('click', saveProfile);
-  $('chatBackBtn').addEventListener('click', () => { activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); teardownRoomMode(); closeVnPanel(); showScreen('chatList'); renderChatList(); });
+  $('chatBackBtn').addEventListener('click', () => { activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); teardownRoomMode(); closeVnPanel(); closeChatPanel(); showScreen('chatList'); renderChatList(); });
   $('trimBtn').addEventListener('click', trimContext);
   $('regenBtn').addEventListener('click', regenerateLastResponse);
   $('cancelBtn').addEventListener('click', () => { if (activeAbortController) activeAbortController.abort(); });
@@ -120,12 +138,21 @@ function init() {
 
   // Copy message text delegation
   chatArea.addEventListener('click', (e) => {
-    const btn = e.target.closest('.msg-copy-btn');
-    if (!btn) return;
-    const msgEl = btn.closest('.message');
-    if (!msgEl) return;
-    const text = msgEl.dataset.text || msgEl.querySelector('.msg-bubble')?.textContent || '';
-    navigator.clipboard.writeText(text).then(() => showToast('Copied!', 'success')).catch(() => showToast('Copy failed.'));
+    const copyBtn = e.target.closest('.msg-copy-btn');
+    if (copyBtn) {
+      const msgEl = copyBtn.closest('.message');
+      if (!msgEl) return;
+      const text = msgEl.dataset.text || msgEl.querySelector('.msg-bubble')?.textContent || '';
+      navigator.clipboard.writeText(text).then(() => showToast('Copied!', 'success')).catch(() => showToast('Copy failed.'));
+      return;
+    }
+    // Edit message delegation
+    const editBtn = e.target.closest('.msg-edit-btn');
+    if (editBtn) {
+      const msgEl = editBtn.closest('.message');
+      if (msgEl) startEditMessage(msgEl);
+      return;
+    }
   });
 
   $('globalSettingsBtn').addEventListener('click', () => { openSettings(); renderSettingsBenchHint(); });

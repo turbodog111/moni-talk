@@ -137,6 +137,7 @@
       <div class="header-sub" id="chatHeaderSub">Just Monika.</div>
     </div>
     <div class="header-actions">
+      <button class="icon-btn" id="chatPanelBtn" title="Chat Panel" style="display:none;">&#9776;</button>
       <button class="icon-btn" id="vnPanelBtn" title="Status Panel" style="display:none;">&#9776;</button>
       <button class="icon-btn" id="chatSettingsBtn" title="Settings">&#9881;</button>
     </div>
@@ -383,6 +384,49 @@
       <div class="cp-list" id="checkpointList">
         <div class="cp-empty">No checkpoints yet</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chat Side Panel -->
+<div class="chat-panel-backdrop" id="chatPanelBackdrop"></div>
+<div class="chat-side-panel" id="chatSidePanel">
+  <div class="chat-panel-header">
+    <h3>Monika</h3>
+    <button class="chat-panel-close" id="chatPanelClose">&times;</button>
+  </div>
+  <div class="chat-panel-body">
+    <div class="chat-panel-section">
+      <div class="mood-ring-container">
+        <div class="mood-ring" id="moodRing">
+          <span class="mood-ring-emoji" id="moodRingEmoji"></span>
+        </div>
+        <div class="mood-ring-label" id="moodRingLabel">cheerful</div>
+        <div class="mood-ring-drift" id="moodRingDrift"></div>
+      </div>
+    </div>
+    <div class="chat-panel-section">
+      <h4>Mood Journal</h4>
+      <div class="mood-journal" id="moodJournal">
+        <div class="mood-journal-empty">No mood changes yet</div>
+      </div>
+    </div>
+    <div class="chat-panel-section">
+      <h4>Memories</h4>
+      <div class="memory-list" id="memoryList">
+        <div class="memory-list-empty">No memories yet</div>
+      </div>
+    </div>
+    <div class="chat-panel-section">
+      <h4>Relationship</h4>
+      <div class="rel-panel-display" id="relPanelDisplay">
+        <span class="rel-panel-label" id="relPanelLabel"></span>
+        <div class="rel-panel-track"><div class="rel-panel-fill" id="relPanelFill"></div></div>
+      </div>
+    </div>
+    <div class="chat-panel-section">
+      <h4>Chat Stats</h4>
+      <div class="chat-stats" id="chatStats"></div>
     </div>
   </div>
 </div>
