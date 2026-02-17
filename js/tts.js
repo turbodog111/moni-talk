@@ -91,12 +91,82 @@ function cleanTextForTTS(text) {
   return t;
 }
 
-// Split text into sentences for pipelined TTS
+// Split text into chunks for pipelined TTS
+// Targets ~8-20 words per chunk for consistent voice and even playback
 function splitSentences(text) {
-  // Split on sentence-ending punctuation followed by space or end
+  const MIN_WORDS = 5;
+  const MAX_WORDS = 22;
+  const SPLIT_TARGET = 15; // ideal split point when breaking long chunks
+
+  // Step 1: Split on sentence-ending punctuation
   const raw = text.match(/[^.!?]*[.!?]+[\s]?|[^.!?]+$/g);
   if (!raw) return [text];
-  return raw.map(s => s.trim()).filter(s => s.length > 0);
+  const sentences = raw.map(s => s.trim()).filter(s => s.length > 0);
+
+  // Step 2: Split long sentences at natural breath points
+  const midChunks = [];
+  for (const sent of sentences) {
+    const wordCount = sent.split(/\s+/).length;
+    if (wordCount <= MAX_WORDS) {
+      midChunks.push(sent);
+      continue;
+    }
+    // Split at commas, semicolons, colons, em-dashes, ellipses
+    const parts = sent.split(/(?<=[,;:\u2014–])\s+|(?<=\.\.\.)\s+/);
+    if (parts.length > 1) {
+      // Recombine parts that are too small
+      let buf = '';
+      for (const part of parts) {
+        const combined = buf ? buf + ' ' + part : part;
+        if (combined.split(/\s+/).length >= SPLIT_TARGET && buf) {
+          midChunks.push(buf.trim());
+          buf = part;
+        } else {
+          buf = combined;
+        }
+      }
+      if (buf.trim()) midChunks.push(buf.trim());
+    } else {
+      // No punctuation breaks — split at conjunctions
+      const conjSplit = sent.split(/\s+(?=(?:and|but|or|so|because|although|while|then|yet)\s)/i);
+      if (conjSplit.length > 1) {
+        let buf = '';
+        for (const part of conjSplit) {
+          const combined = buf ? buf + ' ' + part : part;
+          if (combined.split(/\s+/).length >= SPLIT_TARGET && buf) {
+            midChunks.push(buf.trim());
+            buf = part;
+          } else {
+            buf = combined;
+          }
+        }
+        if (buf.trim()) midChunks.push(buf.trim());
+      } else {
+        // Last resort: hard split at word limit
+        const words = sent.split(/\s+/);
+        for (let i = 0; i < words.length; i += MAX_WORDS) {
+          midChunks.push(words.slice(i, i + MAX_WORDS).join(' '));
+        }
+      }
+    }
+  }
+
+  // Step 3: Merge short fragments with neighbors
+  const merged = [];
+  for (const chunk of midChunks) {
+    if (merged.length > 0 && merged[merged.length - 1].split(/\s+/).length < MIN_WORDS) {
+      merged[merged.length - 1] += ' ' + chunk;
+    } else {
+      merged.push(chunk);
+    }
+  }
+  // Check if the last chunk is too short — merge it back
+  if (merged.length > 1 && merged[merged.length - 1].split(/\s+/).length < MIN_WORDS) {
+    const last = merged.pop();
+    merged[merged.length - 1] += ' ' + last;
+  }
+
+  return merged.filter(s => s.length > 0);
 }
 
 function stopTTS() {
