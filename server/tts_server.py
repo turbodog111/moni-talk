@@ -70,6 +70,29 @@ def load_model():
     )
     logger.info("Model loaded on %s", device)
 
+    # Compile the model for faster inference (PyTorch 2.x Dynamo)
+    # First call after compile is slow (tracing), but all subsequent calls are faster
+    try:
+        tts_model.llm = torch.compile(tts_model.llm, mode="reduce-overhead")
+        logger.info("torch.compile applied to LLM backbone (reduce-overhead mode)")
+    except Exception as e:
+        logger.warning("torch.compile failed, continuing without it: %s", e)
+
+    # Warm-up: run a short dummy generation so the first real request isn't slow
+    logger.info("Running warm-up generation...")
+    try:
+        torch.manual_seed(0)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(0)
+        tts_model.generate_voice_design(
+            text="Hello.",
+            language="English",
+            instruct="A young woman speaking naturally.",
+        )
+        logger.info("Warm-up complete")
+    except Exception as e:
+        logger.warning("Warm-up generation failed (non-fatal): %s", e)
+
 
 @app.get("/api/tts/health")
 def health():

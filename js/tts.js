@@ -188,20 +188,27 @@ async function speakText(text, mood, intensity) {
   updateTTSIcon();
 
   try {
-    // Pipeline: fetch sentence N+1 while playing sentence N
-    let nextFetch = fetchTTSAudio(sentences[0], instruct);
+    // Pipeline: prefetch up to PREFETCH_AHEAD sentences while playing current one
+    const PREFETCH_AHEAD = 3;
+    const prefetchPromises = [];  // sparse array: prefetchPromises[i] = promise for sentence i
+
+    // Kick off initial batch of prefetches
+    for (let j = 0; j < Math.min(PREFETCH_AHEAD, sentences.length); j++) {
+      prefetchPromises[j] = fetchTTSAudio(sentences[j], instruct);
+    }
 
     for (let i = 0; i < sentences.length; i++) {
       if (ttsCancelled) break;
       console.log('[TTS] generating sentence', i + 1, '/', sentences.length, ':', sentences[i].slice(0, 50));
 
       // Wait for the current sentence's audio
-      const audioUrl = await nextFetch;
+      const audioUrl = await prefetchPromises[i];
       if (ttsCancelled) { URL.revokeObjectURL(audioUrl); break; }
 
-      // Start fetching the NEXT sentence while we play this one
-      if (i + 1 < sentences.length) {
-        nextFetch = fetchTTSAudio(sentences[i + 1], instruct);
+      // Start prefetching the next sentence beyond our current window
+      const nextIdx = i + PREFETCH_AHEAD;
+      if (nextIdx < sentences.length && !prefetchPromises[nextIdx]) {
+        prefetchPromises[nextIdx] = fetchTTSAudio(sentences[nextIdx], instruct);
       }
 
       // Play current sentence
@@ -218,6 +225,13 @@ async function speakText(text, mood, intensity) {
         ttsLoading = true;
         ttsPlaying = false;
         updateTTSIcon();
+      }
+    }
+
+    // Clean up any unused prefetched audio
+    for (let j = 0; j < prefetchPromises.length; j++) {
+      if (prefetchPromises[j]) {
+        prefetchPromises[j].then(url => URL.revokeObjectURL(url)).catch(() => {});
       }
     }
   } catch (err) {
