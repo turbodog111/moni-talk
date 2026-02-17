@@ -76,11 +76,21 @@ def load_model():
     logger.info("Model loaded on %s", device)
 
     # Compile the model for faster inference (PyTorch 2.x Dynamo)
-    try:
-        tts_model.llm = torch.compile(tts_model.llm, mode="reduce-overhead")
-        logger.info("torch.compile applied to LLM backbone (reduce-overhead mode)")
-    except Exception as e:
-        logger.warning("torch.compile failed, continuing without it: %s", e)
+    # The LLM backbone attribute name varies by model variant — try common names
+    compiled = False
+    for attr in ("llm", "talker", "model"):
+        if hasattr(tts_model, attr):
+            try:
+                orig = getattr(tts_model, attr)
+                setattr(tts_model, attr, torch.compile(orig, mode="reduce-overhead"))
+                logger.info("torch.compile applied to '%s' (reduce-overhead mode)", attr)
+                compiled = True
+                break
+            except Exception as e:
+                logger.warning("torch.compile on '%s' failed: %s", attr, e)
+    if not compiled:
+        logger.info("torch.compile skipped — no compilable backbone found (attrs: %s)",
+                     [a for a in dir(tts_model) if not a.startswith("_")])
 
     # Pre-build voice clone prompt from reference audio (processed once, reused every request)
     ref_path = Path(__file__).parent / REF_AUDIO_PATH
