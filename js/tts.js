@@ -19,6 +19,7 @@ const TTS_MOOD_INSTRUCTS = {
 
 let ttsAudio = null;
 let ttsPlaying = false;
+let ttsLoading = false;
 
 function buildTTSInstruct(mood, intensity) {
   const moodText = TTS_MOOD_INSTRUCTS[mood] || TTS_MOOD_INSTRUCTS.cheerful;
@@ -53,6 +54,7 @@ function stopTTS() {
     ttsAudio = null;
   }
   ttsPlaying = false;
+  ttsLoading = false;
   updateTTSIcon();
 }
 
@@ -67,6 +69,8 @@ async function speakText(text, mood, intensity) {
 
   const instruct = buildTTSInstruct(mood || 'cheerful', intensity || 'moderate');
   console.log('[TTS] fetching audio from', ttsEndpoint, '— text length:', cleaned.length);
+  ttsLoading = true;
+  updateTTSIcon();
 
   try {
     const resp = await fetch(ttsEndpoint + '/api/tts', {
@@ -80,6 +84,7 @@ async function speakText(text, mood, intensity) {
 
     const blob = await resp.blob();
     console.log('[TTS] got audio blob, size:', blob.size, 'type:', blob.type);
+    ttsLoading = false;
     const url = URL.createObjectURL(blob);
     ttsAudio = new Audio(url);
     ttsPlaying = true;
@@ -106,6 +111,7 @@ async function speakText(text, mood, intensity) {
   } catch (err) {
     console.error('[TTS] error:', err);
     ttsPlaying = false;
+    ttsLoading = false;
     updateTTSIcon();
     showToast('TTS unavailable: ' + (err.message || 'server unreachable'));
   }
@@ -137,13 +143,16 @@ function updateTTSIcon() {
     return;
   }
   btn.style.display = '';
-  if (ttsPlaying) {
+  if (ttsLoading) {
+    btn.innerHTML = '&#9676;'; // loading circle
+  } else if (ttsPlaying) {
     btn.innerHTML = '&#128266;'; // loud speaker (playing)
   } else if (ttsMuted) {
     btn.innerHTML = '&#128263;'; // muted speaker
   } else {
     btn.innerHTML = '&#128264;'; // normal speaker (ready)
   }
-  btn.classList.toggle('tts-playing', ttsPlaying);
-  btn.classList.toggle('tts-muted', ttsMuted && !ttsPlaying);
+  btn.classList.toggle('tts-loading', ttsLoading);
+  btn.classList.toggle('tts-playing', ttsPlaying && !ttsLoading);
+  btn.classList.toggle('tts-muted', ttsMuted && !ttsPlaying && !ttsLoading);
 }
