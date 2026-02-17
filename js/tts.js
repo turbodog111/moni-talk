@@ -20,6 +20,8 @@ const TTS_MOOD_INSTRUCTS = {
 let ttsAudio = null;
 let ttsPlaying = false;
 let ttsLoading = false;
+let ttsQueue = [];       // queued audio URLs to play next
+let ttsCancelled = false; // flag to abort sentence pipeline
 
 function buildTTSInstruct(mood, intensity) {
   const moodText = TTS_MOOD_INSTRUCTS[mood] || TTS_MOOD_INSTRUCTS.cheerful;
@@ -31,8 +33,6 @@ function buildTTSInstruct(mood, intensity) {
   if (intensity === 'subtle') return TTS_VOICE_BASE;
   return TTS_VOICE_BASE + ' ' + adjusted;
 }
-
-const TTS_MAX_CHARS = 200;
 
 function cleanTextForTTS(text) {
   let t = text;
@@ -46,17 +46,20 @@ function cleanTextForTTS(text) {
   t = t.replace(/`(.+?)`/g, '$1');
   // Collapse whitespace
   t = t.replace(/\s+/g, ' ').trim();
-  // Truncate to first ~2 sentences to keep generation fast
-  if (t.length > TTS_MAX_CHARS) {
-    // Try to break at a sentence boundary
-    const truncated = t.slice(0, TTS_MAX_CHARS);
-    const lastSentence = truncated.search(/[.!?]\s[^.!?]*$/);
-    t = lastSentence > 40 ? truncated.slice(0, lastSentence + 1) : truncated;
-  }
   return t;
 }
 
+// Split text into sentences for pipelined TTS
+function splitSentences(text) {
+  // Split on sentence-ending punctuation followed by space or end
+  const raw = text.match(/[^.!?]*[.!?]+[\s]?|[^.!?]+$/g);
+  if (!raw) return [text];
+  return raw.map(s => s.trim()).filter(s => s.length > 0);
+}
+
 function stopTTS() {
+  ttsCancelled = true;
+  ttsQueue = [];
   if (ttsAudio) {
     ttsAudio.pause();
     ttsAudio.src = '';
@@ -67,62 +70,98 @@ function stopTTS() {
   updateTTSIcon();
 }
 
+// Fetch audio for a single chunk of text
+async function fetchTTSAudio(text, instruct) {
+  const resp = await fetch(ttsEndpoint + '/api/tts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, language: 'English', instruct })
+  });
+  if (!resp.ok) throw new Error('TTS server error ' + resp.status);
+  const blob = await resp.blob();
+  return URL.createObjectURL(blob);
+}
+
+// Play a single audio URL, returns a promise that resolves when playback ends
+function playAudioUrl(url) {
+  return new Promise((resolve, reject) => {
+    ttsAudio = new Audio(url);
+    ttsAudio.addEventListener('ended', () => {
+      URL.revokeObjectURL(url);
+      ttsAudio = null;
+      resolve();
+    });
+    ttsAudio.addEventListener('error', (e) => {
+      URL.revokeObjectURL(url);
+      ttsAudio = null;
+      reject(e);
+    });
+    ttsAudio.play().catch(reject);
+  });
+}
+
 async function speakText(text, mood, intensity) {
   console.log('[TTS] speakText called — enabled:', ttsEnabled, 'muted:', ttsMuted);
   if (!ttsEnabled || ttsMuted) return;
   // Stop any current playback
   stopTTS();
+  ttsCancelled = false;
 
   const cleaned = cleanTextForTTS(text);
   if (!cleaned) { console.log('[TTS] cleaned text is empty, skipping'); return; }
 
+  const sentences = splitSentences(cleaned);
   const instruct = buildTTSInstruct(mood || 'cheerful', intensity || 'moderate');
-  console.log('[TTS] fetching audio from', ttsEndpoint, '— text length:', cleaned.length);
+  console.log('[TTS] pipelined generation —', sentences.length, 'sentences');
+
   ttsLoading = true;
   updateTTSIcon();
 
   try {
-    const resp = await fetch(ttsEndpoint + '/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: cleaned, language: 'English', instruct })
-    });
+    // Pipeline: fetch sentence N+1 while playing sentence N
+    let nextFetch = fetchTTSAudio(sentences[0], instruct);
 
-    console.log('[TTS] response status:', resp.status);
-    if (!resp.ok) throw new Error('TTS server error ' + resp.status);
+    for (let i = 0; i < sentences.length; i++) {
+      if (ttsCancelled) break;
+      console.log('[TTS] generating sentence', i + 1, '/', sentences.length, ':', sentences[i].slice(0, 50));
 
-    const blob = await resp.blob();
-    console.log('[TTS] got audio blob, size:', blob.size, 'type:', blob.type);
-    ttsLoading = false;
-    const url = URL.createObjectURL(blob);
-    ttsAudio = new Audio(url);
-    ttsPlaying = true;
-    updateTTSIcon();
+      // Wait for the current sentence's audio
+      const audioUrl = await nextFetch;
+      if (ttsCancelled) { URL.revokeObjectURL(audioUrl); break; }
 
-    ttsAudio.addEventListener('ended', () => {
-      console.log('[TTS] playback ended');
-      ttsPlaying = false;
-      URL.revokeObjectURL(url);
-      ttsAudio = null;
+      // Start fetching the NEXT sentence while we play this one
+      if (i + 1 < sentences.length) {
+        nextFetch = fetchTTSAudio(sentences[i + 1], instruct);
+      }
+
+      // Play current sentence
+      ttsLoading = false;
+      ttsPlaying = true;
       updateTTSIcon();
-    });
+      console.log('[TTS] playing sentence', i + 1);
 
-    ttsAudio.addEventListener('error', (e) => {
-      console.error('[TTS] audio playback error:', e);
-      ttsPlaying = false;
-      URL.revokeObjectURL(url);
-      ttsAudio = null;
-      updateTTSIcon();
-    });
+      await playAudioUrl(audioUrl);
+      if (ttsCancelled) break;
 
-    await ttsAudio.play();
-    console.log('[TTS] playback started');
+      // Show loading again if more sentences coming
+      if (i + 1 < sentences.length) {
+        ttsLoading = true;
+        ttsPlaying = false;
+        updateTTSIcon();
+      }
+    }
   } catch (err) {
-    console.error('[TTS] error:', err);
+    if (!ttsCancelled) {
+      console.error('[TTS] error:', err);
+      showToast('TTS unavailable: ' + (err.message || 'server unreachable'));
+    }
+  } finally {
     ttsPlaying = false;
     ttsLoading = false;
+    ttsCancelled = false;
+    ttsAudio = null;
     updateTTSIcon();
-    showToast('TTS unavailable: ' + (err.message || 'server unreachable'));
+    console.log('[TTS] done');
   }
 }
 
