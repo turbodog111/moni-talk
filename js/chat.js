@@ -126,6 +126,8 @@ function openChat(id) {
     activeAbortController = null;
   }
   isGenerating = false;
+  // Stop any TTS playback when switching chats
+  if (typeof stopTTS === 'function') stopTTS();
   activeChatId = id;
   const chat = getChat();
   if (!chat) return;
@@ -209,6 +211,8 @@ function openChat(id) {
   if (isRoom) initRoomMode(chat);
   renderMessages();
   updateContextBar();
+  // Show/hide TTS toggle (only for chat/room modes)
+  if (typeof updateTTSIcon === 'function') updateTTSIcon();
 
   if (isStory && chat.messages.length === 0) {
     generateStoryBeat(chat);
@@ -282,6 +286,10 @@ async function generateGreeting(chat) {
     updateChatHeader(chat); scrollToBottom(); updateContextBar();
     if (chat.mode === 'room') {
       updateRoomExpression(reply, mood, moodIntensity).then(expr => { chat.lastExpression = expr; saveChats(); });
+    }
+    // TTS: speak the greeting
+    if (ttsEnabled && reply && chat.mode !== 'story') {
+      speakText(reply, mood, moodIntensity);
     }
   } catch (err) {
     typingIndicator.classList.remove('visible');
@@ -454,6 +462,10 @@ async function regenerateLastResponse() {
     updateChatHeader(chat); scrollToBottom(); updateContextBar();
     if (chat.mode === 'room') {
       updateRoomExpression(reply, mood, moodIntensity).then(expr => { chat.lastExpression = expr; saveChats(); });
+    }
+    // TTS: speak the regenerated response
+    if (ttsEnabled && reply && chat.mode !== 'story') {
+      speakText(reply, mood, moodIntensity);
     }
   } catch (err) {
     typingIndicator.classList.remove('visible');
@@ -733,6 +745,11 @@ async function sendMessage() {
         chat.lastExpression = expr;
         saveChats();
       });
+    }
+
+    // TTS: speak the response
+    if (ttsEnabled && reply && chat.mode !== 'story') {
+      speakText(reply, mood, moodIntensity);
     }
 
     // Memory extraction — rate limited: every 5th user+assistant pair, skip short messages

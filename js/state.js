@@ -22,6 +22,8 @@ let currentTheme = localStorage.getItem('moni_talk_theme') || 'system';
 let memories = JSON.parse(localStorage.getItem('moni_talk_memories') || '[]');
 let pendingImage = null;
 let activeAbortController = null; // AbortController for current streaming generation
+let ttsEnabled = localStorage.getItem('moni_talk_tts_enabled') === 'true';
+let ttsEndpoint = localStorage.getItem('moni_talk_tts_endpoint') || 'http://localhost:8880';
 
 // ====== DOM ======
 const $ = id => document.getElementById(id);

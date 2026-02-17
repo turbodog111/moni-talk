@@ -224,6 +224,16 @@
 [data-theme="dark"] .poem-text { color: var(--text); }
 [data-theme="dark"] .poem-attr { color: var(--gray-text); }
 
+/* === TTS Toggle === */
+.tts-toggle { font-size: 18px; transition: color 0.2s; }
+.tts-toggle.tts-playing { animation: ttsPulse 1.2s ease-in-out infinite; color: var(--green-mid); }
+@keyframes ttsPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* === TTS Settings === */
+.tts-settings-row { margin-bottom: 8px; }
+.toggle-label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; color: var(--text); }
+.toggle-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--green-dark); cursor: pointer; }
+
 /* === Benchmark Modal === */
 .bench-modal { max-width: 640px; width: 95vw; max-height: 85vh; display: flex; flex-direction: column; transition: max-width 0.3s ease, width 0.3s ease; }
 .bench-modal.results-active { max-width: 95vw; width: 95vw; }

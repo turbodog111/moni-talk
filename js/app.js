@@ -84,7 +84,7 @@ function init() {
   $('profileBtn').addEventListener('click', () => { loadProfile(); showScreen('profile'); });
   $('profileBackBtn').addEventListener('click', () => showScreen('chatList'));
   $('saveProfileBtn').addEventListener('click', saveProfile);
-  $('chatBackBtn').addEventListener('click', () => { activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); teardownRoomMode(); closeVnPanel(); closeChatPanel(); showScreen('chatList'); renderChatList(); });
+  $('chatBackBtn').addEventListener('click', () => { if (typeof stopTTS === 'function') stopTTS(); activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); teardownRoomMode(); closeVnPanel(); closeChatPanel(); showScreen('chatList'); renderChatList(); });
   $('trimBtn').addEventListener('click', trimContext);
   $('regenBtn').addEventListener('click', regenerateLastResponse);
   $('cancelBtn').addEventListener('click', () => { if (activeAbortController) activeAbortController.abort(); });
@@ -178,6 +178,21 @@ function init() {
       applyTheme();
     });
   }
+
+  // TTS toggle button
+  $('ttsToggleBtn').addEventListener('click', () => {
+    if (ttsPlaying) { stopTTS(); return; }
+    ttsEnabled = !ttsEnabled;
+    localStorage.setItem('moni_talk_tts_enabled', ttsEnabled);
+    updateTTSIcon();
+  });
+  // TTS test connection
+  $('ttsTestBtn').addEventListener('click', () => {
+    const input = $('ttsEndpointInput');
+    if (input) ttsEndpoint = input.value.trim().replace(/\/+$/, '') || 'http://localhost:8880';
+    testTTSConnection();
+  });
+  updateTTSIcon();
 
   // Benchmark
   $('openBenchmarkBtn').addEventListener('click', () => { closeSettings(); openBenchmarkModal(); });

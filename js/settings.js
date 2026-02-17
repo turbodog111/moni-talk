@@ -15,6 +15,11 @@ function openSettings() {
   toggleProviderFields(provider);
   const ts = $('themeSelect');
   if (ts) ts.value = currentTheme;
+  // TTS settings
+  const ttsCheck = $('ttsEnabledCheck');
+  if (ttsCheck) ttsCheck.checked = ttsEnabled;
+  const ttsInput = $('ttsEndpointInput');
+  if (ttsInput) ttsInput.value = ttsEndpoint;
   settingsModal.classList.add('open');
 }
 function closeSettings() { settingsModal.classList.remove('open'); }
@@ -41,6 +46,18 @@ function saveSettings() {
     localStorage.setItem(STORAGE.MODEL_PUTER, puterModel);
   }
   provider = p; localStorage.setItem(STORAGE.PROVIDER, provider);
+  // TTS settings
+  const ttsCheck = $('ttsEnabledCheck');
+  if (ttsCheck) {
+    ttsEnabled = ttsCheck.checked;
+    localStorage.setItem('moni_talk_tts_enabled', ttsEnabled);
+  }
+  const ttsInput = $('ttsEndpointInput');
+  if (ttsInput) {
+    ttsEndpoint = ttsInput.value.trim().replace(/\/+$/, '') || 'http://localhost:8880';
+    localStorage.setItem('moni_talk_tts_endpoint', ttsEndpoint);
+  }
+  if (typeof updateTTSIcon === 'function') updateTTSIcon();
   closeSettings(); showToast('Settings saved!', 'success');
 }
 function clearKey() {

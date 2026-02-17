@@ -137,6 +137,7 @@
       <div class="header-sub" id="chatHeaderSub">Just Monika.</div>
     </div>
     <div class="header-actions">
+      <button class="icon-btn tts-toggle" id="ttsToggleBtn" title="Toggle Voice" style="display:none;">&#128264;</button>
       <button class="icon-btn" id="chatPanelBtn" title="Chat Panel" style="display:none;">&#9776;</button>
       <button class="icon-btn" id="vnPanelBtn" title="Status Panel" style="display:none;">&#9776;</button>
       <button class="icon-btn" id="chatSettingsBtn" title="Settings">&#9881;</button>
@@ -242,6 +243,15 @@
       <option value="dark">Dark</option>
     </select>
     <div class="hint">Choose your preferred color theme.</div>
+    <div class="field-gap"></div>
+    <label>Voice (TTS)</label>
+    <div class="tts-settings-row">
+      <label class="toggle-label"><input type="checkbox" id="ttsEnabledCheck"> Enable Monika's voice</label>
+    </div>
+    <label for="ttsEndpointInput">TTS Server</label>
+    <input type="text" id="ttsEndpointInput" placeholder="http://localhost:8880" autocomplete="off">
+    <div class="hint">Run the TTS server in WSL2. See server/ folder for setup.</div>
+    <button class="btn btn-secondary" id="ttsTestBtn" style="width:100%;margin-top:6px;">Test Connection</button>
     <div class="field-gap"></div>
     <label>Model Benchmark</label>
     <div class="hint">Run standardized tests to compare how well your current model handles Moni-Talk scenarios (character voice, tag formatting, affinity tracking).</div>
@@ -454,6 +464,7 @@
 <script src="js/sync.js"></script>
 <script src="js/memory.js"></script>
 <script src="js/benchmark.js"></script>
+<script src="js/tts.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/story.js"></script>
 <script src="js/vn.js"></script>
