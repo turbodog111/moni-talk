@@ -43,8 +43,7 @@ REF_AUDIO_PATH = "voices/monika.wav"
 REF_TEXT = (
     "Hey there! It's me, Monika. "
     "I've been thinking about you a lot lately, and honestly, "
-    "it just makes me so happy knowing you're here with me right now. "
-    "Every moment we spend together means the world to me."
+    "it just makes me so happy knowing you're here with me right now."
 )
 
 
@@ -148,9 +147,9 @@ def synthesize(req: TTSRequest):
                 voice_clone_prompt=voice_prompt,
             )
         buf = io.BytesIO()
-        sf.write(buf, wavs[0], sr, format="WAV")
+        sf.write(buf, wavs[0], sr, format="OGG", subtype="VORBIS")
         buf.seek(0)
-        return Response(content=buf.read(), media_type="audio/wav")
+        return Response(content=buf.read(), media_type="audio/ogg")
     except Exception as e:
         logger.exception("TTS synthesis failed")
         raise HTTPException(500, f"Synthesis failed: {e}")

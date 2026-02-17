@@ -64,6 +64,10 @@ let ttsLoading = false;
 let ttsQueue = [];       // queued audio URLs to play next
 let ttsCancelled = false; // flag to abort sentence pipeline
 
+// Audio cache — keyed by text, stores blob URLs for instant replay
+const ttsCache = new Map();
+const TTS_CACHE_MAX = 50; // max cached entries
+
 function buildTTSInstruct(mood, intensity) {
   const profile = getVoiceProfile();
   const moodText = TTS_MOOD_INSTRUCTS[mood] || TTS_MOOD_INSTRUCTS.cheerful;
@@ -86,6 +90,21 @@ function cleanTextForTTS(text) {
   t = t.replace(/\*\*(.+?)\*\*/g, '$1');
   t = t.replace(/\*(.+?)\*/g, '$1');
   t = t.replace(/`(.+?)`/g, '$1');
+  // Strip emojis and other non-speech symbols
+  t = t.replace(/[\u{1F600}-\u{1F9FF}]/gu, '');  // emoticons, supplemental symbols
+  t = t.replace(/[\u{1FA00}-\u{1FAFF}]/gu, '');  // extended symbols
+  t = t.replace(/[\u{2600}-\u{26FF}]/gu, '');     // misc symbols
+  t = t.replace(/[\u{2700}-\u{27BF}]/gu, '');     // dingbats
+  t = t.replace(/[\u{FE00}-\u{FE0F}]/gu, '');     // variation selectors
+  t = t.replace(/[\u{200D}]/gu, '');               // zero-width joiner
+  t = t.replace(/[\u{20E3}]/gu, '');               // combining enclosing keycap
+  t = t.replace(/[\u{E0020}-\u{E007F}]/gu, '');   // tags
+  // Strip kaomoji-style faces like (╥_╥) (~‾▿‾)~ etc
+  t = t.replace(/[(\[{][^)\]}\n]{1,10}[)\]}]/g, (match) => {
+    // Only strip if it contains special symbols (not normal parenthetical text)
+    if (/[╥▿‾◕◡≧≦•̀•́ω╯°□ノ┻━┬─_]/.test(match)) return '';
+    return match;
+  });
   // Collapse whitespace
   t = t.replace(/\s+/g, ' ').trim();
   return t;
@@ -182,8 +201,15 @@ function stopTTS() {
   updateTTSIcon();
 }
 
-// Fetch audio for a single chunk of text
+// Fetch audio for a single chunk of text (with caching)
 async function fetchTTSAudio(text, instruct) {
+  // Check cache first
+  const cacheKey = text;
+  if (ttsCache.has(cacheKey)) {
+    console.log('[TTS] cache hit:', text.slice(0, 30));
+    return ttsCache.get(cacheKey);
+  }
+
   const profile = getVoiceProfile();
   const resp = await fetch(ttsEndpoint + '/api/tts', {
     method: 'POST',
@@ -192,7 +218,17 @@ async function fetchTTSAudio(text, instruct) {
   });
   if (!resp.ok) throw new Error('TTS server error ' + resp.status);
   const blob = await resp.blob();
-  return URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+
+  // Store in cache (evict oldest if full)
+  if (ttsCache.size >= TTS_CACHE_MAX) {
+    const oldest = ttsCache.keys().next().value;
+    URL.revokeObjectURL(ttsCache.get(oldest));
+    ttsCache.delete(oldest);
+  }
+  ttsCache.set(cacheKey, url);
+
+  return url;
 }
 
 // Preview a voice profile with a short sample
@@ -217,7 +253,7 @@ async function previewVoice(profileKey) {
     const blob = await resp.blob();
     ttsLoading = false;
     const url = URL.createObjectURL(blob);
-    await playAudioUrl(url);
+    await playAudioUrl(url, true);
   } catch (err) {
     showToast('Preview failed: ' + (err.message || 'server unreachable'));
   } finally {
@@ -229,16 +265,17 @@ async function previewVoice(profileKey) {
 }
 
 // Play a single audio URL, returns a promise that resolves when playback ends
-function playAudioUrl(url) {
+// skipRevoke=true for preview (URL not from cache)
+function playAudioUrl(url, skipRevoke) {
   return new Promise((resolve, reject) => {
     ttsAudio = new Audio(url);
     ttsAudio.addEventListener('ended', () => {
-      URL.revokeObjectURL(url);
+      if (skipRevoke) URL.revokeObjectURL(url);
       ttsAudio = null;
       resolve();
     });
     ttsAudio.addEventListener('error', (e) => {
-      URL.revokeObjectURL(url);
+      if (skipRevoke) URL.revokeObjectURL(url);
       ttsAudio = null;
       reject(e);
     });
@@ -264,27 +301,20 @@ async function speakText(text, mood, intensity) {
   updateTTSIcon();
 
   try {
-    // Pipeline: prefetch up to PREFETCH_AHEAD sentences while playing current one
-    const PREFETCH_AHEAD = 3;
-    const prefetchPromises = [];  // sparse array: prefetchPromises[i] = promise for sentence i
-
-    // Kick off initial batch of prefetches
-    for (let j = 0; j < Math.min(PREFETCH_AHEAD, sentences.length); j++) {
-      prefetchPromises[j] = fetchTTSAudio(sentences[j], instruct);
-    }
+    // Pipeline: fetch next sentence while playing current one
+    let nextFetch = fetchTTSAudio(sentences[0], instruct);
 
     for (let i = 0; i < sentences.length; i++) {
       if (ttsCancelled) break;
       console.log('[TTS] generating sentence', i + 1, '/', sentences.length, ':', sentences[i].slice(0, 50));
 
       // Wait for the current sentence's audio
-      const audioUrl = await prefetchPromises[i];
-      if (ttsCancelled) { URL.revokeObjectURL(audioUrl); break; }
+      const audioUrl = await nextFetch;
+      if (ttsCancelled) break;
 
-      // Start prefetching the next sentence beyond our current window
-      const nextIdx = i + PREFETCH_AHEAD;
-      if (nextIdx < sentences.length && !prefetchPromises[nextIdx]) {
-        prefetchPromises[nextIdx] = fetchTTSAudio(sentences[nextIdx], instruct);
+      // Start fetching the NEXT sentence while we play this one
+      if (i + 1 < sentences.length) {
+        nextFetch = fetchTTSAudio(sentences[i + 1], instruct);
       }
 
       // Play current sentence
@@ -301,13 +331,6 @@ async function speakText(text, mood, intensity) {
         ttsLoading = true;
         ttsPlaying = false;
         updateTTSIcon();
-      }
-    }
-
-    // Clean up any unused prefetched audio
-    for (let j = 0; j < prefetchPromises.length; j++) {
-      if (prefetchPromises[j]) {
-        prefetchPromises[j].then(url => URL.revokeObjectURL(url)).catch(() => {});
       }
     }
   } catch (err) {

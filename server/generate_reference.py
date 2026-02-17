@@ -53,7 +53,7 @@ wavs, sr = model.generate_voice_design(
 )
 
 import os
-out_path = os.path.expanduser("~/Downloads/monika_reference.wav")
+out_path = "/mnt/c/Users/joshu/Downloads/monika_reference.wav"
 sf.write(out_path, wavs[0], sr)
 print(f"Saved to {out_path}")
 print(f"Sample rate: {sr} Hz, duration: {len(wavs[0]) / sr:.1f}s")
