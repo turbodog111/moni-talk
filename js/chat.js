@@ -27,6 +27,62 @@ function getStreamingDisplay(fullText) {
 }
 
 // ====== CHAT LIST ======
+function formatRelativeTime(ts) {
+  if (!ts) return '';
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return 'yesterday';
+  if (days < 30) return days + 'd ago';
+  const months = Math.floor(days / 30);
+  return months === 1 ? '1 month ago' : months + ' months ago';
+}
+
+function getChatTitle(chat) {
+  if (chat.title) return chat.title;
+  if (chat.mode === 'story') return 'Story Mode';
+  if (chat.mode === 'room') return 'Room Mode';
+  // Creative default based on time of day created
+  const hour = new Date(chat.created).getHours();
+  if (hour >= 5 && hour < 12) return 'Morning Chat';
+  if (hour >= 12 && hour < 17) return 'Afternoon Chat';
+  if (hour >= 17 && hour < 21) return 'Evening Chat';
+  return 'Late Night Talk';
+}
+
+function getChatSubtitle(chat) {
+  const parts = [];
+  // Relationship
+  if (chat.mode === 'story') {
+    const phase = chat.storyPhase || '';
+    const day = chat.storyDay || 1;
+    parts.push('Day ' + day);
+  } else if (chat.mode === 'room') {
+    const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
+    parts.push(rel.label);
+  } else {
+    const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
+    parts.push(rel.label);
+    if (chat.mood) parts.push(chat.mood);
+  }
+  // Last model used
+  const lastModelMsg = [...chat.messages].reverse().find(m => m.model);
+  if (lastModelMsg) parts.push(formatModelLabel(lastModelMsg.model));
+  return parts.join(' \u00b7 ');
+}
+
+function getChatTimeline(chat) {
+  const lastMsg = chat.messages[chat.messages.length - 1];
+  const lastTime = lastMsg ? (lastMsg.timestamp || chat.lastModified) : null;
+  const created = new Date(chat.created).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  if (lastTime) return formatRelativeTime(lastTime);
+  return created;
+}
+
 function renderChatList() {
   chatListBody.innerHTML = '';
   if (chats.length === 0) {
@@ -39,9 +95,9 @@ function renderChatList() {
     if (bStarred !== aStarred) return bStarred - aStarred;
     return (b.lastModified || b.created) - (a.lastModified || a.created);
   }).forEach(chat => {
-    const rel = chat.mode === 'story' ? { label: 'Story Mode' } : chat.mode === 'room' ? { label: 'Room Mode' } : (RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2]);
-    const defaultTitle = chat.mode === 'story' ? 'Story Mode' : chat.mode === 'room' ? 'Room Mode' : `${rel.label} Monika`;
-    const displayTitle = chat.title || defaultTitle;
+    const displayTitle = getChatTitle(chat);
+    const subtitle = getChatSubtitle(chat);
+    const timeline = getChatTimeline(chat);
     const lastMsg = chat.messages[chat.messages.length - 1];
     let preview;
     if (!lastMsg) { preview = 'No messages yet'; }
@@ -52,7 +108,7 @@ function renderChatList() {
       const raw = lastMsg.role === 'assistant' ? stripRoomTags(lastMsg.content) : lastMsg.content;
       preview = (lastMsg.role === 'user' ? 'You: ' : 'Monika: ') + raw.slice(0, 60);
     } else { preview = (lastMsg.role === 'user' ? 'You: ' : 'Monika: ') + lastMsg.content.slice(0, 60); }
-    const moodText = chat.mood && chat.mode !== 'story' ? ` \u2022 ${chat.mood}` : '';
+    const msgCount = chat.messages.length;
 
     const item = document.createElement('div');
     item.className = 'chat-item';
@@ -61,9 +117,10 @@ function renderChatList() {
       <img class="chat-item-avatar" src="Monika PFP.png" alt="Monika">
       <div class="chat-item-info">
         <div class="chat-item-top">
-          <span class="chat-item-rel">${escapeHtml(displayTitle)}${moodText}</span>
-          <span class="chat-item-date">${new Date(chat.created).toLocaleDateString()}</span>
+          <span class="chat-item-title">${escapeHtml(displayTitle)}</span>
+          <span class="chat-item-time">${timeline}</span>
         </div>
+        <div class="chat-item-subtitle">${escapeHtml(subtitle)}</div>
         <div class="chat-item-preview">${escapeHtml(preview)}</div>
       </div>
       <button class="chat-item-rename" title="Rename">&#9998;</button>
@@ -72,7 +129,7 @@ function renderChatList() {
     item.addEventListener('click', (e) => { if (!e.target.closest('.chat-item-delete') && !e.target.closest('.chat-item-star') && !e.target.closest('.chat-item-rename')) openChat(chat.id); });
     item.querySelector('.chat-item-rename').addEventListener('click', (e) => {
       e.stopPropagation();
-      const newTitle = prompt('Rename this conversation:', chat.title || defaultTitle);
+      const newTitle = prompt('Rename this conversation:', chat.title || displayTitle);
       if (newTitle !== null) {
         chat.title = newTitle.trim() || null; // null clears back to default
         saveChats(); renderChatList();
