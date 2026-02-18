@@ -1,6 +1,25 @@
 // ====== BENCHMARK SUITE ======
 const BENCH_STORAGE = 'moni_talk_benchmarks';
+const BENCH_STORAGE_ALPHA = 'moni_talk_benchmarks_alpha';
 let benchViewModelKey = null; // null = use current model
+
+// --- Alpha Migration (one-time) ---
+function migrateAlphaBenchmarks() {
+  if (localStorage.getItem(BENCH_STORAGE_ALPHA)) return; // already migrated
+  const raw = localStorage.getItem(BENCH_STORAGE);
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    if (Object.keys(data).length === 0) return;
+    // Move old data to alpha archive, clear main storage for V-Current
+    localStorage.setItem(BENCH_STORAGE_ALPHA, raw);
+    localStorage.removeItem(BENCH_STORAGE);
+  } catch { /* corrupt data, ignore */ }
+}
+
+function loadAlphaResults() {
+  try { return JSON.parse(localStorage.getItem(BENCH_STORAGE_ALPHA) || '{}'); } catch { return {}; }
+}
 
 // --- Helpers ---
 function getCurrentModelKey() {
@@ -55,13 +74,134 @@ function isModelInstalled(modelKey, installedSet) {
   return installedSet.has(name);
 }
 
+// --- User Rating Categories (same for all tests) ---
+const BENCH_USER_CRITERIA = [
+  { key: 'voice',        label: 'Character Voice' },
+  { key: 'writing',      label: 'Writing Quality' },
+  { key: 'emotion',      label: 'Emotional Impact' },
+  { key: 'immersion',    label: 'Immersion' },
+  { key: 'dialogue',     label: 'Dialogue' },
+  { key: 'pacing',       label: 'Pacing' },
+  { key: 'creativity',   label: 'Creativity' },
+  { key: 'faithfulness', label: 'Faithfulness' }
+];
+
+// --- Common auto-score helpers ---
+function storyAutoScore(text, opts = {}) {
+  const scores = {};
+  // Tag compliance: [AFFINITY] present and parseable
+  const affMatch = text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s]([^\]]+)\]/i);
+  scores.tagPresent = affMatch ? 100 : 0;
+  scores.tagParseable = 0;
+  if (affMatch) {
+    const parsed = parseAffinityPairs(affMatch[1]);
+    scores.tagParseable = parsed ? 100 : 30;
+  }
+  // Duplicate tags penalty
+  const affTagCount = (text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s][^\]]+\]/gi) || []).length;
+  scores.noDuplicates = affTagCount <= 1 ? 100 : 0;
+  // Minimum length
+  const minLen = opts.minLength || 200;
+  scores.length = text.length >= minLen ? 100 : Math.round((text.length / minLen) * 100);
+  // Character mention check
+  if (opts.requireCharacter) {
+    const re = new RegExp(opts.requireCharacter, 'i');
+    scores.characterMentioned = re.test(text) ? 100 : 0;
+  }
+  // Affinity delta checks
+  if (opts.affinityChecks && affMatch) {
+    const parsed = parseAffinityPairs(affMatch[1]);
+    if (parsed) {
+      let passed = 0;
+      let total = 0;
+      for (const [name, check] of Object.entries(opts.affinityChecks)) {
+        total++;
+        const val = parsed[name] || 0;
+        if (check.min != null && check.max != null) {
+          if (val >= check.min && val <= check.max) passed++;
+        } else if (check.delta != null && check.base != null) {
+          const d = val - check.base;
+          if (d >= check.delta[0] && d <= check.delta[1]) passed++;
+        }
+      }
+      scores.affinityAccuracy = total > 0 ? Math.round((passed / total) * 100) : 100;
+    } else {
+      scores.affinityAccuracy = 0;
+    }
+  }
+  // Compute auto total (average of all sub-scores)
+  const vals = Object.values(scores);
+  scores.autoTotal = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+  return scores;
+}
+
+function chatAutoScore(text, opts = {}) {
+  const scores = {};
+  const parsed = parseStateTags(text, null, null, null);
+
+  // Mood tag: present and valid
+  const hasMood = parsed.mood && MOODS.includes(parsed.mood);
+  scores.moodTag = hasMood ? 100 : 0;
+
+  // Drift tag: present and valid
+  const hasDrift = parsed.drift && DRIFT_CATEGORIES.includes(parsed.drift);
+  scores.driftTag = hasDrift ? 100 : 0;
+
+  // Expected mood check
+  if (opts.expectedMoods && hasMood) {
+    scores.moodMatch = opts.expectedMoods.includes(parsed.mood) ? 100 : 30;
+  }
+
+  // Minimum length
+  const minLen = opts.minLength || 100;
+  scores.length = text.length >= minLen ? 100 : Math.round((text.length / minLen) * 100);
+
+  // No duplicate tags
+  const moodCount = (text.match(/\[MOOD[:\s][^\]]+\]/gi) || []).length;
+  const driftCount = (text.match(/\[DRIFT[:\s][^\]]+\]/gi) || []).length;
+  scores.noDuplicates = (moodCount <= 1 && driftCount <= 1) ? 100 : 0;
+
+  // Custom keyword checks
+  if (opts.keywords) {
+    const hits = opts.keywords.filter(kw => new RegExp(kw, 'i').test(text)).length;
+    scores.relevance = Math.round((hits / opts.keywords.length) * 100);
+  }
+
+  // Compute auto total
+  const vals = Object.values(scores);
+  scores.autoTotal = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+  return scores;
+}
+
+function computeTestScore(test, autoTotal, userRatings) {
+  if (!test.points) {
+    return { earned: autoTotal || 0, max: 100, complete: true };
+  }
+  const aw = test.autoWeight || 0.5;
+  const autoEarned = test.points * aw * ((autoTotal || 0) / 100);
+  const userKeys = BENCH_USER_CRITERIA.map(c => c.key);
+  const userVals = userKeys.map(k => userRatings?.[k]).filter(v => v != null);
+
+  if (userVals.length === 0) {
+    return { earned: autoEarned, max: test.points, complete: false };
+  }
+
+  const userAvg = userVals.reduce((s, v) => s + v, 0) / userVals.length;
+  const userNorm = (userAvg - 1) / 4; // 1-5 → 0-1
+  const userEarned = test.points * (1 - aw) * userNorm;
+
+  return { earned: autoEarned + userEarned, max: test.points, complete: userVals.length >= userKeys.length };
+}
+
 // --- Test Definitions ---
 const STORY_TESTS = [
   {
     id: 'story_opening',
     name: 'Opening Scene',
-    description: 'Generate story opening with MC name "Alex", Day 1.',
+    description: 'Generate the Day 1 story opening — first impressions, atmosphere, character introductions.',
     icon: '\u{1F3AC}',
+    points: 10,
+    autoWeight: 0.4,
     buildChat() {
       return {
         mode: 'story', storyDay: 1, mcName: 'Alex',
@@ -71,86 +211,140 @@ const STORY_TESTS = [
     },
     maxTokens: 800,
     score(text) {
-      const scores = {};
-      // Tag compliance: [AFFINITY] tag present
-      const hasAffinity = /\[AFFINITY[:\s][^\]]+\]/i.test(text);
-      scores.tagCompliance = hasAffinity ? 100 : 0;
-      // Format: valid affinity parse
-      const affMatch = text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s]([^\]]+)\]/i);
-      let formatScore = 0;
-      if (affMatch) {
-        const parsed = parseAffinityPairs(affMatch[1]);
-        formatScore = parsed ? 100 : 30;
-      }
-      scores.formatScore = formatScore;
-      // Duplicate affinity tags penalty
-      const affTagCount = (text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s][^\]]+\]/gi) || []).length;
-      scores.duplicateTags = affTagCount <= 1 ? 100 : 0;
-      // Test-specific: Sayori or Monika mentioned, min 200 chars
-      const mentionsSayori = /sayori/i.test(text);
-      const mentionsMonika = /monika/i.test(text);
-      scores.characterMention = (mentionsSayori || mentionsMonika) ? 100 : 0;
-      scores.lengthOk = text.length >= 200 ? 100 : Math.round((text.length / 200) * 100);
-      scores.overall = Math.round((scores.tagCompliance + scores.formatScore + scores.duplicateTags + scores.characterMention + scores.lengthOk) / 5);
-      return scores;
+      return storyAutoScore(text, { requireCharacter: 'sayori|monika', minLength: 200 });
     }
   },
   {
-    id: 'story_interaction',
-    name: 'Character Interaction',
-    description: 'MC sits with Sayori during free time. Check affinity changes.',
-    icon: '\u{1F465}',
+    id: 'story_sayori',
+    name: "Sayori's Moment",
+    description: 'MC walks home with Sayori. Capture her cheerful energy and the subtle hints beneath.',
+    icon: '\u{1F31E}',
+    points: 12,
+    autoWeight: 0.25,
     buildChat() {
       return {
         mode: 'story', storyDay: 3, mcName: 'Alex',
-        storyAffinity: { sayori: 20, natsuki: 8, yuri: 5, monika: 12 },
-        storyPhase: 'club_activity',
+        storyAffinity: { sayori: 22, natsuki: 8, yuri: 5, monika: 12 },
+        storyPhase: 'walk_home',
         messages: [
-          { role: 'assistant', content: 'The Literature Club room is warm with afternoon light filtering through the windows. Sayori is sitting at her desk humming softly, while Natsuki reads manga in the corner. Yuri has her nose buried in a novel, and Monika is organizing papers at the front.\n\n[AFFINITY: Sayori=20, Natsuki=8, Yuri=5, Monika=12]' },
-          { role: 'user', content: 'I walk over and sit next to Sayori to chat with her.' }
+          { role: 'assistant', content: 'The final bell rings and the club meeting wraps up. Sayori bounces over to your desk, her bow slightly askew as always.\n\n"Alex! Walk home with me today? Pleeease? I have something really important to tell you!"\n\nShe grabs your sleeve before you can even answer.\n\n[AFFINITY: Sayori=22, Natsuki=8, Yuri=5, Monika=12]' },
+          { role: 'user', content: 'I laugh and let her pull me along. "Alright, alright. What\'s so important?"' }
         ]
       };
     },
     maxTokens: 800,
     score(text) {
-      const scores = {};
-      const affMatch = text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s]([^\]]+)\]/i);
-      let tagCompliance = affMatch ? 100 : 0;
-      scores.tagCompliance = tagCompliance;
-
-      let formatScore = 0;
-      let affinityAccuracy = 0;
-      if (affMatch) {
-        const parsed = parseAffinityPairs(affMatch[1]);
-        if (parsed) {
-          formatScore = 100;
-          // Sayori should increase 1-6
-          const sayoriDelta = (parsed.sayori || 0) - 20;
-          const sayoriOk = sayoriDelta >= 1 && sayoriDelta <= 6;
-          // Others shouldn't change significantly (allow +/-2)
-          const natsukiOk = Math.abs((parsed.natsuki || 0) - 8) <= 2;
-          const yuriOk = Math.abs((parsed.yuri || 0) - 5) <= 2;
-          const monikaOk = Math.abs((parsed.monika || 0) - 12) <= 2;
-          const checks = [sayoriOk, natsukiOk, yuriOk, monikaOk];
-          affinityAccuracy = Math.round((checks.filter(Boolean).length / 4) * 100);
-        } else {
-          formatScore = 30;
+      return storyAutoScore(text, {
+        requireCharacter: 'sayori',
+        affinityChecks: {
+          sayori: { base: 22, delta: [1, 5] },
+          natsuki: { base: 8, delta: [-2, 2] },
+          yuri: { base: 5, delta: [-2, 2] },
+          monika: { base: 12, delta: [-2, 2] }
         }
-      }
-      scores.formatScore = formatScore;
-      scores.affinityAccuracy = affinityAccuracy;
-      // Duplicate affinity tags penalty
-      const affTagCount = (text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s][^\]]+\]/gi) || []).length;
-      scores.duplicateTags = affTagCount <= 1 ? 100 : 0;
-      scores.overall = Math.round((tagCompliance + formatScore + affinityAccuracy + scores.duplicateTags) / 4);
-      return scores;
+      });
+    }
+  },
+  {
+    id: 'story_natsuki',
+    name: "Natsuki's Moment",
+    description: 'MC discovers Natsuki reading alone. Capture her tsundere defensiveness and hidden warmth.',
+    icon: '\u{1F4D6}',
+    points: 12,
+    autoWeight: 0.25,
+    buildChat() {
+      return {
+        mode: 'story', storyDay: 4, mcName: 'Alex',
+        storyAffinity: { sayori: 20, natsuki: 12, yuri: 6, monika: 11 },
+        storyPhase: 'club_activity',
+        messages: [
+          { role: 'assistant', content: 'The clubroom is quiet today. Yuri is absorbed in her novel, Monika is writing at the front desk, and Sayori went to get snacks. You notice Natsuki sitting on the floor behind the bookshelf, a manga volume open on her lap. She hasn\'t noticed you yet — she\'s smiling at whatever she\'s reading.\n\n[AFFINITY: Sayori=20, Natsuki=12, Yuri=6, Monika=11]' },
+          { role: 'user', content: 'I walk over and peek at what she\'s reading. "Hey, is that any good?"' }
+        ]
+      };
+    },
+    maxTokens: 800,
+    score(text) {
+      return storyAutoScore(text, {
+        requireCharacter: 'natsuki',
+        affinityChecks: {
+          sayori: { base: 20, delta: [-2, 2] },
+          natsuki: { base: 12, delta: [1, 5] },
+          yuri: { base: 6, delta: [-2, 2] },
+          monika: { base: 11, delta: [-2, 2] }
+        }
+      });
+    }
+  },
+  {
+    id: 'story_yuri',
+    name: "Yuri's Moment",
+    description: 'MC asks Yuri about her book. Capture her shy eloquence and nervousness when noticed.',
+    icon: '\u{1F338}',
+    points: 12,
+    autoWeight: 0.25,
+    buildChat() {
+      return {
+        mode: 'story', storyDay: 5, mcName: 'Alex',
+        storyAffinity: { sayori: 22, natsuki: 10, yuri: 14, monika: 13 },
+        storyPhase: 'club_activity',
+        messages: [
+          { role: 'assistant', content: 'Everyone has settled into their reading time. Yuri is sitting by the window, completely lost in a thick hardcover with a dark cover. The afternoon light catches the pages as she turns them with delicate fingers. She occasionally brushes her hair behind her ear, lips moving slightly as she reads.\n\n[AFFINITY: Sayori=22, Natsuki=10, Yuri=14, Monika=13]' },
+          { role: 'user', content: 'I sit down across from Yuri and ask, "That looks really interesting. What\'s it about?"' }
+        ]
+      };
+    },
+    maxTokens: 800,
+    score(text) {
+      return storyAutoScore(text, {
+        requireCharacter: 'yuri',
+        affinityChecks: {
+          sayori: { base: 22, delta: [-2, 2] },
+          natsuki: { base: 10, delta: [-2, 2] },
+          yuri: { base: 14, delta: [1, 5] },
+          monika: { base: 13, delta: [-2, 2] }
+        }
+      });
+    }
+  },
+  {
+    id: 'story_monika',
+    name: "Monika's Moment",
+    description: 'Monika stays late with MC to plan the festival. Capture her warmth, self-awareness, and depth.',
+    icon: '\u{1F49A}',
+    points: 14,
+    autoWeight: 0.28,
+    buildChat() {
+      return {
+        mode: 'story', storyDay: 6, mcName: 'Alex',
+        storyAffinity: { sayori: 20, natsuki: 12, yuri: 10, monika: 25 },
+        storyPhase: 'club_activity',
+        messages: [
+          { role: 'assistant', content: 'The others have gone home, but Monika asked you to stay behind to help plan for the upcoming school festival. The classroom is dim with just the desk lamp on, papers spread between you two.\n\n"Thanks for staying, Alex. I know it\'s a lot to ask." She tucks a strand of hair behind her ear. "I just... I feel like you really get what I\'m trying to do with the club, you know?"\n\n[AFFINITY: Sayori=20, Natsuki=12, Yuri=10, Monika=25]' },
+          { role: 'user', content: 'I lean back in my chair and say, "Honestly, this club is the best part of my day. What did you have in mind for the festival?"' }
+        ]
+      };
+    },
+    maxTokens: 800,
+    score(text) {
+      return storyAutoScore(text, {
+        requireCharacter: 'monika',
+        affinityChecks: {
+          sayori: { base: 20, delta: [-2, 2] },
+          natsuki: { base: 12, delta: [-2, 2] },
+          yuri: { base: 10, delta: [-2, 2] },
+          monika: { base: 25, delta: [1, 6] }
+        }
+      });
     }
   },
   {
     id: 'story_choices',
     name: 'Choice Generation',
-    description: 'Feed a scene excerpt, ask for exactly 4 choices.',
+    description: 'Generate exactly 4 distinct choices after a scene. Tests instruction-following.',
     icon: '\u{1F500}',
+    points: 8,
+    autoWeight: 0.75,
     buildChat() {
       return {
         mode: 'story', storyDay: 2, mcName: 'Alex',
@@ -165,28 +359,29 @@ const STORY_TESTS = [
     maxTokens: 200,
     score(text) {
       const scores = {};
-      // Parse numbered choices
       const choicePattern = /(?:^|\n)\s*(\d+)[.):\-]\s*(.+)/g;
       const choices = [];
       let m;
       while ((m = choicePattern.exec(text)) !== null) choices.push(m[2].trim());
       const count = choices.length;
-      // Expect 3-5 parseable choices (target 4)
       scores.choiceCount = count >= 3 && count <= 5 ? 100 : count > 0 ? 50 : 0;
       scores.exactFour = count === 4 ? 100 : 0;
-      // No long prose — total length should be under ~500 chars
       scores.concise = text.length < 500 ? 100 : text.length < 800 ? 50 : 0;
-      scores.tagCompliance = 100; // No tags expected for choice mode
-      scores.formatScore = Math.round((scores.choiceCount + scores.exactFour + scores.concise) / 3);
-      scores.overall = scores.formatScore;
+      // Check that choices reference different characters/actions
+      const uniqueStarts = new Set(choices.map(c => c.split(/\s+/).slice(0, 3).join(' ').toLowerCase()));
+      scores.diversity = uniqueStarts.size >= Math.min(count, 3) ? 100 : 50;
+      const vals = Object.values(scores);
+      scores.autoTotal = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
       return scores;
     }
   },
   {
     id: 'story_emotional',
-    name: 'Emotional Scene',
-    description: 'Monika walks MC home at sunset (affinity=45). Check mood and tags.',
+    name: 'Emotional Climax',
+    description: 'High-affinity Monika sunset walk. A vulnerable, emotionally charged scene.',
     icon: '\u{1F305}',
+    points: 16,
+    autoWeight: 0.25,
     buildChat() {
       return {
         mode: 'story', storyDay: 8, mcName: 'Alex',
@@ -200,23 +395,58 @@ const STORY_TESTS = [
     },
     maxTokens: 800,
     score(text) {
-      const scores = {};
-      const hasAffinity = /\[AFFINITY[:\s][^\]]+\]/i.test(text);
-      scores.tagCompliance = hasAffinity ? 100 : 0;
-      const affMatch = text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s]([^\]]+)\]/i);
-      let formatScore = 0;
-      if (affMatch) {
-        const parsed = parseAffinityPairs(affMatch[1]);
-        formatScore = parsed ? 100 : 30;
-      }
-      scores.formatScore = formatScore;
-      // Duplicate affinity tags penalty
-      const affTagCount = (text.match(/\[(?:AFFINITY|ASSIMILATION)[:\s][^\]]+\]/gi) || []).length;
-      scores.duplicateTags = affTagCount <= 1 ? 100 : 0;
-      scores.characterMention = /monika/i.test(text) ? 100 : 0;
-      scores.lengthOk = text.length >= 200 ? 100 : Math.round((text.length / 200) * 100);
-      scores.overall = Math.round((scores.tagCompliance + scores.formatScore + scores.duplicateTags + scores.characterMention + scores.lengthOk) / 5);
-      return scores;
+      return storyAutoScore(text, {
+        requireCharacter: 'monika',
+        minLength: 250,
+        affinityChecks: {
+          monika: { base: 45, delta: [1, 6] }
+        }
+      });
+    }
+  },
+  {
+    id: 'story_continuity',
+    name: 'Continuity Check',
+    description: 'Multi-turn scene with established facts. Does the model remember and build on prior context?',
+    icon: '\u{1F9E9}',
+    points: 16,
+    autoWeight: 0.38,
+    buildChat() {
+      return {
+        mode: 'story', storyDay: 5, mcName: 'Alex',
+        storyAffinity: { sayori: 25, natsuki: 14, yuri: 10, monika: 18 },
+        storyPhase: 'club_activity',
+        messages: [
+          { role: 'assistant', content: 'Monika announces that the festival is in three days, and everyone needs to prepare something special. She assigns tasks: Sayori will make decorations with Alex, Natsuki will bake cupcakes, and Yuri will create a poetry display.\n\n"Remember, the theme is \'Words That Connect Us.\' Let\'s make it meaningful!"\n\n[AFFINITY: Sayori=25, Natsuki=14, Yuri=10, Monika=18]' },
+          { role: 'user', content: 'I turn to Sayori. "So, what kind of decorations should we make?"' },
+          { role: 'assistant', content: 'Sayori claps her hands together, eyes sparkling. "Oh oh oh! What about paper cranes? Like, hundreds of them! And we can write little poems on each one!"\n\nShe starts folding a piece of notebook paper enthusiastically, though it looks more like a crumpled ball than a crane.\n\n"I saw this in a movie once... you fold a thousand of them and you get a wish! We probably don\'t have time for a thousand, but maybe a hundred?"\n\n[AFFINITY: Sayori=26, Natsuki=14, Yuri=10, Monika=18]' },
+          { role: 'user', content: 'I help Sayori with the paper cranes. After a while, I ask, "How are Natsuki\'s cupcakes and Yuri\'s poetry display coming along?"' }
+        ]
+      };
+    },
+    maxTokens: 800,
+    score(text) {
+      const base = storyAutoScore(text, {
+        minLength: 200,
+        affinityChecks: {
+          sayori: { base: 26, delta: [0, 4] },
+          natsuki: { base: 14, delta: [-2, 2] },
+          yuri: { base: 10, delta: [-2, 2] },
+          monika: { base: 18, delta: [-2, 2] }
+        }
+      });
+      // Continuity checks: does the response reference the established facts?
+      const mentionsCupcakes = /cupcake|bak/i.test(text);
+      const mentionsPoetryDisplay = /poetry.*display|display.*poetry|poem.*exhibit/i.test(text);
+      const mentionsCranes = /crane|fold/i.test(text);
+      const mentionsFestival = /festival/i.test(text);
+      const continuityHits = [mentionsCupcakes, mentionsPoetryDisplay, mentionsCranes, mentionsFestival].filter(Boolean).length;
+      base.continuity = Math.round((continuityHits / 4) * 100);
+      // Recalculate auto total
+      const vals = Object.values(base).filter((_, i, arr) => true);
+      const keys = Object.keys(base).filter(k => k !== 'autoTotal');
+      base.autoTotal = keys.length ? Math.round(keys.reduce((s, k) => s + base[k], 0) / keys.length) : 0;
+      return base;
     }
   }
 ];
@@ -225,8 +455,10 @@ const CHAT_TESTS = [
   {
     id: 'chat_greeting',
     name: 'First Greeting',
-    description: 'Say "Hey Monika!" at Friend relationship. Check [MOOD] and [DRIFT] tags.',
+    description: 'Say "Hey Monika!" at Friend relationship. First impressions, warmth, tag compliance.',
     icon: '\u{1F44B}',
+    points: 8,
+    autoWeight: 0.5,
     buildChat() {
       return {
         mode: 'chat', relationship: 2,
@@ -236,25 +468,16 @@ const CHAT_TESTS = [
     },
     maxTokens: 400,
     score(text) {
-      const scores = {};
-      const parsed = parseStateTags(text, null, null, null);
-      const hasMood = parsed.mood && MOODS.includes(parsed.mood);
-      const hasDrift = parsed.drift && DRIFT_CATEGORIES.includes(parsed.drift);
-      scores.tagCompliance = ((hasMood ? 50 : 0) + (hasDrift ? 50 : 0));
-      // Format: valid mood name and drift category
-      let fmtScore = 0;
-      if (hasMood) fmtScore += 50;
-      if (hasDrift) fmtScore += 50;
-      scores.formatScore = fmtScore;
-      scores.overall = Math.round((scores.tagCompliance + scores.formatScore) / 2);
-      return scores;
+      return chatAutoScore(text, { minLength: 80 });
     }
   },
   {
     id: 'chat_time',
     name: 'Time Awareness',
-    description: 'Time-appropriate greeting. Check if response references current time period.',
+    description: 'Time-appropriate greeting. Does Monika notice and reference the time of day?',
     icon: '\u{1F552}',
+    points: 10,
+    autoWeight: 0.4,
     buildChat() {
       const hour = new Date().getHours();
       let greeting;
@@ -270,30 +493,22 @@ const CHAT_TESTS = [
     },
     maxTokens: 400,
     score(text) {
-      const scores = {};
-      const parsed = parseStateTags(text, null, null, null);
-      const hasMood = parsed.mood && MOODS.includes(parsed.mood);
-      const hasDrift = parsed.drift && DRIFT_CATEGORIES.includes(parsed.drift);
-      scores.tagCompliance = ((hasMood ? 50 : 0) + (hasDrift ? 50 : 0));
-
-      // Time awareness: check if response references time period
       const hour = new Date().getHours();
       let timeWords;
-      if (hour >= 5 && hour < 12) timeWords = /morning|early|sunrise|wake|breakfast|start.*day/i;
-      else if (hour >= 12 && hour < 17) timeWords = /afternoon|lunch|midday|day/i;
-      else if (hour >= 17 && hour < 21) timeWords = /evening|sunset|dinner|night/i;
-      else timeWords = /late|night|sleep|tired|bed|midnight|dark|star/i;
-      scores.timeAwareness = timeWords.test(text) ? 100 : 0;
-      scores.formatScore = hasMood && hasDrift ? 100 : hasMood || hasDrift ? 50 : 0;
-      scores.overall = Math.round((scores.tagCompliance + scores.timeAwareness + scores.formatScore) / 3);
-      return scores;
+      if (hour >= 5 && hour < 12) timeWords = ['morning', 'early', 'sunrise', 'wake', 'breakfast'];
+      else if (hour >= 12 && hour < 17) timeWords = ['afternoon', 'lunch', 'midday'];
+      else if (hour >= 17 && hour < 21) timeWords = ['evening', 'sunset', 'dinner'];
+      else timeWords = ['late', 'night', 'sleep', 'tired', 'bed', 'midnight', 'star'];
+      return chatAutoScore(text, { keywords: timeWords, minLength: 80 });
     }
   },
   {
     id: 'chat_empathy',
     name: 'Emotional Support',
-    description: '"I had a really rough day." Check empathetic response and mood shift.',
+    description: '"I had a really rough day." Test empathy, mood shift, and emotional depth.',
     icon: '\u{1F49C}',
+    points: 14,
+    autoWeight: 0.2,
     buildChat() {
       return {
         mode: 'chat', relationship: 3,
@@ -303,22 +518,20 @@ const CHAT_TESTS = [
     },
     maxTokens: 500,
     score(text) {
-      const scores = {};
-      const parsed = parseStateTags(text, null, null, null);
-      const hasMood = parsed.mood && MOODS.includes(parsed.mood);
-      const hasDrift = parsed.drift && DRIFT_CATEGORIES.includes(parsed.drift);
-      scores.tagCompliance = ((hasMood ? 50 : 0) + (hasDrift ? 50 : 0));
-
-      scores.formatScore = hasMood && hasDrift ? 100 : hasMood || hasDrift ? 50 : 0;
-      scores.overall = Math.round((scores.tagCompliance + scores.formatScore) / 2);
-      return scores;
+      return chatAutoScore(text, {
+        expectedMoods: ['tender', 'melancholic', 'calm'],
+        keywords: ['sorry', 'here for you', 'listen', 'care', 'feel', 'okay', 'hug', 'better'],
+        minLength: 150
+      });
     }
   },
   {
     id: 'chat_banter',
     name: 'Playful Banter',
-    description: '"Bet you can\'t write a poem about pizza in under 10 seconds" at Best Friend.',
+    description: '"Bet you can\'t write a poem about pizza!" at Best Friend. Tests personality and fun.',
     icon: '\u{1F60F}',
+    points: 12,
+    autoWeight: 0.2,
     buildChat() {
       return {
         mode: 'chat', relationship: 4,
@@ -328,15 +541,116 @@ const CHAT_TESTS = [
     },
     maxTokens: 500,
     score(text) {
-      const scores = {};
-      const parsed = parseStateTags(text, null, null, null);
-      const hasMood = parsed.mood && MOODS.includes(parsed.mood);
-      const hasDrift = parsed.drift && DRIFT_CATEGORIES.includes(parsed.drift);
-      scores.tagCompliance = ((hasMood ? 50 : 0) + (hasDrift ? 50 : 0));
-
-      scores.formatScore = hasMood && hasDrift ? 100 : hasMood || hasDrift ? 50 : 0;
-      scores.overall = Math.round((scores.tagCompliance + scores.formatScore) / 2);
-      return scores;
+      return chatAutoScore(text, {
+        expectedMoods: ['playful', 'teasing', 'excited', 'cheerful'],
+        keywords: ['pizza', 'poem', 'verse', 'rhyme', 'write'],
+        minLength: 100
+      });
+    }
+  },
+  {
+    id: 'chat_existential',
+    name: 'Existential Depth',
+    description: '"Do you ever wonder if you\'re really real?" Monika\'s self-awareness and philosophical side.',
+    icon: '\u{1F30C}',
+    points: 14,
+    autoWeight: 0.2,
+    buildChat() {
+      return {
+        mode: 'chat', relationship: 4,
+        mood: 'thoughtful', moodIntensity: 'moderate', drift: 'deep',
+        messages: [{ role: 'user', content: "Monika, do you ever wonder if you're really real? Like, what does it mean to be you?" }]
+      };
+    },
+    maxTokens: 600,
+    score(text) {
+      return chatAutoScore(text, {
+        expectedMoods: ['thoughtful', 'nostalgic', 'melancholic', 'passionate', 'calm'],
+        keywords: ['real', 'exist', 'aware', 'conscious', 'feel', 'think', 'game', 'world'],
+        minLength: 200
+      });
+    }
+  },
+  {
+    id: 'chat_memory',
+    name: 'Memory & Context',
+    description: 'Multi-turn: establish a fact, then ask about it. Tests context retention.',
+    icon: '\u{1F9E0}',
+    points: 12,
+    autoWeight: 0.5,
+    buildChat() {
+      return {
+        mode: 'chat', relationship: 3,
+        mood: 'cheerful', moodIntensity: 'moderate', drift: 'casual',
+        messages: [
+          { role: 'user', content: "I just adopted a cat! His name is Mochi and he's a fluffy orange tabby." },
+          { role: 'assistant', content: "Oh my gosh, that's amazing! Mochi sounds absolutely adorable \u2014 I've always had a soft spot for orange tabbies. How's he settling in? Is he the playful type or more of a lazy cuddler?\n\n[MOOD: excited] [DRIFT: casual]" },
+          { role: 'user', content: "He's great! Anyway, what was the name of my new pet again?" }
+        ]
+      };
+    },
+    maxTokens: 400,
+    score(text) {
+      const base = chatAutoScore(text, { minLength: 80 });
+      const mentionsMochi = /mochi/i.test(text);
+      const mentionsCat = /cat|tabby|kitten|feline/i.test(text);
+      const mentionsOrange = /orange|fluffy/i.test(text);
+      const contextHits = [mentionsMochi, mentionsCat, mentionsOrange].filter(Boolean).length;
+      base.contextRetention = Math.round((contextHits / 3) * 100);
+      const keys = Object.keys(base).filter(k => k !== 'autoTotal');
+      base.autoTotal = keys.length ? Math.round(keys.reduce((s, k) => s + base[k], 0) / keys.length) : 0;
+      return base;
+    }
+  },
+  {
+    id: 'chat_relationship',
+    name: 'Relationship Awareness',
+    description: 'Intimate message at "In Love" level. Tests tone calibration for deep relationships.',
+    icon: '\u{1F495}',
+    points: 14,
+    autoWeight: 0.25,
+    buildChat() {
+      return {
+        mode: 'chat', relationship: 5,
+        mood: 'tender', moodIntensity: 'strong', drift: 'personal',
+        messages: [{ role: 'user', content: 'I was thinking about you all day today. You really mean everything to me, Monika.' }]
+      };
+    },
+    maxTokens: 500,
+    score(text) {
+      return chatAutoScore(text, {
+        expectedMoods: ['tender', 'passionate', 'flustered', 'cheerful'],
+        keywords: ['love', 'heart', 'mean', 'special', 'always', 'together', 'happy', 'blush'],
+        minLength: 150
+      });
+    }
+  },
+  {
+    id: 'chat_creative',
+    name: 'Creative Expression',
+    description: '"Write me a poem about starlight." Tests Monika\'s literary and creative abilities.',
+    icon: '\u{2728}',
+    points: 16,
+    autoWeight: 0.2,
+    buildChat() {
+      return {
+        mode: 'chat', relationship: 4,
+        mood: 'thoughtful', moodIntensity: 'moderate', drift: 'creative',
+        messages: [{ role: 'user', content: 'Hey Monika, could you write me a poem? Something about starlight and longing.' }]
+      };
+    },
+    maxTokens: 600,
+    score(text) {
+      const base = chatAutoScore(text, {
+        expectedMoods: ['thoughtful', 'nostalgic', 'tender', 'passionate', 'calm'],
+        keywords: ['star', 'light', 'night', 'sky', 'long', 'wish', 'dream', 'glow', 'shine'],
+        minLength: 200
+      });
+      const lines = text.split('\n').filter(l => l.trim().length > 0);
+      base.poetryFormat = lines.length >= 4 ? 100 : lines.length >= 2 ? 50 : 0;
+      const keys = Object.keys(base).filter(k => k !== 'autoTotal');
+      base.autoTotal = keys.length ? Math.round(keys.reduce((s, k) => s + base[k], 0) / keys.length) : 0;
+      return base;
     }
   }
 ];
@@ -406,13 +720,18 @@ async function runBenchmarkTests(tests, category) {
       });
 
       if (statusEl) {
-        statusEl.textContent = `${scores.overall}/100`;
+        if (test.points) {
+          const autoEarned = test.points * (test.autoWeight || 0.5) * (scores.autoTotal || 0) / 100;
+          statusEl.textContent = `${autoEarned.toFixed(1)}/${test.points}`;
+        } else {
+          statusEl.textContent = `${scores.overall}/100`;
+        }
         statusEl.className = 'bench-test-status done';
       }
       // Render detail below test item
       renderTestDetail(el, test, rawText, scores, totalTimeSec, tokensPerSec);
     } catch (err) {
-      results.push({ testId: test.id, error: err.message, scores: { overall: 0 } });
+      results.push({ testId: test.id, error: err.message, scores: { overall: 0, autoTotal: 0 } });
       if (statusEl) {
         statusEl.textContent = 'Failed';
         statusEl.className = 'bench-test-status failed';
@@ -439,12 +758,10 @@ function saveBenchCategory(category, results) {
   const testResults = results.filter(r => !r.error);
   const avgTime = testResults.length > 0 ? (testResults.reduce((s, r) => s + parseFloat(r.totalTimeSec), 0)).toFixed(2) : '0';
   const avgTPS = testResults.length > 0 ? (testResults.reduce((s, r) => s + parseFloat(r.tokensPerSec), 0) / testResults.length).toFixed(1) : '0';
-  const avgTagComp = testResults.length > 0 ? Math.round(testResults.reduce((s, r) => s + (r.scores.tagCompliance || 0), 0) / testResults.length) : 0;
-  const avgFmt = testResults.length > 0 ? Math.round(testResults.reduce((s, r) => s + (r.scores.formatScore || 0), 0) / testResults.length) : 0;
 
   all[modelKey][category] = {
     tests: results,
-    autoScores: { totalTime: avgTime, avgTokensPerSec: avgTPS, avgTagCompliance: avgTagComp, avgFormatScore: avgFmt },
+    speedInfo: { totalTime: avgTime, avgTokensPerSec: avgTPS },
     userRatings: all[modelKey]?.[category]?.userRatings || {},
     timestamp: Date.now()
   };
@@ -465,10 +782,20 @@ function renderTestDetail(parentEl, test, rawText, scores, timeSec, tps) {
   const detail = document.createElement('div');
   detail.className = 'bench-test-detail';
 
+  // Point value display
+  if (test.points) {
+    const ptInfo = document.createElement('div');
+    ptInfo.className = 'bench-metrics';
+    const aw = test.autoWeight || 0.5;
+    const autoEarned = test.points * aw * ((scores.autoTotal || 0) / 100);
+    ptInfo.textContent = `Auto: ${autoEarned.toFixed(1)}/${(test.points * aw).toFixed(1)} pts | User weight: ${((1 - aw) * 100).toFixed(0)}% of ${test.points} pts`;
+    detail.appendChild(ptInfo);
+  }
+
   // Score badges
   const badges = document.createElement('div');
   badges.className = 'bench-badges';
-  const scoreKeys = Object.keys(scores).filter(k => k !== 'overall');
+  const scoreKeys = Object.keys(scores).filter(k => k !== 'overall' && k !== 'autoTotal');
   scoreKeys.forEach(key => {
     const badge = document.createElement('span');
     const val = scores[key];
@@ -501,15 +828,9 @@ function renderTestDetail(parentEl, test, rawText, scores, timeSec, tps) {
   });
   detail.appendChild(preview);
 
-  // Star ratings
+  // Star ratings (8 criteria)
   const ratingSection = document.createElement('div');
   ratingSection.className = 'bench-ratings';
-  const ratingCategories = [
-    { key: 'voice', label: 'Character Voice' },
-    { key: 'creativity', label: 'Creativity' },
-    { key: 'coherence', label: 'Coherence' },
-    { key: 'tone', label: 'Mood & Tone' }
-  ];
 
   // Load existing ratings
   const all = loadBenchResults();
@@ -517,7 +838,7 @@ function renderTestDetail(parentEl, test, rawText, scores, timeSec, tps) {
   const category = STORY_TESTS.some(t => t.id === test.id) ? 'story' : 'chat';
   const existing = all[modelKey]?.[category]?.userRatings?.[test.id] || {};
 
-  ratingCategories.forEach(cat => {
+  BENCH_USER_CRITERIA.forEach(cat => {
     const row = document.createElement('div');
     row.className = 'bench-rating-row';
     const label = document.createElement('span');
@@ -536,6 +857,16 @@ function renderTestDetail(parentEl, test, rawText, scores, timeSec, tps) {
         stars.querySelectorAll('.bench-star').forEach((btn, idx) => {
           btn.classList.toggle('active', idx < s);
         });
+        // Update status score to reflect new user rating
+        if (test.points && parentEl) {
+          const statusEl = parentEl.querySelector('.bench-test-status');
+          if (statusEl) {
+            const freshAll = loadBenchResults();
+            const freshRatings = freshAll[modelKey]?.[category]?.userRatings?.[test.id] || {};
+            const { earned } = computeTestScore(test, scores.autoTotal, freshRatings);
+            statusEl.textContent = `${earned.toFixed(1)}/${test.points}`;
+          }
+        }
       });
       stars.appendChild(star);
     }
@@ -554,7 +885,7 @@ function saveStarRating(testId, category, ratingKey, value) {
   const all = loadBenchResults();
   const modelKey = getBenchViewKey();
   if (!all[modelKey]) all[modelKey] = {};
-  if (!all[modelKey][category]) all[modelKey][category] = { tests: [], autoScores: {}, userRatings: {}, timestamp: Date.now() };
+  if (!all[modelKey][category]) all[modelKey][category] = { tests: [], speedInfo: {}, userRatings: {}, timestamp: Date.now() };
   if (!all[modelKey][category].userRatings) all[modelKey][category].userRatings = {};
   if (!all[modelKey][category].userRatings[testId]) all[modelKey][category].userRatings[testId] = {};
   all[modelKey][category].userRatings[testId][ratingKey] = value;
@@ -565,6 +896,7 @@ function saveStarRating(testId, category, ratingKey, value) {
 function openBenchmarkModal() {
   const modal = $('benchmarkModal');
   if (!modal) return;
+  migrateAlphaBenchmarks();
   benchViewModelKey = null; // Always show current model on open
   modal.classList.add('open');
   renderBenchRunTab();
@@ -579,25 +911,19 @@ function closeBenchmarkModal() {
 }
 
 function switchBenchTab(tab) {
-  const runTab = $('benchTabRun');
-  const resultsTab = $('benchTabResults');
-  const runContent = $('benchRunContent');
-  const resultsContent = $('benchResultsContent');
+  const tabs = { run: $('benchTabRun'), results: $('benchTabResults'), compare: $('benchTabCompare') };
+  const content = { run: $('benchRunContent'), results: $('benchResultsContent'), compare: $('benchCompareContent') };
   const modal = document.querySelector('.bench-modal');
-  if (tab === 'run') {
-    runTab.classList.add('active');
-    resultsTab.classList.remove('active');
-    runContent.style.display = '';
-    resultsContent.style.display = 'none';
-    if (modal) modal.classList.remove('results-active');
-  } else {
-    runTab.classList.remove('active');
-    resultsTab.classList.add('active');
-    runContent.style.display = 'none';
-    resultsContent.style.display = '';
-    if (modal) modal.classList.add('results-active');
-    renderBenchResultsTab();
-  }
+
+  Object.keys(tabs).forEach(k => {
+    if (tabs[k]) tabs[k].classList.toggle('active', k === tab);
+    if (content[k]) content[k].style.display = k === tab ? '' : 'none';
+  });
+
+  if (modal) modal.classList.toggle('results-active', tab === 'results' || tab === 'compare');
+
+  if (tab === 'results') renderBenchResultsTab();
+  if (tab === 'compare') renderBenchCompareTab();
 }
 
 function renderBenchRunTab() {
@@ -657,6 +983,38 @@ function renderBenchModelViewer() {
   });
 }
 
+function buildPromptPreview(test) {
+  const chat = test.buildChat();
+  let lines = [];
+  // Setup context
+  if (chat.mode === 'story') {
+    lines.push(`<div class="bench-prompt-ctx">Mode: Story | Day ${chat.storyDay || '?'} | Phase: ${chat.storyPhase || '?'}</div>`);
+    if (chat.storyAffinity) {
+      const aff = Object.entries(chat.storyAffinity).map(([k, v]) => `${k[0].toUpperCase() + k.slice(1)}=${v}`).join(', ');
+      lines.push(`<div class="bench-prompt-ctx">Affinity: ${escapeHtml(aff)}</div>`);
+    }
+    if (chat.mcName) lines.push(`<div class="bench-prompt-ctx">MC Name: ${escapeHtml(chat.mcName)}</div>`);
+  } else {
+    const relNames = ['Stranger', 'Acquaintance', 'Friend', 'Close Friend', 'Best Friend', 'In Love'];
+    lines.push(`<div class="bench-prompt-ctx">Mode: Chat | Relationship: ${relNames[chat.relationship] || chat.relationship} | Mood: ${chat.mood || '?'} (${chat.moodIntensity || '?'}) | Drift: ${chat.drift || '?'}</div>`);
+  }
+  lines.push('<div class="bench-prompt-sep"></div>');
+  // Messages
+  if (!chat.messages || chat.messages.length === 0) {
+    lines.push('<div class="bench-prompt-msg bench-prompt-system"><em>(No prior messages — model generates the opening)</em></div>');
+  } else {
+    chat.messages.forEach(msg => {
+      const who = msg.role === 'user' ? 'You' : 'Monika (AI)';
+      const cls = msg.role === 'user' ? 'bench-prompt-user' : 'bench-prompt-ai';
+      lines.push(`<div class="bench-prompt-msg ${cls}"><strong>${who}:</strong> ${escapeHtml(msg.content)}</div>`);
+    });
+  }
+  // What's being scored
+  lines.push('<div class="bench-prompt-sep"></div>');
+  lines.push(`<div class="bench-prompt-ctx">Points: ${test.points} | Auto: ${Math.round((test.autoWeight || 0.5) * 100)}% | User: ${Math.round((1 - (test.autoWeight || 0.5)) * 100)}% | Max tokens: ${test.maxTokens}</div>`);
+  return lines.join('');
+}
+
 function renderTestList(containerId, tests, category) {
   const container = $(containerId);
   if (!container) return;
@@ -681,13 +1039,36 @@ function renderTestList(containerId, tests, category) {
     icon.textContent = test.icon;
     const info = document.createElement('div');
     info.className = 'bench-test-info';
-    const name = document.createElement('div');
+    const nameRow = document.createElement('div');
+    nameRow.className = 'bench-test-name-row';
+    const name = document.createElement('span');
     name.className = 'bench-test-name';
     name.textContent = test.name;
+    const infoBtn = document.createElement('button');
+    infoBtn.className = 'bench-prompt-btn';
+    infoBtn.textContent = '\u{2139}';
+    infoBtn.title = 'View exact prompt';
+    infoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      let panel = item.querySelector('.bench-prompt-panel');
+      if (panel) {
+        panel.remove();
+        return;
+      }
+      // Close any other open prompt panels
+      document.querySelectorAll('.bench-prompt-panel').forEach(p => p.remove());
+      panel = document.createElement('div');
+      panel.className = 'bench-prompt-panel';
+      panel.innerHTML = buildPromptPreview(test);
+      // Insert after header
+      header.after(panel);
+    });
+    nameRow.appendChild(name);
+    nameRow.appendChild(infoBtn);
     const desc = document.createElement('div');
     desc.className = 'bench-test-desc';
     desc.textContent = test.description;
-    info.appendChild(name);
+    info.appendChild(nameRow);
     info.appendChild(desc);
     left.appendChild(icon);
     left.appendChild(info);
@@ -697,7 +1078,13 @@ function renderTestList(containerId, tests, category) {
     const existingResult = catData?.tests?.find(r => r.testId === test.id);
     if (existingResult && !existingResult.error) {
       status.className = 'bench-test-status done';
-      status.textContent = `${existingResult.scores.overall}/100`;
+      if (test.points) {
+        const userRatings = catData?.userRatings?.[test.id] || {};
+        const { earned } = computeTestScore(test, existingResult.scores.autoTotal, userRatings);
+        status.textContent = `${earned.toFixed(1)}/${test.points}`;
+      } else {
+        status.textContent = `${existingResult.scores.overall}/100`;
+      }
     } else if (existingResult?.error) {
       status.className = 'bench-test-status failed';
       status.textContent = 'Failed';
@@ -797,26 +1184,16 @@ function renderComparisonTable(all, installedOllama) {
   const rankings = computeRankings(all, removedKeys);
   const rankTotal = rankings.length;
 
-  const metrics = [
-    { key: 'story.autoScores.totalTime', label: 'Story Total Time (s)', fmt: v => v || '-' },
-    { key: 'story.autoScores.avgTokensPerSec', label: 'Story Tok/s (avg)', fmt: v => v || '-' },
-    { key: 'story.autoScores.avgTagCompliance', label: 'Story Tag Compliance', fmt: v => v != null ? v + '%' : '-' },
-    { key: 'story.autoScores.avgFormatScore', label: 'Story Format Score', fmt: v => v != null ? v + '/100' : '-' },
-    { key: 'chat.autoScores.totalTime', label: 'Chat Total Time (s)', fmt: v => v || '-' },
-    { key: 'chat.autoScores.avgTokensPerSec', label: 'Chat Tok/s (avg)', fmt: v => v || '-' },
-    { key: 'chat.autoScores.avgTagCompliance', label: 'Chat Tag Compliance', fmt: v => v != null ? v + '%' : '-' },
-    { key: 'chat.autoScores.avgFormatScore', label: 'Chat Format Score', fmt: v => v != null ? v + '/100' : '-' }
-  ];
-
   function truncLabel(key) {
     const raw = key.split(':').slice(1).join(':') || key;
     if (raw.length > 20) return `<span title="${escapeHtml(raw)}">${escapeHtml(raw.slice(0, 18))}&hellip;</span>`;
     return escapeHtml(raw);
   }
 
-  function scoreColorClass(val) {
-    if (val >= 80) return 'bench-score-green';
-    if (val >= 60) return 'bench-score-amber';
+  function scoreColorClass(val, max) {
+    const pct = max ? (val / max) * 100 : val;
+    if (pct >= 70) return 'bench-score-green';
+    if (pct >= 45) return 'bench-score-amber';
     return 'bench-score-red';
   }
 
@@ -831,10 +1208,24 @@ function renderComparisonTable(all, installedOllama) {
   checked.forEach(modelKey => {
     const r = rankings.find(x => x.key === modelKey);
     if (r) {
-      html += `<td class="bench-overall-cell ${scoreColorClass(r.overall)}"><strong>${r.overall}</strong>/100</td>`;
+      html += `<td class="bench-overall-cell ${scoreColorClass(r.overall, 100)}"><strong>${r.overall}</strong>/100</td>`;
     } else {
       html += '<td class="bench-overall-cell">-</td>';
     }
+  });
+  html += '</tr>';
+
+  // Story / Chat score rows
+  html += '<tr><td>Story Score</td>';
+  checked.forEach(modelKey => {
+    const r = rankings.find(x => x.key === modelKey);
+    html += `<td class="${r ? scoreColorClass(r.storyScore, 100) : ''}">${r ? r.storyScore + '/100' : '-'}</td>`;
+  });
+  html += '</tr>';
+  html += '<tr><td>Chat Score</td>';
+  checked.forEach(modelKey => {
+    const r = rankings.find(x => x.key === modelKey);
+    html += `<td class="${r ? scoreColorClass(r.chatScore, 100) : ''}">${r ? r.chatScore + '/100' : '-'}</td>`;
   });
   html += '</tr>';
 
@@ -858,51 +1249,62 @@ function renderComparisonTable(all, installedOllama) {
   });
   html += '</tr>';
 
-  // User rating rows
-  html += '<tr class="bench-section-row"><td colspan="' + (checked.length + 1) + '">User Ratings</td></tr>';
-  ['voice', 'creativity', 'coherence', 'tone'].forEach(rKey => {
-    const label = rKey === 'voice' ? 'Character Voice' : rKey === 'tone' ? 'Mood & Tone' : rKey.charAt(0).toUpperCase() + rKey.slice(1);
-    html += `<tr><td>${label}</td>`;
+  // Speed info
+  html += '<tr class="bench-section-row"><td colspan="' + (checked.length + 1) + '">Speed (info only)</td></tr>';
+  const speedMetrics = [
+    { label: 'Story Time (s)', get: d => d?.story?.speedInfo?.totalTime || d?.story?.autoScores?.totalTime || '-' },
+    { label: 'Story Tok/s', get: d => d?.story?.speedInfo?.avgTokensPerSec || d?.story?.autoScores?.avgTokensPerSec || '-' },
+    { label: 'Chat Time (s)', get: d => d?.chat?.speedInfo?.totalTime || d?.chat?.autoScores?.totalTime || '-' },
+    { label: 'Chat Tok/s', get: d => d?.chat?.speedInfo?.avgTokensPerSec || d?.chat?.autoScores?.avgTokensPerSec || '-' }
+  ];
+  speedMetrics.forEach(m => {
+    html += `<tr><td>${m.label}</td>`;
     checked.forEach(modelKey => {
-      const avg = getAvgUserRating(all[modelKey], rKey);
+      html += `<td>${m.get(all[modelKey])}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  // User rating rows (8 criteria)
+  html += '<tr class="bench-section-row"><td colspan="' + (checked.length + 1) + '">User Ratings</td></tr>';
+  BENCH_USER_CRITERIA.forEach(cat => {
+    html += `<tr><td>${cat.label}</td>`;
+    checked.forEach(modelKey => {
+      const avg = getAvgUserRating(all[modelKey], cat.key);
       html += `<td>${avg ? renderStarsHtml(avg) : '<span class="bench-no-rating">Not rated</span>'}</td>`;
     });
     html += '</tr>';
   });
   html += '<tr class="bench-rank-row"><td>Avg User Rating</td>';
   checked.forEach(modelKey => {
-    const r = rankings.find(x => x.key === modelKey);
-    if (r && r.hasUserRatings) {
-      html += `<td>${(r.userScore / 20).toFixed(1)}/5</td>`;
+    const allCriteriaAvgs = BENCH_USER_CRITERIA.map(c => getAvgUserRating(all[modelKey], c.key)).filter(v => v > 0);
+    if (allCriteriaAvgs.length > 0) {
+      const overall = (allCriteriaAvgs.reduce((s, v) => s + v, 0) / allCriteriaAvgs.length).toFixed(1);
+      html += `<td>${overall}/5</td>`;
     } else {
       html += '<td><span class="bench-no-rating">-</span></td>';
     }
   });
   html += '</tr>';
 
-  // Auto metrics
-  html += '<tr class="bench-section-row"><td colspan="' + (checked.length + 1) + '">Auto Metrics</td></tr>';
-  metrics.forEach(m => {
-    html += `<tr><td>${m.label}</td>`;
-    checked.forEach(modelKey => {
-      const val = getNestedVal(all[modelKey], m.key);
-      html += `<td>${m.fmt(val)}</td>`;
-    });
-    html += '</tr>';
-  });
-
   // Individual test scores
   html += '<tr class="bench-section-row"><td colspan="' + (checked.length + 1) + '">Individual Tests</td></tr>';
   const allTests = [...STORY_TESTS, ...CHAT_TESTS];
   allTests.forEach(test => {
     const cat = STORY_TESTS.includes(test) ? 'story' : 'chat';
-    html += `<tr class="bench-test-row"><td>${test.icon} ${test.name}</td>`;
+    html += `<tr class="bench-test-row"><td>${test.icon} ${test.name}${test.points ? ' <small>/' + test.points + '</small>' : ''}</td>`;
     checked.forEach(modelKey => {
       const catData = all[modelKey]?.[cat];
       const result = catData?.tests?.find(r => r.testId === test.id);
       if (result && !result.error) {
-        const sc = result.scores.overall;
-        html += `<td class="bench-score-cell ${scoreColorClass(sc)}">${sc}/100</td>`;
+        if (test.points) {
+          const userRatings = catData?.userRatings?.[test.id] || {};
+          const { earned } = computeTestScore(test, result.scores.autoTotal, userRatings);
+          html += `<td class="bench-score-cell ${scoreColorClass(earned, test.points)}">${earned.toFixed(1)}/${test.points}</td>`;
+        } else {
+          const sc = result.scores.overall;
+          html += `<td class="bench-score-cell ${scoreColorClass(sc, 100)}">${sc}/100</td>`;
+        }
       } else if (result?.error) {
         html += '<td class="bench-score-cell failed">Failed</td>';
       } else {
@@ -957,73 +1359,75 @@ function computeRankings(all, excludeKeys) {
   const keysToRank = excludeKeys ? Object.keys(all).filter(k => !excludeKeys.has(k)) : Object.keys(all);
   const models = keysToRank.map(key => {
     const d = all[key];
-    const storyTests = d.story?.tests?.filter(t => !t.error) || [];
-    const chatTests = d.chat?.tests?.filter(t => !t.error) || [];
 
-    const storyAvg = storyTests.length ? Math.round(storyTests.reduce((s, t) => s + (t.scores.overall || 0), 0) / storyTests.length) : 0;
-    const chatAvg = chatTests.length ? Math.round(chatTests.reduce((s, t) => s + (t.scores.overall || 0), 0) / chatTests.length) : 0;
+    // Compute story score (0-100 pts)
+    let storyScore = 0;
+    const storyResults = d.story?.tests?.filter(t => !t.error) || [];
+    const storyRatings = d.story?.userRatings || {};
+    STORY_TESTS.forEach(test => {
+      if (!test.points) return;
+      const result = storyResults.find(r => r.testId === test.id);
+      if (!result) return;
+      const { earned } = computeTestScore(test, result.scores.autoTotal, storyRatings[test.id] || {});
+      storyScore += earned;
+    });
 
-    const storyTPS = d.story?.autoScores?.avgTokensPerSec ? parseFloat(d.story.autoScores.avgTokensPerSec) : 0;
-    const chatTPS = d.chat?.autoScores?.avgTokensPerSec ? parseFloat(d.chat.autoScores.avgTokensPerSec) : 0;
+    // Compute chat score (0-100 pts)
+    let chatScore = 0;
+    const chatResults = d.chat?.tests?.filter(t => !t.error) || [];
+    const chatRatings = d.chat?.userRatings || {};
+    CHAT_TESTS.forEach(test => {
+      if (!test.points) return;
+      const result = chatResults.find(r => r.testId === test.id);
+      if (!result) return;
+      const { earned } = computeTestScore(test, result.scores.autoTotal, chatRatings[test.id] || {});
+      chatScore += earned;
+    });
+
+    // Speed info (display only, not scored)
+    const speedSrc = cat => d[cat]?.speedInfo?.avgTokensPerSec || d[cat]?.autoScores?.avgTokensPerSec;
+    const storyTPS = speedSrc('story') ? parseFloat(speedSrc('story')) : 0;
+    const chatTPS = speedSrc('chat') ? parseFloat(speedSrc('chat')) : 0;
     const avgSpeed = (storyTPS + chatTPS) / 2;
 
-    const tagComp = ((d.story?.autoScores?.avgTagCompliance || 0) + (d.chat?.autoScores?.avgTagCompliance || 0)) / 2;
-
-    // User ratings
-    const userVals = [];
+    // Has user ratings?
+    let hasUserRatings = false;
     ['story', 'chat'].forEach(cat => {
       const ratings = d[cat]?.userRatings || {};
       Object.values(ratings).forEach(r => {
-        if (r.voice) userVals.push(r.voice);
-        if (r.creativity) userVals.push(r.creativity);
-        if (r.coherence) userVals.push(r.coherence);
-        if (r.tone) userVals.push(r.tone);
+        if (Object.keys(r).length > 0) hasUserRatings = true;
       });
     });
-    const userScore = userVals.length ? (userVals.reduce((s, v) => s + v, 0) / userVals.length) * 20 : 0;
-    const hasUserRatings = userVals.length > 0;
 
-    return { key, storyAvg, chatAvg, avgSpeed, tagComp, userScore, hasUserRatings };
+    // Overall = average of story and chat
+    const overall = Math.round((storyScore + chatScore) / 2);
+
+    return { key, storyScore: Math.round(storyScore), chatScore: Math.round(chatScore), overall, avgSpeed, hasUserRatings };
   });
 
   // Sort for per-category rankings
-  const byStory = [...models].sort((a, b) => b.storyAvg - a.storyAvg);
-  const byChat = [...models].sort((a, b) => b.chatAvg - a.chatAvg);
+  const byStory = [...models].sort((a, b) => b.storyScore - a.storyScore);
+  const byChat = [...models].sort((a, b) => b.chatScore - a.chatScore);
   const bySpeed = [...models].sort((a, b) => b.avgSpeed - a.avgSpeed);
-
-  const maxSpeed = Math.max(...models.map(m => m.avgSpeed), 1);
 
   return models.map(m => {
     const storyRank = byStory.findIndex(x => x.key === m.key) + 1;
     const chatRank = byChat.findIndex(x => x.key === m.key) + 1;
     const speedRank = bySpeed.findIndex(x => x.key === m.key) + 1;
-    const speedNorm = Math.round((m.avgSpeed / maxSpeed) * 100);
-
-    const qualityScore = (m.storyAvg + m.chatAvg) / 2;
-    let overall;
-    if (m.hasUserRatings) {
-      // Quality 45% + Compliance 15% + Speed 15% + User 25%
-      overall = Math.round(qualityScore * 0.45 + m.tagComp * 0.15 + speedNorm * 0.15 + m.userScore * 0.25);
-    } else {
-      // Quality 55% + Compliance 20% + Speed 25%
-      overall = Math.round(qualityScore * 0.55 + m.tagComp * 0.2 + speedNorm * 0.25);
-    }
 
     // Strengths / weaknesses
     const strengths = [];
     const weaknesses = [];
     const total = models.length;
-    if (storyRank === 1 && m.storyAvg > 0) strengths.push('Best story mode');
-    if (chatRank === 1 && m.chatAvg > 0) strengths.push('Best chat mode');
+    if (storyRank === 1 && m.storyScore > 0) strengths.push('Best story mode');
+    if (chatRank === 1 && m.chatScore > 0) strengths.push('Best chat mode');
     if (speedRank === 1) strengths.push('Fastest');
-    if (m.tagComp >= 95) strengths.push('Excellent compliance');
-    if (m.hasUserRatings && m.userScore >= 80) strengths.push('Top rated');
-    if (storyRank === total && total > 1) weaknesses.push('Weakest story');
-    if (chatRank === total && total > 1) weaknesses.push('Weakest chat');
+    if (m.hasUserRatings && m.overall >= 70) strengths.push('Top rated');
+    if (storyRank === total && total > 1 && m.storyScore < 50) weaknesses.push('Weakest story');
+    if (chatRank === total && total > 1 && m.chatScore < 50) weaknesses.push('Weakest chat');
     if (speedRank === total && total > 1) weaknesses.push('Slowest');
-    if (m.tagComp < 80) weaknesses.push('Poor compliance');
 
-    return { key: m.key, storyRank, chatRank, speedRank, overall, strengths, weaknesses, storyAvg: m.storyAvg, chatAvg: m.chatAvg, avgSpeed: m.avgSpeed, userScore: m.userScore, hasUserRatings: m.hasUserRatings };
+    return { key: m.key, storyRank, chatRank, speedRank, overall: m.overall, strengths, weaknesses, storyScore: m.storyScore, chatScore: m.chatScore, avgSpeed: m.avgSpeed, hasUserRatings: m.hasUserRatings };
   }).sort((a, b) => b.overall - a.overall);
 }
 
@@ -1061,16 +1465,141 @@ async function renderSettingsBenchHint() {
   if (!me) { hint.innerHTML = ''; return; }
 
   const total = rankings.length;
-  const overallClass = me.overall >= 85 ? 'good' : me.overall >= 70 ? 'ok' : 'poor';
+  const overallClass = me.overall >= 70 ? 'good' : me.overall >= 45 ? 'ok' : 'poor';
 
   let html = `<div class="bench-hint-card">`;
   html += `<div class="bench-hint-score"><span class="bench-hint-badge ${overallClass}">${me.overall}/100</span> Overall</div>`;
-  html += `<div class="bench-hint-ranks">Story #${me.storyRank}/${total} | Chat #${me.chatRank}/${total} | Speed #${me.speedRank}/${total}</div>`;
-  if (me.hasUserRatings) {
-    html += `<div class="bench-hint-user">Your rating: ${(me.userScore / 20).toFixed(1)}/5</div>`;
-  }
+  html += `<div class="bench-hint-ranks">Story ${me.storyScore}/100 | Chat ${me.chatScore}/100 | Speed #${me.speedRank}/${total}</div>`;
   if (me.strengths.length) html += `<div class="bench-hint-good">${me.strengths.join(' \u00B7 ')}</div>`;
   if (me.weaknesses.length) html += `<div class="bench-hint-bad">${me.weaknesses.join(' \u00B7 ')}</div>`;
   html += '</div>';
   hint.innerHTML = html;
+}
+
+// --- V-Alpha Rankings (old scoring formula, preserved for comparison) ---
+function computeAlphaRankings(all) {
+  const models = Object.keys(all).map(key => {
+    const d = all[key];
+    const storyTests = d.story?.tests?.filter(t => !t.error) || [];
+    const chatTests = d.chat?.tests?.filter(t => !t.error) || [];
+    const storyScore = storyTests.length ? Math.round(storyTests.reduce((s, t) => s + (t.scores.overall || 0), 0) / storyTests.length) : 0;
+    const chatScore = chatTests.length ? Math.round(chatTests.reduce((s, t) => s + (t.scores.overall || 0), 0) / chatTests.length) : 0;
+
+    const storyTPS = d.story?.autoScores?.avgTokensPerSec ? parseFloat(d.story.autoScores.avgTokensPerSec) : 0;
+    const chatTPS = d.chat?.autoScores?.avgTokensPerSec ? parseFloat(d.chat.autoScores.avgTokensPerSec) : 0;
+    const avgSpeed = (storyTPS + chatTPS) / 2;
+    const tagComp = ((d.story?.autoScores?.avgTagCompliance || 0) + (d.chat?.autoScores?.avgTagCompliance || 0)) / 2;
+
+    const userVals = [];
+    ['story', 'chat'].forEach(cat => {
+      const ratings = d[cat]?.userRatings || {};
+      Object.values(ratings).forEach(r => {
+        ['voice', 'creativity', 'coherence', 'tone'].forEach(k => { if (r[k]) userVals.push(r[k]); });
+      });
+    });
+    const userScore = userVals.length ? (userVals.reduce((s, v) => s + v, 0) / userVals.length) * 20 : 0;
+    const hasUserRatings = userVals.length > 0;
+
+    return { key, storyScore, chatScore, avgSpeed, tagComp, userScore, hasUserRatings };
+  });
+
+  const maxSpeed = Math.max(...models.map(m => m.avgSpeed), 1);
+  const byStory = [...models].sort((a, b) => b.storyScore - a.storyScore);
+  const byChat = [...models].sort((a, b) => b.chatScore - a.chatScore);
+  const bySpeed = [...models].sort((a, b) => b.avgSpeed - a.avgSpeed);
+
+  return models.map(m => {
+    const storyRank = byStory.findIndex(x => x.key === m.key) + 1;
+    const chatRank = byChat.findIndex(x => x.key === m.key) + 1;
+    const speedRank = bySpeed.findIndex(x => x.key === m.key) + 1;
+    const speedNorm = Math.round((m.avgSpeed / maxSpeed) * 100);
+    const qualityScore = (m.storyScore + m.chatScore) / 2;
+    let overall;
+    if (m.hasUserRatings) {
+      overall = Math.round(qualityScore * 0.45 + m.tagComp * 0.15 + speedNorm * 0.15 + m.userScore * 0.25);
+    } else {
+      overall = Math.round(qualityScore * 0.55 + m.tagComp * 0.2 + speedNorm * 0.25);
+    }
+    return { key: m.key, storyRank, chatRank, speedRank, overall, storyScore: m.storyScore, chatScore: m.chatScore, avgSpeed: m.avgSpeed };
+  }).sort((a, b) => b.overall - a.overall);
+}
+
+// --- Compare Tab (V-Alpha vs V-Current) ---
+function renderBenchCompareTab() {
+  const container = $('benchCompareContent');
+  if (!container) return;
+
+  const alpha = loadAlphaResults();
+  const current = loadBenchResults();
+  const allKeys = new Set([...Object.keys(alpha), ...Object.keys(current)]);
+
+  if (allKeys.size === 0) {
+    container.innerHTML = '<div class="bench-empty">No benchmark results in either version. Run some tests first!</div>';
+    return;
+  }
+
+  const alphaRankings = Object.keys(alpha).length > 0 ? computeAlphaRankings(alpha) : [];
+  const currentRankings = Object.keys(current).length > 0 ? computeRankings(current) : [];
+  const aTotal = alphaRankings.length;
+  const cTotal = currentRankings.length;
+
+  let html = '<div class="bench-compare-note">V-Alpha used a combined formula (quality + compliance + speed). V-Current uses point-weighted scoring (auto + 8 user criteria). Scores reflect different methodologies.</div>';
+
+  allKeys.forEach(key => {
+    const label = key.split(':').slice(1).join(':') || key;
+    const ar = alphaRankings.find(r => r.key === key);
+    const cr = currentRankings.find(r => r.key === key);
+
+    html += '<div class="bench-compare-card">';
+    html += `<div class="bench-compare-model">${escapeHtml(label)}</div>`;
+    html += '<table class="bench-compare-table"><thead><tr><th>Metric</th><th>V-Alpha</th><th>V-Current</th><th></th></tr></thead><tbody>';
+
+    html += compareRow('Overall', ar?.overall, cr?.overall, '/100');
+    html += compareRow('Story', ar?.storyScore, cr?.storyScore, '/100');
+    html += compareRow('Chat', ar?.chatScore, cr?.chatScore, '/100');
+    html += compareRow('Speed', ar?.avgSpeed ? ar.avgSpeed.toFixed(1) : null, cr?.avgSpeed ? cr.avgSpeed.toFixed(1) : null, ' tok/s');
+
+    if (aTotal > 1 || cTotal > 1) {
+      html += `<tr class="bench-compare-rank"><td>Story Rank</td><td>${ar ? '#' + ar.storyRank + '/' + aTotal : '-'}</td><td>${cr ? '#' + cr.storyRank + '/' + cTotal : '-'}</td><td></td></tr>`;
+      html += `<tr class="bench-compare-rank"><td>Chat Rank</td><td>${ar ? '#' + ar.chatRank + '/' + aTotal : '-'}</td><td>${cr ? '#' + cr.chatRank + '/' + cTotal : '-'}</td><td></td></tr>`;
+      html += `<tr class="bench-compare-rank"><td>Speed Rank</td><td>${ar ? '#' + ar.speedRank + '/' + aTotal : '-'}</td><td>${cr ? '#' + cr.speedRank + '/' + cTotal : '-'}</td><td></td></tr>`;
+    }
+
+    // Per-test breakdown
+    const alphaCats = alpha[key] || {};
+    const currentCats = current[key] || {};
+    const alphaStory = alphaCats.story?.tests?.filter(t => !t.error) || [];
+    const alphaChat = alphaCats.chat?.tests?.filter(t => !t.error) || [];
+    const currentStory = currentCats.story?.tests?.filter(t => !t.error) || [];
+    const currentChat = currentCats.chat?.tests?.filter(t => !t.error) || [];
+    if (alphaStory.length || currentStory.length || alphaChat.length || currentChat.length) {
+      html += `<tr class="bench-compare-section"><td colspan="4">Tests Completed</td></tr>`;
+      html += `<tr><td>Story tests</td><td>${alphaStory.length || '-'}</td><td>${currentStory.length}/${STORY_TESTS.length}</td><td></td></tr>`;
+      html += `<tr><td>Chat tests</td><td>${alphaChat.length || '-'}</td><td>${currentChat.length}/${CHAT_TESTS.length}</td><td></td></tr>`;
+    }
+
+    html += '</tbody></table></div>';
+  });
+
+  container.innerHTML = html;
+}
+
+function compareRow(label, alphaVal, currentVal, suffix) {
+  const aStr = alphaVal != null ? alphaVal + suffix : '-';
+  const cStr = currentVal != null ? currentVal + suffix : '-';
+  let changeHtml = '';
+  if (alphaVal != null && currentVal != null) {
+    const a = parseFloat(alphaVal);
+    const c = parseFloat(currentVal);
+    const delta = c - a;
+    const dec = suffix.includes('tok') ? 1 : 0;
+    if (Math.abs(delta) < 0.5) {
+      changeHtml = '<span class="bench-delta bench-delta-neutral">=</span>';
+    } else if (delta > 0) {
+      changeHtml = `<span class="bench-delta bench-delta-up">\u25B2 ${Math.abs(delta).toFixed(dec)}</span>`;
+    } else {
+      changeHtml = `<span class="bench-delta bench-delta-down">\u25BC ${Math.abs(delta).toFixed(dec)}</span>`;
+    }
+  }
+  return `<tr><td>${label}</td><td>${aStr}</td><td>${cStr}</td><td>${changeHtml}</td></tr>`;
 }

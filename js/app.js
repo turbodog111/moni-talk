@@ -214,6 +214,7 @@ function init() {
   $('benchmarkModal').addEventListener('click', (e) => { if (e.target === $('benchmarkModal')) closeBenchmarkModal(); });
   $('benchTabRun').addEventListener('click', () => switchBenchTab('run'));
   $('benchTabResults').addEventListener('click', () => switchBenchTab('results'));
+  $('benchTabCompare').addEventListener('click', () => switchBenchTab('compare'));
   $('benchRunAllBtn').addEventListener('click', async () => {
     await runBenchmarkTests(STORY_TESTS, 'story');
     if (!benchCancelled) await runBenchmarkTests(CHAT_TESTS, 'chat');

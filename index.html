@@ -308,15 +308,30 @@
     <div class="bench-tabs">
       <button class="bench-tab active" id="benchTabRun">Run Tests</button>
       <button class="bench-tab" id="benchTabResults">Results</button>
+      <button class="bench-tab" id="benchTabCompare">Compare</button>
     </div>
     <div class="bench-body" id="benchRunContent">
       <div id="benchModelViewer"></div>
+      <details class="bench-criteria-info">
+        <summary>Grading Criteria Guide</summary>
+        <div class="bench-criteria-grid">
+          <div><strong>Character Voice</strong><br>Does this sound like the character? Mannerisms, speech patterns, personality.</div>
+          <div><strong>Writing Quality</strong><br>Prose quality, word choice, sentence variety. Vivid and varied vs flat and repetitive.</div>
+          <div><strong>Emotional Impact</strong><br>Did the scene make you feel something? Genuinely touching vs hollow.</div>
+          <div><strong>Immersion</strong><br>Can you visualize it? Rich setting details and atmosphere vs bare-bones description.</div>
+          <div><strong>Dialogue</strong><br>Do spoken lines feel natural and age-appropriate? Real high schoolers vs stiff robots.</div>
+          <div><strong>Pacing</strong><br>Well-paced? Natural beat progression vs info-dump, filler, or rushing.</div>
+          <div><strong>Creativity</strong><br>Fresh and surprising vs generic and predictable. Unexpected moments that feel earned.</div>
+          <div><strong>Faithfulness</strong><br>Does it feel like DDLC? Captures the VN's unique blend of cute, heartfelt, and unsettling.</div>
+        </div>
+      </details>
+      <div class="bench-version-label">V-Current</div>
       <div class="bench-section">
-        <h3>Story Mode</h3>
+        <h3>Story Mode <span class="bench-section-pts">/100</span></h3>
         <div id="benchStoryTests"></div>
       </div>
       <div class="bench-section">
-        <h3>Casual Chat</h3>
+        <h3>Casual Chat <span class="bench-section-pts">/100</span></h3>
         <div id="benchChatTests"></div>
       </div>
       <div class="bench-actions">
@@ -333,6 +348,7 @@
       </div>
     </div>
     <div class="bench-body" id="benchResultsContent" style="display:none;"></div>
+    <div class="bench-body" id="benchCompareContent" style="display:none;"></div>
   </div>
 </div>
 
