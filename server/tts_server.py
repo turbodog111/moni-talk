@@ -114,6 +114,7 @@ def load_model():
         voice_prompt = tts_model.create_voice_clone_prompt(
             ref_audio=str(ref_path),
             ref_text=REF_TEXT,
+            x_vector_only_mode=True,
         )
         logger.info("Voice clone prompt ready")
     else:
