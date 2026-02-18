@@ -63,6 +63,31 @@ let ttsPlaying = false;
 let ttsLoading = false;
 let ttsQueue = [];       // queued audio URLs to play next
 let ttsCancelled = false; // flag to abort sentence pipeline
+let ttsAudioUnlocked = false; // iOS audio context unlock state
+
+// iOS/Safari requires a user gesture to unlock audio playback.
+// We play a tiny silent buffer on the first tap to permanently unlock it.
+function unlockAudioContext() {
+  if (ttsAudioUnlocked) return;
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const buf = ctx.createBuffer(1, 1, 22050);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  src.start(0);
+  // Also unlock HTMLAudioElement
+  const silent = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+  silent.play().then(() => { silent.pause(); }).catch(() => {});
+  ttsAudioUnlocked = true;
+  ctx.close();
+  // Remove listeners once unlocked
+  document.removeEventListener('touchstart', unlockAudioContext, true);
+  document.removeEventListener('touchend', unlockAudioContext, true);
+  document.removeEventListener('click', unlockAudioContext, true);
+}
+document.addEventListener('touchstart', unlockAudioContext, true);
+document.addEventListener('touchend', unlockAudioContext, true);
+document.addEventListener('click', unlockAudioContext, true);
 
 // Audio cache — keyed by text, stores blob URLs for instant replay
 const ttsCache = new Map();
@@ -279,7 +304,14 @@ function playAudioUrl(url, skipRevoke) {
       ttsAudio = null;
       reject(e);
     });
-    ttsAudio.play().catch(reject);
+    ttsAudio.play().catch(err => {
+      // iOS may need the audio context unlocked — try once more
+      console.warn('[TTS] play() blocked, retrying after unlock:', err.message);
+      unlockAudioContext();
+      setTimeout(() => {
+        if (ttsAudio) ttsAudio.play().catch(reject);
+      }, 100);
+    });
   });
 }
 
