@@ -563,7 +563,7 @@ function prettifyFamily(raw) {
 }
 
 // ====== RAW AI CALL (for journals etc. — non-streaming) ======
-async function callAI(messages, maxTokens = 1000) {
+async function callAI(messages, maxTokens = 1000, options = {}) {
   let raw;
   if (provider === 'puter') {
     try {
@@ -594,6 +594,7 @@ async function callAI(messages, maxTokens = 1000) {
           messages,
           stream: false,
           keep_alive: 10,
+          ...(options.think === false ? { think: false } : {}),
           options: {
             num_predict: maxTokens,
             num_ctx: 16384,

@@ -452,9 +452,9 @@ Choices:`;
   try {
     const result = await callAI([
       { role: 'user', content: prompt }
-    ], 1200);
+    ], 400, { think: false });
     if (!result || !result.trim()) {
-      console.warn('[STORY] AI returned empty result (thinking model may have used all tokens on <think> block)');
+      console.warn('[STORY] AI returned empty result for choice generation');
       return null;
     }
     const lines = result.split('\n').map(l => l.trim()).filter(Boolean);
