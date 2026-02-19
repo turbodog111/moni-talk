@@ -85,6 +85,28 @@ function init() {
   $('profileBtn').addEventListener('click', () => { loadProfile(); showScreen('profile'); });
   $('profileBackBtn').addEventListener('click', () => showScreen('chatList'));
   $('saveProfileBtn').addEventListener('click', saveProfile);
+  $('addSpecialDateBtn').addEventListener('click', addSpecialDate);
+  // Special date delete delegation
+  $('specialDatesList').addEventListener('click', (e) => {
+    const delBtn = e.target.closest('.special-date-delete');
+    if (!delBtn) return;
+    const id = delBtn.dataset.id;
+    if (id) deleteSpecialDate(id);
+  });
+  // Profile memory delete delegation
+  $('profileMemoryList').addEventListener('click', (e) => {
+    const delBtn = e.target.closest('.memory-delete');
+    if (!delBtn) return;
+    const fact = delBtn.dataset.fact;
+    if (!fact) return;
+    const idx = memories.findIndex(m => m.fact === fact);
+    if (idx !== -1) {
+      memories.splice(idx, 1);
+      saveMemories(memories);
+      renderProfileMemories();
+      showToast('Memory forgotten.', 'success');
+    }
+  });
   $('chatBackBtn').addEventListener('click', () => { if (typeof stopTTS === 'function') stopTTS(); activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); screens.chat.classList.remove('adventure-mode'); teardownRoomMode(); closeVnPanel(); closeChatPanel(); closeAdventurePanel(); showScreen('chatList'); renderChatList(); });
   $('trimBtn').addEventListener('click', trimContext);
   $('regenBtn').addEventListener('click', regenerateLastResponse);

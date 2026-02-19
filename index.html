@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="css/chat.css">
 <link rel="stylesheet" href="css/vn.css">
 <link rel="stylesheet" href="css/room.css">
+<link rel="stylesheet" href="css/profile.css">
 </head>
 <body>
 
@@ -39,7 +40,7 @@
   <button class="fab" id="newChatFab" title="New Chat">+</button>
 </div>
 
-<!-- SCREEN: Profile Setup -->
+<!-- SCREEN: Profile Dashboard -->
 <div class="screen" id="screenProfile">
   <div class="header">
     <button class="icon-btn" id="profileBackBtn" aria-label="Back">&#8592;</button>
@@ -48,26 +49,67 @@
       <div class="header-sub">Help Monika get to know you</div>
     </div>
   </div>
-  <div class="form-body">
-    <img src="Monika PFP.png" alt="Monika">
-    <h2>About You</h2>
-    <div class="subtitle">Monika will remember these details across all chats.</div>
-    <div class="form-section">
-      <label for="profileName">Your Name</label>
-      <input type="text" id="profileName" placeholder="What should Monika call you?">
+  <div class="profile-body">
+
+    <!-- Hero -->
+    <div class="profile-hero">
+      <img src="Monika PFP.png" alt="Monika">
+      <div class="profile-hero-name" id="profileHeroName">Your Profile</div>
+      <div class="profile-hero-sub">Monika remembers everything here across all chats.</div>
     </div>
-    <div class="form-section">
-      <label for="profileAbout">About You</label>
-      <textarea id="profileAbout" rows="3" placeholder="Tell Monika a bit about yourself... age, what you do, personality, etc."></textarea>
+
+    <!-- About You Card -->
+    <div class="profile-card">
+      <div class="profile-card-header"><span class="profile-card-icon">&#128221;</span> About You</div>
+      <div class="profile-card-body">
+        <div class="form-section">
+          <label for="profileName">Your Name</label>
+          <input type="text" id="profileName" placeholder="What should Monika call you?">
+        </div>
+        <div class="form-section">
+          <label for="profileAbout">About You</label>
+          <textarea id="profileAbout" rows="3" placeholder="Tell Monika a bit about yourself... age, what you do, personality, etc."></textarea>
+        </div>
+        <div class="form-section">
+          <label for="profileInterests">Interests &amp; Hobbies</label>
+          <textarea id="profileInterests" rows="2" placeholder="Gaming, music, reading, cooking, coding..."></textarea>
+        </div>
+        <div class="form-section">
+          <label for="profileValues">What You Value</label>
+          <textarea id="profileValues" rows="2" placeholder="Honesty, humor, deep conversations, loyalty..."></textarea>
+        </div>
+      </div>
     </div>
-    <div class="form-section">
-      <label for="profileInterests">Interests & Hobbies</label>
-      <textarea id="profileInterests" rows="2" placeholder="Gaming, music, reading, cooking, coding..."></textarea>
+
+    <!-- Special Dates Card -->
+    <div class="profile-card">
+      <div class="profile-card-header"><span class="profile-card-icon">&#128197;</span> Special Dates</div>
+      <div class="profile-card-body">
+        <div id="specialDatesList"></div>
+        <div class="special-dates-add">
+          <input type="text" id="specialDateLabel" placeholder="e.g. My Birthday" maxlength="40">
+          <input type="date" id="specialDateValue">
+          <button class="special-dates-add-btn" id="addSpecialDateBtn">Add</button>
+        </div>
+      </div>
     </div>
-    <div class="form-section">
-      <label for="profileValues">What You Value</label>
-      <textarea id="profileValues" rows="2" placeholder="Honesty, humor, deep conversations, loyalty..."></textarea>
+
+    <!-- Memories Card -->
+    <div class="profile-card">
+      <div class="profile-card-header"><span class="profile-card-icon">&#129504;</span> Memories <span class="profile-card-badge" id="memoryCount">0</span></div>
+      <div class="profile-card-body">
+        <div class="profile-memory-list" id="profileMemoryList"></div>
+      </div>
     </div>
+
+    <!-- Stats Card -->
+    <div class="profile-card">
+      <div class="profile-card-header"><span class="profile-card-icon">&#128202;</span> Stats</div>
+      <div class="profile-card-body">
+        <div class="profile-stats-grid" id="profileStatsGrid"></div>
+      </div>
+    </div>
+
     <button class="primary-btn" id="saveProfileBtn">Save Profile</button>
   </div>
 </div>
