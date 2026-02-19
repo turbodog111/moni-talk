@@ -890,14 +890,22 @@ async function generateStoryBeat(chat) {
 
     // Affinity fallback — merge with existing, never lose values
     // Rule-based filter: only accept affinity changes for characters actually present in the scene
+    // Delta cap: max ±6 per beat (matches prompt instruction), prevents model from ignoring rules
+    const MAX_AFFINITY_DELTA = 6;
     const prev = { ...(chat.storyAffinity || { sayori: 15, natsuki: 1, yuri: 1, monika: 10 }) };
     if (affinity) {
       const sceneLower = narrative.toLowerCase();
+      const clampDelta = (name) => {
+        if (!sceneLower.includes(name) || affinity[name] == null) return prev[name];
+        const delta = affinity[name] - prev[name];
+        const clamped = Math.max(-MAX_AFFINITY_DELTA, Math.min(MAX_AFFINITY_DELTA, delta));
+        return Math.min(100, Math.max(0, prev[name] + clamped));
+      };
       chat.storyAffinity = {
-        sayori: (sceneLower.includes('sayori') && affinity.sayori != null) ? affinity.sayori : prev.sayori,
-        natsuki: (sceneLower.includes('natsuki') && affinity.natsuki != null) ? affinity.natsuki : prev.natsuki,
-        yuri: (sceneLower.includes('yuri') && affinity.yuri != null) ? affinity.yuri : prev.yuri,
-        monika: (sceneLower.includes('monika') && affinity.monika != null) ? affinity.monika : prev.monika
+        sayori: clampDelta('sayori'),
+        natsuki: clampDelta('natsuki'),
+        yuri: clampDelta('yuri'),
+        monika: clampDelta('monika')
       };
     } else {
       chat.storyAffinity = prev;
