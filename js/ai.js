@@ -372,7 +372,7 @@ async function callOllama(chat) {
         stream: false,
         keep_alive: 10,
         options: {
-          num_predict: isStory ? 1500 : 500,
+          num_predict: isStory ? 2048 : 1000,
           num_ctx: 16384,
           temperature: isStory ? 0.8 : 0.75,
           top_p: 0.92,
@@ -417,7 +417,7 @@ async function streamOllama(chat, onChunk, externalSignal) {
         stream: true,
         keep_alive: 10,
         options: {
-          num_predict: isStory ? 1500 : 500,
+          num_predict: isStory ? 2048 : 1000,
           num_ctx: 16384,
           temperature: isStory ? 0.8 : 0.75,
           top_p: 0.92,
@@ -563,7 +563,7 @@ function prettifyFamily(raw) {
 }
 
 // ====== RAW AI CALL (for journals etc. — non-streaming) ======
-async function callAI(messages, maxTokens = 600) {
+async function callAI(messages, maxTokens = 1000) {
   let raw;
   if (provider === 'puter') {
     try {
