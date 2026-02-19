@@ -395,9 +395,9 @@ function parseStoryResponse(text) {
 }
 
 // ====== AI CHOICE GENERATION ======
-async function generateStoryChoices(narrative, phase, chat) {
+async function generateStoryChoices(narrative, phase, chat, staticChoices) {
   // Use the full latest narrative — this is the scene the choices respond to
-  const excerpt = narrative.length > 1200 ? '...' + narrative.slice(-1200) : narrative;
+  const excerpt = narrative.length > 2000 ? '...' + narrative.slice(-2000) : narrative;
   const phaseLabel = phase ? phase.label : 'Scene';
   const name = chat.mcName || 'MC';
   const day = chat.storyDay || 1;
@@ -432,11 +432,15 @@ Choices should reflect these relationships. A girl ${name} is close to warrants 
 ${sceneHint ? `Upcoming scene context: ${sceneHint}\nChoices should naturally lead into this next scene when possible.` : ''}
 Rules:
 - Choices must be grounded in the scene above. If a character just said or did something, choices should react to THAT.
-- Each choice: one sentence, under 80 characters.
+- Reference specific character names, dialogue, or actions from the scene text.
+- Each choice: one sentence, under 80 characters. Each choice should hint at a consequence or emotional direction — use an em-dash with a brief flavor note.
 - Write in IMPERATIVE or SECOND PERSON ("Tell Sayori...", "Ask about...", "Compliment her..."). Do NOT use first person ("I").
 - ${name} IS the player character — NEVER refer to ${name} in third person. The player IS ${name}.
 - Vary the tone: mix bold, cautious, funny, and sincere options.
-- Format: numbered 1. 2. 3. 4. — output ONLY the 4 choices, nothing else.
+- Format: numbered list (1. 2. 3. 4.) — output ONLY the choices, no preamble or commentary.
+${staticChoices && staticChoices.length > 0 ? `
+Here are the default generic choices for this phase. You MUST write NEW choices that are MORE SPECIFIC to the actual scene content above. Do NOT repeat or rephrase these defaults:
+${staticChoices.join('\n')}` : ''}
 
 Scene (${phaseLabel}):
 """
@@ -448,22 +452,51 @@ Choices:`;
   try {
     const result = await callAI([
       { role: 'user', content: prompt }
-    ], 200);
+    ], 400);
     const lines = result.split('\n').map(l => l.trim()).filter(Boolean);
-    const choices = [];
-    for (const line of lines) {
-      const m = line.match(/^\d[.):\-]\s*(.+)/);
-      if (m && m[1].length > 5) choices.push(m[1].trim());
-    }
+
+    // Cascading parser — try numbered, then bullets, then bare lines
+    let choices = parseNumberedChoices(lines);
+    if (choices.length < 3) choices = parseBulletChoices(lines);
+    if (choices.length < 3) choices = parseBareLineChoices(lines);
+
     if (choices.length >= 3 && choices.length <= 5) return choices.slice(0, 4);
+    console.warn('[STORY] AI choices could not be parsed. Raw:', result);
   } catch (e) {
     // Silent fail — fall back to static choices
   }
   return null; // Signal to use fallback
 }
 
+function parseNumberedChoices(lines) {
+  const choices = [];
+  for (const line of lines) {
+    const m = line.match(/^\d[.):\-]\s*(.+)/);
+    if (m && m[1].trim().length >= 10) choices.push(m[1].trim().replace(/^["']|["']$/g, ''));
+  }
+  return choices;
+}
+
+function parseBulletChoices(lines) {
+  const choices = [];
+  for (const line of lines) {
+    const m = line.match(/^[-*•]\s+(.+)/);
+    if (m && m[1].trim().length >= 10) choices.push(m[1].trim().replace(/^["']|["']$/g, ''));
+  }
+  return choices;
+}
+
+function parseBareLineChoices(lines) {
+  // Only use if exactly 3-5 non-empty lines of reasonable length
+  const candidates = lines.filter(l => l.length >= 10 && l.length <= 120);
+  if (candidates.length >= 3 && candidates.length <= 5) {
+    return candidates.map(l => l.replace(/^["']|["']$/g, '').replace(/^\d+\.\s*/, ''));
+  }
+  return [];
+}
+
 // Try AI choice generation in the background; swap in if successful before user clicks
-function tryAIChoices(narrative, phase, chat) {
+function tryAIChoices(narrative, phase, chat, staticChoices) {
   // Show generating indicator on the choices
   const choicesEl = chatArea.querySelector('.story-choices-inline');
   if (choicesEl) {
@@ -474,13 +507,12 @@ function tryAIChoices(narrative, phase, chat) {
     choicesEl.prepend(ind);
   }
 
-  // 90 seconds — slow local models (3-6 tok/s) need 30-60s for 200 tokens
+  // 90 seconds — slow local models (3-6 tok/s) need 30-60s for 400 tokens
   const timeout = new Promise(resolve => setTimeout(() => resolve(null), 90000));
-  Promise.race([generateStoryChoices(narrative, phase, chat), timeout]).then(aiChoices => {
+  Promise.race([generateStoryChoices(narrative, phase, chat, staticChoices), timeout]).then(aiChoices => {
     const ind = $('choicesGeneratingIndicator');
-    if (ind) ind.remove();
-
     if (aiChoices && aiChoices.length >= 2) {
+      if (ind) ind.remove();
       // Only swap if the inline choices are still showing (user hasn't clicked yet)
       const existing = chatArea.querySelector('.story-choices-inline');
       if (existing && !isGenerating) {
@@ -488,10 +520,20 @@ function tryAIChoices(narrative, phase, chat) {
         saveChats();
         renderStoryChoices(aiChoices);
       }
+    } else {
+      // AI succeeded but parsing failed — show brief hint before removing indicator
+      if (ind) {
+        ind.textContent = 'Using default choices';
+        setTimeout(() => ind.remove(), 1500);
+      }
     }
-  }).catch(() => {
+  }).catch((err) => {
+    console.warn('[STORY] AI choice generation failed:', err?.message || err);
     const ind = $('choicesGeneratingIndicator');
-    if (ind) ind.remove();
+    if (ind) {
+      ind.textContent = 'Using default choices';
+      setTimeout(() => ind.remove(), 1500);
+    }
   });
 }
 
@@ -919,7 +961,7 @@ async function generateStoryBeat(chat) {
         chat.lastChoices = nextPhase.choices;
         saveChats();
         renderStoryChoices(nextPhase.choices);
-        tryAIChoices(narrative, nextPhase, chat);
+        tryAIChoices(narrative, nextPhase, chat, nextPhase.choices);
       } else {
         console.log('[STORY] → path 3b: maxBeats, advancing with Continue');
         chat.lastChoices = null;
@@ -949,7 +991,7 @@ async function generateStoryBeat(chat) {
     scrollToBottom();
     updatePhaseDisplay(chat);
     if (phase && !phase.noChoices) {
-      tryAIChoices(narrative, phase, chat);
+      tryAIChoices(narrative, phase, chat, staticChoices);
     }
 
   } catch (err) {

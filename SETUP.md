@@ -168,13 +168,83 @@ moni-talk/
 ## App Modes
 
 ### Chat Mode
-Free-form conversation with Monika. Adjustable relationship level (Stranger through In Love). Mood system tracks her emotional state across the conversation. Side panel shows mood ring, mood journal, memories, and stats.
+
+**Overview:** Free-form conversation with Monika as a texting companion.
+
+**Relationship system:** 6 levels (Stranger → Acquaintance → Friend → Close Friend → Romantic → In Love), each with strict behavioral rules governing tone, boundaries, pet names, vulnerability, and physical language.
+
+**Mood system:** 12 moods (cheerful, playful, thoughtful, melancholic, excited, tender, teasing, curious, nostalgic, flustered, calm, passionate) × 3 intensities (subtle, moderate, strong). Moods shift gradually with momentum rules. Drift categories (deep, lighthearted, personal, creative, casual) steer conversation direction.
+
+**Memory system:** Automatic extraction of user facts from conversation (identity, preferences, events, relationships, feelings). Max 50 memories. Relevance-scored injection into prompts. Cross-chat persistence.
+
+**Time awareness:** Holiday detection, gap-since-last-chat tracking, session length awareness, daily conversation counting.
+
+**Spontaneous poetry:** Monika may write short poems wrapped in `[POEM]...[/POEM]` tags when emotionally moved.
+
+**Side panel:** Mood ring visualization, mood history journal, memories list (with delete), conversation stats.
+
+**Image support:** Paste, drag-drop, or attach images (vision-capable providers only).
+
+**State tags:** Every response starts with `[MOOD:word:intensity] [DRIFT:category]` (parsed and hidden from display).
 
 ### Story Mode
-Interactive DDLC visual novel. Multi-day narrative with phase progression (morning, club meeting, free time, poem writing, walk home). Affinity tracking for all four girls. Branching choices. Checkpoint save/load system. Visual novel sprites and backgrounds.
+
+**Overview:** Interactive DDLC visual novel — multi-day narrative with branching choices.
+
+**Setting:** Alternate wholesome timeline — no horror, no meta-awareness, no file deletion. All four girls have genuine romance routes.
+
+**Phase system:** Each day progresses through a fixed sequence of phases:
+- Day 1: Before Club → Arriving → Introductions → Cupcakes → Settling In → Activity → Wrap Up
+- Poem days: Morning → Club Arrival → Poem Sharing → Poem Reactions → Free Time → Meeting End → Walk Home
+- Regular days: Morning → Club Arrival → Club Activity → Free Time → Meeting End → Walk Home
+
+**Beat system:** Each phase has `maxBeats` (1-3 AI responses) before automatically advancing. `noChoices` phases show only "Continue."
+
+**Choice system:**
+- Static defaults display immediately per phase
+- Background AI call generates context-aware replacements (`tryAIChoices`)
+- Dynamic companion choices for Free Time ("Spend time with X") and Walk Home ("Walk home with X") — sorted by affinity with tiered flavor text
+- Special choices: "Continue", "Retry", "End of day — read diaries", "Begin next day"
+
+**Affinity system:** Per-girl affinity tracking (Sayori, Natsuki, Yuri, Monika). Starting values: Sayori 15 (childhood friend), Monika 10 (classmate), others 1 (stranger). Tiers: stranger (<16), warming up (16-30), friends (31-50), romantic interest (51+). Milestone toasts at thresholds. Only girls present in a scene can gain affinity.
+
+**Rivalry system:** When two girls have affinity ≥25 with a gap ≤8, rivalry hints inject into phase instructions.
+
+**Poem writing:** Word picker mini-game during poem_sharing phases. Words influence which girl resonates with your poem.
+
+**Checkpoints:** Manual save (up to 5) + auto-save (up to 5) per chat. Stores full state: day, phase, beat, affinity, messages, milestones.
+
+**Journal/Diary:** End-of-day overlay showing each girl's diary entry reflecting the day's events. Built via AI call. Yesterday summary carries into next day.
+
+**Visual novel layer:** Character sprites (Monika, Sayori, Natsuki, Yuri PFPs), day/phase display bar, affinity panel, context bar showing message count.
+
+**Day continuity:** Yesterday summary injected into prompts — who MC spent free time with, who he walked home with. Characters naturally reference it.
+
+**Writing style:** Second person present tense, plain prose, natural teenage dialogue. Scene structure instructions keep pacing tight.
 
 ### Adventure Mode
-Text-based RPG called "The Poem Labyrinth." Monika acts as Game Master in a fantasy world built from the club members' poems and personalities. Four domains to explore (Sayori's Meadow, Natsuki's Bakehouse, Yuri's Library, Monika's Void). HP system, inventory, collectible Heart Fragments. Side panel shows game state.
+
+**Overview:** Text-based RPG called "The Poem Labyrinth" — Monika acts as Game Master.
+
+**Setting:** Fantasy realm woven from the Literature Club members' poems and personalities. Exists in the space between realities.
+
+**Hub:** The Clubroom — four shimmering portals lead to four domains. Monika sits on her desk as guide.
+
+**Four domains:**
+- **Sayori's Sunlit Meadow** — joy masking sorrow, emotional puzzles, Memory Wisps and Thornvine Tanglers
+- **Natsuki's Bakehouse Fortress** — cute exterior, brutal interior, combat challenges, Candy Golems and Sugar Knights
+- **Yuri's Library of Shadows** — infinite gothic library, knowledge/mystery theme, Ink Wraiths and riddles
+- **Monika's Void** — unlocked after collecting all 3 fragments, digital space, final conversation challenge
+
+**Game mechanics:** HP system (100 max), inventory, 3 collectible Heart Fragments (one per domain). Death = respawn at hub with full HP but lose some items.
+
+**State tags:** `[SCENE:location] [HP:number] [ITEM:name] [REMOVE:name]` — parsed and stripped from display.
+
+**Status bar:** Location, HP bar (color-coded), item count, fragment progress (X/3).
+
+**Side panel:** Full inventory list, fragment checklist by domain, detailed stats.
+
+**DM style:** Mix of narration and Monika's meta-commentary ("Oh, you actually went left? Bold choice~"). 2-4 paragraphs per response.
 
 ---
 
