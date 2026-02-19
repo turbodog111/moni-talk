@@ -46,6 +46,7 @@ function getChatTitle(chat) {
   if (chat.title) return chat.title;
   if (chat.mode === 'story') return 'Story Mode';
   if (chat.mode === 'room') return 'Room Mode';
+  if (chat.mode === 'adventure') return 'Adventure Mode';
   // Creative default based on time of day created
   const hour = new Date(chat.created).getHours();
   if (hour >= 5 && hour < 12) return 'Morning Chat';
@@ -64,6 +65,9 @@ function getChatSubtitle(chat) {
   } else if (chat.mode === 'room') {
     const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
     parts.push(rel.label);
+  } else if (chat.mode === 'adventure') {
+    const advState = chat.advState;
+    if (advState) { parts.push(advState.location); parts.push(`${advState.fragments.length}/3 Fragments`); }
   } else {
     const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
     parts.push(rel.label);
@@ -107,6 +111,8 @@ function renderChatList() {
     } else if (chat.mode === 'room') {
       const raw = lastMsg.role === 'assistant' ? stripRoomTags(lastMsg.content) : lastMsg.content;
       preview = (lastMsg.role === 'user' ? 'You: ' : 'Monika: ') + raw.slice(0, 60);
+    } else if (chat.mode === 'adventure') {
+      preview = (lastMsg.role === 'user' ? 'You: ' : '') + lastMsg.content.slice(0, 60);
     } else { preview = (lastMsg.role === 'user' ? 'You: ' : 'Monika: ') + lastMsg.content.slice(0, 60); }
     const msgCount = chat.messages.length;
 
@@ -172,6 +178,18 @@ function createChat() {
     const roomSlider = $('roomRelSlider');
     chat.relationship = roomSlider ? parseInt(roomSlider.value) : parseInt(relSlider.value);
     chat.lastExpression = 'happy';
+  } else if (newChatMode === 'adventure') {
+    chat.mode = 'adventure';
+    chat.relationship = 3; // Close Friend — DM relationship
+    chat.advState = {
+      location: 'The Clubroom',
+      hp: 100,
+      maxHp: 100,
+      inventory: [],
+      fragments: [],
+      turns: 0,
+      flags: {}
+    };
   }
   chats.push(chat); saveChats(); openChat(chat.id);
 }
@@ -203,6 +221,7 @@ function openChat(id) {
 
   const isStory = chat.mode === 'story';
   const isRoom = chat.mode === 'room';
+  const isAdventure = chat.mode === 'adventure';
 
   // Migration for legacy story chats without phase fields
   if (isStory && !chat.storyPhase) {
@@ -241,12 +260,17 @@ function openChat(id) {
 
   screens.chat.classList.toggle('vn-mode', isStory);
   screens.chat.classList.toggle('room-mode', isRoom);
+  screens.chat.classList.toggle('adventure-mode', isAdventure);
   $('vnPanelBtn').style.display = isStory ? '' : 'none';
-  $('chatPanelBtn').style.display = (!isStory) ? '' : 'none';
+  $('chatPanelBtn').style.display = (!isStory && !isAdventure) ? '' : 'none';
+  $('advPanelBtn').style.display = isAdventure ? '' : 'none';
   showScreen('chat');
 
   // Teardown room mode if switching away
   if (!isRoom) teardownRoomMode();
+  // Hide adventure status bar if not adventure
+  if (!isAdventure) { const bar = $('adventureStatusBar'); if (bar) bar.style.display = 'none'; }
+  if (!isAdventure) closeAdventurePanel();
 
   $('inputArea').style.display = isStory ? 'none' : '';
   $('storyRetryBtn').style.display = isStory ? '' : 'none';
@@ -266,6 +290,7 @@ function openChat(id) {
   hideAffinityPanel();
 
   if (isRoom) initRoomMode(chat);
+  if (isAdventure) initAdventureMode(chat);
   renderMessages();
   updateContextBar();
   // Show/hide TTS toggle (only for chat/room modes)
@@ -323,10 +348,12 @@ async function generateGreeting(chat) {
 
     typingIndicator.classList.remove('visible');
     const rawReply = fullText.trim();
-    const { mood, moodIntensity, drift, text: reply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
+    const { mood, moodIntensity, drift, text: parsedReply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
     chat.mood = mood; chat.moodIntensity = moodIntensity; chat.drift = drift;
     pushMoodHistory(chat, mood, moodIntensity, drift);
     chat.lastActiveTime = Date.now();
+    // Adventure mode: parse game state tags from greeting
+    const reply = chat.mode === 'adventure' ? processAdventureResponse(chat, parsedReply) : parsedReply;
     chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
@@ -373,6 +400,16 @@ function updateChatHeader(chat) {
     const phase = STORY_PHASES[chat.storyPhase];
     const phaseLabel = phase ? ` \u2014 ${phase.label}` : '';
     chatHeaderSub.textContent = `Day ${chat.storyDay || 1}${phaseLabel}`;
+    return;
+  }
+  if (chat.mode === 'adventure') {
+    $('chatHeaderName').textContent = chat.title || 'The Poem Labyrinth';
+    const s = chat.advState;
+    if (s) {
+      chatHeaderSub.innerHTML = `${escapeHtml(s.location)} <span class="chat-header-mood">\u2764\uFE0F ${s.hp}/${s.maxHp} HP</span> <span class="chat-header-drift">\u{1F48E} ${s.fragments.length}/3</span>`;
+    } else {
+      chatHeaderSub.textContent = 'Adventure Mode';
+    }
     return;
   }
   if (chat.mode === 'room') {
@@ -499,10 +536,12 @@ async function regenerateLastResponse() {
 
     typingIndicator.classList.remove('visible');
     const rawReply = fullText.trim();
-    const { mood, moodIntensity, drift, text: reply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
+    const { mood, moodIntensity, drift, text: parsedReply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
     chat.mood = mood; chat.moodIntensity = moodIntensity; chat.drift = drift;
     pushMoodHistory(chat, mood, moodIntensity, drift);
     chat.lastActiveTime = Date.now();
+    // Adventure mode: parse game state tags
+    const reply = chat.mode === 'adventure' ? processAdventureResponse(chat, parsedReply) : parsedReply;
     chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
@@ -660,9 +699,10 @@ function insertMessageEl(role, content, animate = true, imageUrl = null, model =
   const imgHtml = imageUrl ? `<img class="msg-image" src="${imageUrl}" alt="Shared image">` : '';
   const modelTag = isM && model ? `<div class="msg-model">${escapeHtml(formatModelLabel(model))}</div>` : '';
   const timeHtml = timestamp ? `<span class="msg-time">${new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>` : '';
-  const copyBtn = `<button class="msg-copy-btn" title="Copy text">&#128203;</button>`;
-  const editBtn = !isM ? `<button class="msg-edit-btn" title="Edit message">&#9998;</button>` : '';
-  div.innerHTML = `${av}<div class="msg-content"><div class="msg-name">${isM ? 'Monika' : 'You'}${timeHtml}</div>${imgHtml}<div class="msg-bubble">${isM ? renderMarkdown(content) : escapeHtml(content)}</div>${copyBtn}${editBtn}${modelTag}</div>`;
+  const copyBtn = `<button class="msg-copy-btn" title="Copy text">Copy</button>`;
+  const editBtn = !isM ? `<button class="msg-edit-btn" title="Edit message">Edit</button>` : '';
+  const actionsHtml = `<div class="msg-actions">${copyBtn}${editBtn}</div>`;
+  div.innerHTML = `${av}<div class="msg-content"><div class="msg-name">${isM ? 'Monika' : 'You'}${timeHtml}</div>${imgHtml}<div class="msg-bubble">${isM ? renderMarkdown(content) : escapeHtml(content)}</div>${actionsHtml}${modelTag}</div>`;
   div.dataset.text = content;
   chatArea.insertBefore(div, typingIndicator);
 }
@@ -771,12 +811,14 @@ async function sendMessage() {
 
     typingIndicator.classList.remove('visible');
     const rawReply = fullText.trim();
-    const { mood, moodIntensity, drift, text: reply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
+    const { mood, moodIntensity, drift, text: parsedReply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
     chat.mood = mood;
     chat.moodIntensity = moodIntensity;
     chat.drift = drift;
     pushMoodHistory(chat, mood, moodIntensity, drift);
     chat.lastActiveTime = Date.now();
+    // Adventure mode: parse game state tags
+    const reply = chat.mode === 'adventure' ? processAdventureResponse(chat, parsedReply) : parsedReply;
     chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);

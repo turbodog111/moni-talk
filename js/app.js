@@ -47,9 +47,7 @@ function init() {
   $('startChatBtn').addEventListener('click', createChat);
   $('modeChatBtn').addEventListener('click', () => setNewChatMode('chat'));
   $('modeStoryBtn').addEventListener('click', () => setNewChatMode('story'));
-  $('modeRoomBtn').addEventListener('click', () => setNewChatMode('room'));
-  const roomSlider = $('roomRelSlider');
-  if (roomSlider) roomSlider.addEventListener('input', updateRoomRelDisplay);
+  $('modeAdventureBtn').addEventListener('click', () => setNewChatMode('adventure'));
   $('wordSubmitBtn').addEventListener('click', submitPoem);
   $('vnPanelBtn').addEventListener('click', toggleVnPanel);
   $('vnPanelClose').addEventListener('click', closeVnPanel);
@@ -57,6 +55,9 @@ function init() {
   $('chatPanelBtn').addEventListener('click', toggleChatPanel);
   $('chatPanelClose').addEventListener('click', closeChatPanel);
   $('chatPanelBackdrop').addEventListener('click', closeChatPanel);
+  $('advPanelBtn').addEventListener('click', toggleAdventurePanel);
+  $('advPanelClose').addEventListener('click', closeAdventurePanel);
+  $('adventurePanelBackdrop').addEventListener('click', closeAdventurePanel);
   // Memory delete delegation
   $('memoryList').addEventListener('click', (e) => {
     const delBtn = e.target.closest('.memory-delete');
@@ -84,7 +85,7 @@ function init() {
   $('profileBtn').addEventListener('click', () => { loadProfile(); showScreen('profile'); });
   $('profileBackBtn').addEventListener('click', () => showScreen('chatList'));
   $('saveProfileBtn').addEventListener('click', saveProfile);
-  $('chatBackBtn').addEventListener('click', () => { if (typeof stopTTS === 'function') stopTTS(); activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); teardownRoomMode(); closeVnPanel(); closeChatPanel(); showScreen('chatList'); renderChatList(); });
+  $('chatBackBtn').addEventListener('click', () => { if (typeof stopTTS === 'function') stopTTS(); activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); screens.chat.classList.remove('adventure-mode'); teardownRoomMode(); closeVnPanel(); closeChatPanel(); closeAdventurePanel(); showScreen('chatList'); renderChatList(); });
   $('trimBtn').addEventListener('click', trimContext);
   $('regenBtn').addEventListener('click', regenerateLastResponse);
   $('cancelBtn').addEventListener('click', () => { if (activeAbortController) activeAbortController.abort(); });

@@ -3,25 +3,19 @@ function setNewChatMode(mode) {
   newChatMode = mode;
   $('modeChatBtn').classList.toggle('active', mode === 'chat');
   $('modeStoryBtn').classList.toggle('active', mode === 'story');
-  $('modeRoomBtn').classList.toggle('active', mode === 'room');
+  $('modeAdventureBtn').classList.toggle('active', mode === 'adventure');
   $('chatModeOptions').style.display = mode === 'chat' ? '' : 'none';
   $('storyModeOptions').style.display = mode === 'story' ? '' : 'none';
-  $('roomModeOptions').style.display = mode === 'room' ? '' : 'none';
+  $('adventureModeOptions').style.display = mode === 'adventure' ? '' : 'none';
 
   if (mode === 'story') {
     $('newChatTitle').textContent = 'Doki Doki Literature Club';
     $('newChatSubtitle').textContent = 'Your story begins now.';
     $('startChatBtn').textContent = 'Begin Story';
-  } else if (mode === 'room') {
-    $('newChatTitle').textContent = "Monika's Room";
-    $('newChatSubtitle').textContent = 'Just the two of you.';
-    $('startChatBtn').textContent = 'Enter Room';
-    // Sync room relationship slider
-    const roomSlider = $('roomRelSlider');
-    if (roomSlider) {
-      roomSlider.value = relSlider.value;
-      updateRoomRelDisplay();
-    }
+  } else if (mode === 'adventure') {
+    $('newChatTitle').textContent = 'The Poem Labyrinth';
+    $('newChatSubtitle').textContent = 'A world woven from poems and dreams.';
+    $('startChatBtn').textContent = 'Start Adventure';
   } else {
     $('newChatTitle').textContent = 'Talk to Monika';
     $('newChatSubtitle').textContent = 'How well do you two know each other?';
@@ -44,8 +38,6 @@ function resetNewChatScreen() {
   relSlider.value = 2;
   updateRelDisplay();
   $('mcNameInput').value = profile.name || '';
-  const roomSlider = $('roomRelSlider');
-  if (roomSlider) { roomSlider.value = 2; updateRoomRelDisplay(); }
 }
 
 // ====== PHASE HELPERS ======

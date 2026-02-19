@@ -194,6 +194,25 @@ function buildMessages(chat) {
 
     return msgs;
   }
+  // Adventure mode: use ADVENTURE_PROMPT with game state
+  if (chat.mode === 'adventure') {
+    const s = chat.advState || { location: 'The Clubroom', hp: 100, maxHp: 100, inventory: [], fragments: [], turns: 0 };
+    let sys = ADVENTURE_PROMPT;
+    sys += `\n\n=== CURRENT GAME STATE ===`;
+    sys += `\nLocation: ${s.location}`;
+    sys += `\nHP: ${s.hp}/${s.maxHp}`;
+    sys += `\nInventory: ${s.inventory.length > 0 ? s.inventory.join(', ') : 'Empty'}`;
+    sys += `\nFragments collected: ${s.fragments.length}/3${s.fragments.length > 0 ? ' (' + s.fragments.join(', ') + ')' : ''}`;
+    sys += `\nTurns played: ${s.turns}`;
+
+    let recentMessages = chat.messages;
+    if (recentMessages.length > CHAT_MSG_LIMIT) {
+      recentMessages = recentMessages.slice(-CHAT_MSG_LIMIT);
+    }
+    const msgs = recentMessages.map(m => ({ role: m.role, content: m.content }));
+    return [{ role: 'system', content: sys }, ...msgs];
+  }
+
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
   let sys = BASE_PROMPT + '\n\n' + rel.prompt + buildProfilePrompt() + buildMemoryPrompt(chat);
 

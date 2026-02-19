@@ -88,7 +88,7 @@
     <div class="mode-toggle">
       <button id="modeChatBtn" class="active">Chat</button>
       <button id="modeStoryBtn">Story</button>
-      <button id="modeRoomBtn">Room</button>
+      <button id="modeAdventureBtn">Adventure</button>
     </div>
     <div id="chatModeOptions" class="form-section">
       <div class="rel-display">
@@ -109,18 +109,10 @@
         <div class="form-hint">This name will be used throughout the story.</div>
       </div>
     </div>
-    <div id="roomModeOptions" class="form-section" style="display:none;">
+    <div id="adventureModeOptions" class="form-section" style="display:none;">
       <div class="rel-display">
-        <div class="rel-label">Monika's Room</div>
-        <div class="rel-desc">Sit across from Monika in the space classroom &mdash; just the two of you. Chat freely while she reacts with full MAS-style expressions.</div>
-      </div>
-      <div class="form-section" style="margin-top:16px;">
-        <div class="rel-display">
-          <div class="rel-label" id="roomRelLabel"></div>
-          <div class="rel-desc" id="roomRelDesc"></div>
-        </div>
-        <input type="range" id="roomRelSlider" min="0" max="5" value="2" step="1">
-        <div class="slider-labels"><span>Stranger</span><span>In Love</span></div>
+        <div class="rel-label">Adventure Mode</div>
+        <div class="rel-desc">Monika has crafted a fantasy world from the Literature Club's poems and personalities. Explore four unique domains, solve puzzles, battle enemies, and collect Heart Fragments &mdash; all with Monika as your Game Master.</div>
       </div>
     </div>
     <button class="primary-btn" id="startChatBtn">Start Chatting</button>
@@ -138,6 +130,7 @@
     </div>
     <div class="header-actions">
       <button class="icon-btn tts-toggle" id="ttsToggleBtn" title="Toggle Voice" style="display:none;">&#128264;</button>
+      <button class="icon-btn" id="advPanelBtn" title="Inventory" style="display:none;">&#127890;</button>
       <button class="icon-btn" id="chatPanelBtn" title="Chat Panel" style="display:none;">&#9776;</button>
       <button class="icon-btn" id="vnPanelBtn" title="Status Panel" style="display:none;">&#9776;</button>
       <button class="icon-btn" id="chatSettingsBtn" title="Settings">&#9881;</button>
@@ -161,6 +154,7 @@
   <div class="room-scene" id="roomScene" style="display:none;">
     <canvas id="masCanvas" width="1280" height="850"></canvas>
   </div>
+  <div class="adventure-status" id="adventureStatusBar" style="display:none;"></div>
   <div class="chat-area" id="chatArea">
     <div class="typing-indicator" id="typingIndicator">
       <img class="msg-avatar" src="Monika PFP.png" alt="M">
@@ -464,6 +458,37 @@
   </div>
 </div>
 
+<!-- Adventure Side Panel -->
+<div class="adv-panel-backdrop" id="adventurePanelBackdrop"></div>
+<div class="adv-side-panel" id="adventurePanel">
+  <div class="adv-panel-header">
+    <h3>Adventure</h3>
+    <button class="adv-panel-close" id="advPanelClose">&times;</button>
+  </div>
+  <div class="adv-panel-body">
+    <div class="adv-panel-section">
+      <h4>Heart Fragments</h4>
+      <div id="advFragmentList"></div>
+    </div>
+    <div class="adv-panel-section">
+      <h4>Inventory</h4>
+      <div id="advInventoryList"><div class="adv-inv-empty">Your bag is empty</div></div>
+    </div>
+    <div class="adv-panel-section">
+      <h4>Stats</h4>
+      <div id="advStatsList"></div>
+    </div>
+    <div class="adv-panel-section">
+      <h4>Guide</h4>
+      <div class="adv-guide">
+        <strong>Objective:</strong> Collect 3 Heart Fragments from the domains to unlock the Void.<br>
+        <strong>Tip:</strong> Return to the Clubroom to rest and fully heal.<br>
+        <strong>Tip:</strong> Type anything &mdash; creative solutions are rewarded!
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Journal Overlay -->
 <div class="journal-overlay" id="journalOverlay">
   <div class="journal-container">
@@ -488,6 +513,7 @@
 <script src="js/memory.js"></script>
 <script src="js/benchmark.js"></script>
 <script src="js/tts.js"></script>
+<script src="js/adventure.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/story.js"></script>
 <script src="js/vn.js"></script>
