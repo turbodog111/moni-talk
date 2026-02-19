@@ -452,7 +452,11 @@ Choices:`;
   try {
     const result = await callAI([
       { role: 'user', content: prompt }
-    ], 400);
+    ], 1200);
+    if (!result || !result.trim()) {
+      console.warn('[STORY] AI returned empty result (thinking model may have used all tokens on <think> block)');
+      return null;
+    }
     const lines = result.split('\n').map(l => l.trim()).filter(Boolean);
 
     // Cascading parser — try numbered, then bullets, then bare lines
