@@ -87,77 +87,153 @@ function getChatTimeline(chat) {
   return created;
 }
 
+function getDateGroup(ts) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  if (ts >= today) return 'Today';
+  if (ts >= today - 86400000) return 'Yesterday';
+  if (ts >= today - 7 * 86400000) return 'This Week';
+  return 'Older';
+}
+
+function getChatModeKey(chat) {
+  return chat.mode === 'story' ? 'story' : chat.mode === 'adventure' ? 'adventure' : 'chat';
+}
+
 function renderChatList() {
   chatListBody.innerHTML = '';
   if (chats.length === 0) {
     chatListBody.innerHTML = `<div class="chat-list-empty"><img src="Monika PFP.png" alt="Monika"><h3>No conversations yet</h3><p>Tap + to start talking to Monika.</p></div>`;
     return;
   }
-  [...chats].sort((a, b) => {
-    const aStarred = a.starred ? 1 : 0;
-    const bStarred = b.starred ? 1 : 0;
-    if (bStarred !== aStarred) return bStarred - aStarred;
-    return (b.lastModified || b.created) - (a.lastModified || a.created);
-  }).forEach(chat => {
-    const displayTitle = getChatTitle(chat);
-    const subtitle = getChatSubtitle(chat);
-    const timeline = getChatTimeline(chat);
-    const lastMsg = chat.messages[chat.messages.length - 1];
-    let preview;
-    if (!lastMsg) { preview = 'No messages yet'; }
-    else if (chat.mode === 'story') {
-      const raw = lastMsg.role === 'assistant' ? parseStoryResponse(lastMsg.content).narrative : lastMsg.content;
-      preview = raw.slice(0, 60);
-    } else if (chat.mode === 'room') {
-      const raw = lastMsg.role === 'assistant' ? stripRoomTags(lastMsg.content) : lastMsg.content;
-      preview = (lastMsg.role === 'user' ? 'You: ' : 'Monika: ') + raw.slice(0, 60);
-    } else if (chat.mode === 'adventure') {
-      preview = (lastMsg.role === 'user' ? 'You: ' : '') + lastMsg.content.slice(0, 60);
-    } else { preview = (lastMsg.role === 'user' ? 'You: ' : 'Monika: ') + lastMsg.content.slice(0, 60); }
-    const msgCount = chat.messages.length;
 
-    const item = document.createElement('div');
-    item.className = 'chat-item';
-    const starIcon = chat.starred ? '\u2605' : '\u2606';
-    item.innerHTML = `
-      <img class="chat-item-avatar" src="Monika PFP.png" alt="Monika">
-      <div class="chat-item-info">
-        <div class="chat-item-top">
-          <span class="chat-item-title">${escapeHtml(displayTitle)}</span>
-          <span class="chat-item-time">${timeline}</span>
+  const MODE_GROUPS = [
+    { key: 'chat', label: 'Chats', icon: '\uD83D\uDCAC' },
+    { key: 'story', label: 'Stories', icon: '\uD83D\uDCD6' },
+    { key: 'adventure', label: 'Adventures', icon: '\uD83D\uDDFA\uFE0F' }
+  ];
+
+  const sorted = [...chats].sort((a, b) => {
+    const aS = a.starred ? 1 : 0, bS = b.starred ? 1 : 0;
+    if (bS !== aS) return bS - aS;
+    return (b.lastModified || b.created) - (a.lastModified || a.created);
+  });
+
+  const collapseState = JSON.parse(localStorage.getItem('moni_talk_section_collapse') || '{}');
+  let globalIndex = 0;
+
+  MODE_GROUPS.forEach(group => {
+    const items = sorted.filter(c => getChatModeKey(c) === group.key);
+    if (items.length === 0) return;
+
+    const section = document.createElement('div');
+    section.className = 'chat-section';
+
+    const header = document.createElement('div');
+    header.className = 'chat-section-header';
+    const collapsed = !!collapseState[group.key];
+    header.innerHTML = `<span class="chat-section-icon">${group.icon}</span><span class="chat-section-label">${group.label}</span><span class="chat-section-count">${items.length}</span><span class="chat-section-line"></span><span class="chat-section-chevron ${collapsed ? 'collapsed' : ''}">\u25BE</span>`;
+    header.addEventListener('click', () => {
+      const body = section.querySelector('.chat-section-body');
+      const chev = header.querySelector('.chat-section-chevron');
+      const nowCollapsed = body.style.display !== 'none';
+      body.style.display = nowCollapsed ? 'none' : '';
+      chev.classList.toggle('collapsed', nowCollapsed);
+      const st = JSON.parse(localStorage.getItem('moni_talk_section_collapse') || '{}');
+      st[group.key] = nowCollapsed;
+      localStorage.setItem('moni_talk_section_collapse', JSON.stringify(st));
+    });
+    section.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'chat-section-body';
+    if (collapsed) body.style.display = 'none';
+
+    let lastDateGroup = null;
+    items.forEach(chat => {
+      // Date sub-divider
+      const ts = chat.lastModified || chat.created;
+      const dateGroup = getDateGroup(ts);
+      if (dateGroup !== lastDateGroup) {
+        lastDateGroup = dateGroup;
+        const divider = document.createElement('div');
+        divider.className = 'chat-date-divider';
+        divider.textContent = dateGroup;
+        body.appendChild(divider);
+      }
+
+      const modeKey = group.key;
+      const displayTitle = getChatTitle(chat);
+      const subtitle = getChatSubtitle(chat);
+      const timeline = getChatTimeline(chat);
+      const lastMsg = chat.messages[chat.messages.length - 1];
+      let preview;
+      if (!lastMsg) { preview = 'No messages yet'; }
+      else if (chat.mode === 'story') {
+        const raw = lastMsg.role === 'assistant' ? parseStoryResponse(lastMsg.content).narrative : lastMsg.content;
+        preview = raw.slice(0, 60);
+      } else if (chat.mode === 'room') {
+        const raw = lastMsg.role === 'assistant' ? stripRoomTags(lastMsg.content) : lastMsg.content;
+        preview = (lastMsg.role === 'user' ? 'You: ' : 'Monika: ') + raw.slice(0, 60);
+      } else if (chat.mode === 'adventure') {
+        preview = (lastMsg.role === 'user' ? 'You: ' : '') + lastMsg.content.slice(0, 60);
+      } else {
+        preview = (lastMsg.role === 'user' ? 'You: ' : 'Monika: ') + lastMsg.content.slice(0, 60);
+      }
+
+      const item = document.createElement('div');
+      item.className = `chat-item mode-${modeKey}${chat.starred ? ' starred-item' : ''}`;
+      item.style.setProperty('--item-index', globalIndex++);
+
+      const starIcon = chat.starred ? '\u2605' : '\u2606';
+      const badgeLabel = modeKey === 'chat' ? '\uD83D\uDCAC Chat' : modeKey === 'story' ? '\uD83D\uDCD6 Story' : '\uD83D\uDDFA\uFE0F Adventure';
+
+      item.innerHTML = `
+        <div class="chat-item-avatar-wrap">
+          <img class="chat-item-avatar" src="Monika PFP.png" alt="Monika">
+          <span class="chat-item-avatar-badge mode-${modeKey}">${group.icon}</span>
         </div>
-        <div class="chat-item-subtitle">${escapeHtml(subtitle)}</div>
-        <div class="chat-item-preview">${escapeHtml(preview)}</div>
-      </div>
-      <button class="chat-item-rename" title="Rename">&#9998;</button>
-      <button class="chat-item-star ${chat.starred ? 'starred' : ''}" title="Star">${starIcon}</button>
-      <button class="chat-item-delete" title="Delete">&times;</button>`;
-    item.addEventListener('click', (e) => { if (!e.target.closest('.chat-item-delete') && !e.target.closest('.chat-item-star') && !e.target.closest('.chat-item-rename')) openChat(chat.id); });
-    item.querySelector('.chat-item-rename').addEventListener('click', (e) => {
-      e.stopPropagation();
-      const newTitle = prompt('Rename this conversation:', chat.title || displayTitle);
-      if (newTitle !== null) {
-        chat.title = newTitle.trim() || null; // null clears back to default
+        <div class="chat-item-info">
+          <div class="chat-item-top">
+            <span class="chat-item-title">${escapeHtml(displayTitle)}</span>
+            <span class="chat-item-time">${timeline}</span>
+          </div>
+          <div class="chat-item-subtitle"><span>${escapeHtml(subtitle)}</span><span class="chat-item-mode-badge mode-${modeKey}">${badgeLabel}</span></div>
+          <div class="chat-item-preview">${escapeHtml(preview)}</div>
+        </div>
+        <button class="chat-item-rename" title="Rename">&#9998;</button>
+        <button class="chat-item-star ${chat.starred ? 'starred' : ''}" title="Star">${starIcon}</button>
+        <button class="chat-item-delete" title="Delete">&times;</button>`;
+      item.addEventListener('click', (e) => { if (!e.target.closest('.chat-item-delete') && !e.target.closest('.chat-item-star') && !e.target.closest('.chat-item-rename')) openChat(chat.id); });
+      item.querySelector('.chat-item-rename').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const newTitle = prompt('Rename this conversation:', chat.title || displayTitle);
+        if (newTitle !== null) {
+          chat.title = newTitle.trim() || null;
+          saveChats(); renderChatList();
+        }
+      });
+      item.querySelector('.chat-item-star').addEventListener('click', (e) => {
+        e.stopPropagation();
+        chat.starred = !chat.starred;
         saveChats(); renderChatList();
-      }
+      });
+      item.querySelector('.chat-item-delete').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (confirm('Delete this conversation?')) {
+          const delId = chat.id;
+          chats = chats.filter(c => c.id !== delId);
+          deletedChatIds.add(delId);
+          localStorage.setItem('moni_talk_deleted_ids', JSON.stringify([...deletedChatIds]));
+          saveChats(); renderChatList();
+          await deleteCloudChat(delId);
+        }
+      });
+      body.appendChild(item);
     });
-    item.querySelector('.chat-item-star').addEventListener('click', (e) => {
-      e.stopPropagation();
-      chat.starred = !chat.starred;
-      saveChats(); renderChatList();
-    });
-    item.querySelector('.chat-item-delete').addEventListener('click', async (e) => {
-      e.stopPropagation();
-      if (confirm('Delete this conversation?')) {
-        const delId = chat.id;
-        chats = chats.filter(c => c.id !== delId);
-        deletedChatIds.add(delId);
-        localStorage.setItem('moni_talk_deleted_ids', JSON.stringify([...deletedChatIds]));
-        saveChats(); renderChatList();
-        await deleteCloudChat(delId);
-      }
-    });
-    chatListBody.appendChild(item);
+
+    section.appendChild(body);
+    chatListBody.appendChild(section);
   });
 }
 

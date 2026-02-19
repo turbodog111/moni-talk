@@ -14,6 +14,15 @@
   --bubble-user: #edf2f0;
   --shadow: 0 1px 4px rgba(0,0,0,0.06);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --mode-chat: #38a169;
+  --mode-story: #9370DB;
+  --mode-adventure: #4299e1;
+  --mode-chat-pale: rgba(56, 161, 105, 0.08);
+  --mode-story-pale: rgba(147, 112, 219, 0.08);
+  --mode-adventure-pale: rgba(66, 153, 225, 0.08);
+  --card-bg: rgba(0, 0, 0, 0.015);
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --chat-list-tint: #f0f5f2;
 }
 
 [data-theme="dark"] {
@@ -29,6 +38,15 @@
   --bubble-user: #2a2a2a;
   --shadow: 0 1px 4px rgba(0,0,0,0.3);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --mode-chat: #48bb78;
+  --mode-story: #b794f4;
+  --mode-adventure: #63b3ed;
+  --mode-chat-pale: rgba(72, 187, 120, 0.08);
+  --mode-story-pale: rgba(183, 148, 244, 0.08);
+  --mode-adventure-pale: rgba(99, 179, 237, 0.08);
+  --card-bg: rgba(255, 255, 255, 0.025);
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --chat-list-tint: #0f1a14;
 }
 
 body {
@@ -69,9 +87,14 @@ body {
   background: var(--green-dark); color: white; border: none; font-size: 28px; cursor: pointer;
   box-shadow: 0 4px 14px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center;
   transition: background 0.2s, transform 0.1s; z-index: 20;
+  animation: fabBreath 3s ease-in-out infinite;
 }
-.fab:hover { background: var(--green-mid); box-shadow: var(--shadow-md); transform: scale(1.05); }
-.fab:active { transform: scale(0.93); }
+.fab:hover { background: var(--green-mid); box-shadow: var(--shadow-md); transform: scale(1.05); animation: none; }
+.fab:active { transform: scale(0.93); animation: none; }
+@keyframes fabBreath {
+  0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+  50% { box-shadow: 0 4px 20px rgba(56,161,105,0.45), 0 0 10px rgba(56,161,105,0.2); }
+}
 
 /* === Profile / New Chat shared body === */
 .form-body {
