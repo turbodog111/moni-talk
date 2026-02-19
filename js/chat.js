@@ -114,9 +114,14 @@ function renderChatList() {
   ];
 
   const sorted = [...chats].sort((a, b) => {
+    const aTime = a.lastModified || a.created;
+    const bTime = b.lastModified || b.created;
+    const aG = getDateGroup(aTime), bG = getDateGroup(bTime);
+    if (aG !== bG) return bTime - aTime; // different date groups: chronological
+    // same date group: starred first, then chronological
     const aS = a.starred ? 1 : 0, bS = b.starred ? 1 : 0;
     if (bS !== aS) return bS - aS;
-    return (b.lastModified || b.created) - (a.lastModified || a.created);
+    return bTime - aTime;
   });
 
   const collapseState = JSON.parse(localStorage.getItem('moni_talk_section_collapse') || '{}');

@@ -84,25 +84,72 @@ function clearKey() {
   showToast('Keys cleared.');
 }
 
+let _ollamaModelsMeta = []; // cache for model info display
+
 async function refreshOllamaModels() {
   ollamaModelSelect.innerHTML = '';
   const models = await fetchOllamaModels();
+  _ollamaModelsMeta = models;
   if (models.length === 0) {
     const o = document.createElement('option');
-    o.value = ''; o.textContent = 'No models found — is Ollama running?';
+    o.value = ''; o.textContent = 'No models found \u2014 is Ollama running?';
     ollamaModelSelect.appendChild(o);
+    updateOllamaModelInfo('');
     return;
   }
+
+  // Group by family for optgroups
+  const grouped = {};
   models.forEach(m => {
-    const o = document.createElement('option');
-    o.value = m.id; o.textContent = m.label;
-    ollamaModelSelect.appendChild(o);
+    const fam = m.family || 'Other';
+    if (!grouped[fam]) grouped[fam] = [];
+    grouped[fam].push(m);
   });
+
+  const families = Object.keys(grouped).sort();
+  if (families.length === 1) {
+    // Single family — no need for optgroups
+    models.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m.id; o.textContent = m.label;
+      ollamaModelSelect.appendChild(o);
+    });
+  } else {
+    families.forEach(fam => {
+      const og = document.createElement('optgroup');
+      og.label = fam;
+      grouped[fam].forEach(m => {
+        const o = document.createElement('option');
+        o.value = m.id; o.textContent = m.label;
+        og.appendChild(o);
+      });
+      ollamaModelSelect.appendChild(og);
+    });
+  }
+
   if (ollamaModel && models.some(m => m.id === ollamaModel)) {
     ollamaModelSelect.value = ollamaModel;
   }
+  updateOllamaModelInfo(ollamaModelSelect.value);
   // Update benchmark hint now that models are loaded
   if (typeof renderSettingsBenchHint === 'function') renderSettingsBenchHint();
+}
+
+function updateOllamaModelInfo(modelId) {
+  const el = $('ollamaModelInfo');
+  if (!el) return;
+  const m = _ollamaModelsMeta.find(x => x.id === modelId);
+  if (!m || (!m.sizeGB && !m.quant && !m.size)) {
+    el.classList.remove('visible');
+    return;
+  }
+  const parts = [];
+  if (m.family) parts.push(`<strong>${m.family}</strong>`);
+  if (m.size) parts.push(`${m.size} parameters`);
+  if (m.quant) parts.push(`${m.quant} quantization`);
+  if (m.sizeGB) parts.push(`${m.sizeGB} on disk`);
+  el.innerHTML = parts.join(' &middot; ');
+  el.classList.add('visible');
 }
 
 function updateTTSVoiceDesc(key) {

@@ -230,79 +230,101 @@
 
 <!-- Settings Modal -->
 <div class="modal-overlay" id="settingsModal">
-  <div class="modal">
-    <h2>Settings</h2>
-    <label for="providerSelect">Provider</label>
-    <select id="providerSelect">
-      <option value="gemini">Gemini (Google AI, free tier)</option>
-      <option value="ollama">Ollama (local, free, unlimited)</option>
-      <option value="openrouter">OpenRouter (free, best roleplay quality)</option>
-      <option value="puter">Puter (unlimited, no key needed)</option>
-    </select>
-    <div class="hint" id="providerHint"></div>
-    <div class="field-gap"></div>
-    <div id="openrouterFields">
-      <label for="orModelSelect">Model</label>
-      <select id="orModelSelect"></select>
-      <div class="field-gap"></div>
-      <label for="apiKeyInput">API Key</label>
-      <input type="password" id="apiKeyInput" placeholder="sk-or-v1-..." autocomplete="off">
-      <div class="hint">Get a free key at <strong>openrouter.ai</strong>.</div>
+  <div class="modal settings-modal">
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <button class="settings-close" id="cancelSettingsBtn">&times;</button>
     </div>
-    <div id="puterFields" style="display:none;">
-      <label for="puterModelSelect">Model</label>
-      <select id="puterModelSelect"></select>
-      <div class="hint">No API key needed. You'll sign into Puter on first message.</div>
+    <div class="settings-body">
+
+      <!-- Provider & Model -->
+      <div class="settings-section">
+        <div class="settings-section-title">&#9881; Provider &amp; Model</div>
+        <label for="providerSelect">Provider</label>
+        <select id="providerSelect">
+          <option value="ollama">Ollama (local, free, unlimited)</option>
+          <option value="gemini">Gemini (Google AI, free tier)</option>
+          <option value="openrouter">OpenRouter (free, best roleplay quality)</option>
+          <option value="puter">Puter (unlimited, no key needed)</option>
+        </select>
+        <div class="hint" id="providerHint"></div>
+        <div class="field-gap"></div>
+        <div id="ollamaFields" style="display:none;">
+          <label for="ollamaModelSelect">Model</label>
+          <select id="ollamaModelSelect"></select>
+          <div class="hint">Models from your Ollama instance, grouped by family.</div>
+          <div class="ollama-model-info" id="ollamaModelInfo"></div>
+          <div class="field-gap"></div>
+          <label for="ollamaEndpointInput">Endpoint</label>
+          <input type="text" id="ollamaEndpointInput" placeholder="http://localhost:11434" autocomplete="off">
+          <div class="hint">Default: http://localhost:11434. Change only if you moved the port.</div>
+        </div>
+        <div id="openrouterFields" style="display:none;">
+          <label for="orModelSelect">Model</label>
+          <select id="orModelSelect"></select>
+          <div class="field-gap"></div>
+          <label for="apiKeyInput">API Key</label>
+          <input type="password" id="apiKeyInput" placeholder="sk-or-v1-..." autocomplete="off">
+          <div class="hint">Get a free key at <strong>openrouter.ai</strong>.</div>
+        </div>
+        <div id="puterFields" style="display:none;">
+          <label for="puterModelSelect">Model</label>
+          <select id="puterModelSelect"></select>
+          <div class="hint">No API key needed. You'll sign into Puter on first message.</div>
+        </div>
+        <div id="geminiFields" style="display:none;">
+          <label for="geminiModelSelect">Model</label>
+          <select id="geminiModelSelect"></select>
+          <div class="field-gap"></div>
+          <label for="geminiKeyInput">API Key</label>
+          <input type="password" id="geminiKeyInput" placeholder="AIzaSy..." autocomplete="off">
+          <div class="hint">Get a free key at <strong>aistudio.google.com</strong>. Free tier: 15 req/min.</div>
+        </div>
+      </div>
+
+      <!-- Appearance -->
+      <div class="settings-section">
+        <div class="settings-section-title">&#127912; Appearance</div>
+        <label for="themeSelect">Theme</label>
+        <select id="themeSelect">
+          <option value="system">System (auto)</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+        <div class="hint">Choose your preferred color theme.</div>
+      </div>
+
+      <!-- Voice (TTS) -->
+      <div class="settings-section">
+        <div class="settings-section-title">&#128264; Voice (TTS)</div>
+        <div class="tts-settings-row">
+          <label class="toggle-label"><input type="checkbox" id="ttsEnabledCheck"> Enable Monika's voice</label>
+        </div>
+        <label for="ttsVoiceSelect">Voice Style</label>
+        <div class="tts-voice-row">
+          <select id="ttsVoiceSelect"></select>
+          <button class="btn btn-secondary btn-sm" id="ttsPreviewBtn">Preview</button>
+        </div>
+        <div class="hint" id="ttsVoiceDesc"></div>
+        <div class="field-gap"></div>
+        <label for="ttsEndpointInput">TTS Server</label>
+        <input type="text" id="ttsEndpointInput" placeholder="http://localhost:8880" autocomplete="off">
+        <div class="hint">Run the TTS server in WSL2. See server/ folder for setup.</div>
+        <button class="btn btn-secondary" id="ttsTestBtn" style="width:100%;margin-top:6px;">Test Connection</button>
+      </div>
+
+      <!-- Tools -->
+      <div class="settings-section">
+        <div class="settings-section-title">&#128295; Tools</div>
+        <label>Model Benchmark</label>
+        <div class="hint">Run standardized tests to compare how well your current model handles Moni-Talk scenarios.</div>
+        <button class="btn btn-primary" id="openBenchmarkBtn" style="width:100%;margin-top:8px;">Open Benchmark Suite</button>
+        <div id="benchSettingsHint"></div>
+      </div>
+
     </div>
-    <div id="geminiFields" style="display:none;">
-      <label for="geminiModelSelect">Model</label>
-      <select id="geminiModelSelect"></select>
-      <div class="field-gap"></div>
-      <label for="geminiKeyInput">API Key</label>
-      <input type="password" id="geminiKeyInput" placeholder="AIzaSy..." autocomplete="off">
-      <div class="hint">Get a free key at <strong>aistudio.google.com</strong>. Free tier: 15 req/min.</div>
-    </div>
-    <div id="ollamaFields" style="display:none;">
-      <label for="ollamaModelSelect">Model</label>
-      <select id="ollamaModelSelect"></select>
-      <div class="hint">Models you've pulled with <strong>ollama pull</strong> appear here automatically.</div>
-      <div class="field-gap"></div>
-      <label for="ollamaEndpointInput">Endpoint</label>
-      <input type="text" id="ollamaEndpointInput" placeholder="http://localhost:11434" autocomplete="off">
-      <div class="hint">Default: http://localhost:11434. Change only if you moved the port.</div>
-    </div>
-    <div class="field-gap"></div>
-    <label for="themeSelect">Theme</label>
-    <select id="themeSelect">
-      <option value="system">System (auto)</option>
-      <option value="light">Light</option>
-      <option value="dark">Dark</option>
-    </select>
-    <div class="hint">Choose your preferred color theme.</div>
-    <div class="field-gap"></div>
-    <label>Voice (TTS)</label>
-    <div class="tts-settings-row">
-      <label class="toggle-label"><input type="checkbox" id="ttsEnabledCheck"> Enable Monika's voice</label>
-    </div>
-    <label for="ttsVoiceSelect">Voice Style</label>
-    <div class="tts-voice-row">
-      <select id="ttsVoiceSelect"></select>
-      <button class="btn btn-secondary btn-sm" id="ttsPreviewBtn">Preview</button>
-    </div>
-    <div class="hint" id="ttsVoiceDesc"></div>
-    <div class="field-gap"></div>
-    <label for="ttsEndpointInput">TTS Server</label>
-    <input type="text" id="ttsEndpointInput" placeholder="http://localhost:8880" autocomplete="off">
-    <div class="hint">Run the TTS server in WSL2. See server/ folder for setup.</div>
-    <button class="btn btn-secondary" id="ttsTestBtn" style="width:100%;margin-top:6px;">Test Connection</button>
-    <div class="field-gap"></div>
-    <label>Model Benchmark</label>
-    <div class="hint">Run standardized tests to compare how well your current model handles Moni-Talk scenarios (character voice, tag formatting, affinity tracking).</div>
-    <button class="btn btn-primary bench-open-btn" id="openBenchmarkBtn" style="width:100%;margin-top:8px;">Open Benchmark Suite</button>
-    <div id="benchSettingsHint"></div>
-    <div class="modal-actions">
-      <button class="btn btn-danger" id="clearKeyBtn">Clear Key</button>
-      <button class="btn btn-secondary" id="cancelSettingsBtn">Cancel</button>
+    <div class="settings-footer">
+      <button class="btn btn-danger" id="clearKeyBtn">Clear Keys</button>
       <button class="btn btn-primary" id="saveKeyBtn">Save</button>
     </div>
   </div>

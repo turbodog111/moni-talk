@@ -507,13 +507,59 @@ async function streamOpenRouter(chat, onChunk, signal) {
 // ====== FETCH OLLAMA MODELS ======
 async function fetchOllamaModels() {
   try {
-    const res = await fetch(`${ollamaEndpoint}/v1/models`);
+    // Use /api/tags for rich metadata (family, parameter size, quantization)
+    const res = await fetch(`${ollamaEndpoint}/api/tags`);
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.data || []).map(m => ({ id: m.id, label: m.id }));
+    const models = (data.models || []).map(m => {
+      const d = m.details || {};
+      const family = prettifyFamily(d.family || m.name.split(':')[0]);
+      const size = d.parameter_size || '';
+      const quant = d.quantization_level || '';
+      const sizeGB = m.size ? (m.size / 1e9).toFixed(1) + ' GB' : '';
+      let label = family;
+      if (size) label += ` ${size}`;
+      if (quant) label += ` (${quant})`;
+      return { id: m.name, label, family, size, quant, sizeGB, rawSize: parseFloat(size) || 0 };
+    });
+    // Sort by family, then largest first
+    models.sort((a, b) => {
+      if (a.family !== b.family) return a.family.localeCompare(b.family);
+      return b.rawSize - a.rawSize;
+    });
+    return models;
   } catch {
-    return [];
+    // Fallback to /v1/models if /api/tags fails
+    try {
+      const res = await fetch(`${ollamaEndpoint}/v1/models`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.data || []).map(m => ({ id: m.id, label: m.id, family: '', size: '', quant: '', sizeGB: '' }));
+    } catch { return []; }
   }
+}
+
+function prettifyFamily(raw) {
+  const map = {
+    'llama': 'Llama', 'llama2': 'Llama 2', 'llama3': 'Llama 3', 'llama3.1': 'Llama 3.1', 'llama3.2': 'Llama 3.2', 'llama3.3': 'Llama 3.3',
+    'gemma': 'Gemma', 'gemma2': 'Gemma 2', 'gemma3': 'Gemma 3',
+    'qwen': 'Qwen', 'qwen2': 'Qwen 2', 'qwen2.5': 'Qwen 2.5', 'qwq': 'QwQ',
+    'mistral': 'Mistral', 'mixtral': 'Mixtral',
+    'phi': 'Phi', 'phi3': 'Phi 3', 'phi4': 'Phi 4',
+    'deepseek': 'DeepSeek', 'deepseek-r1': 'DeepSeek R1', 'deepseek-v2': 'DeepSeek V2',
+    'command-r': 'Command R', 'command-r-plus': 'Command R+',
+    'codellama': 'Code Llama', 'starcoder': 'StarCoder', 'codegemma': 'CodeGemma',
+    'nomic-embed-text': 'Nomic Embed', 'mxbai-embed-large': 'MxBai Embed',
+    'yi': 'Yi', 'solar': 'Solar', 'internlm2': 'InternLM 2',
+  };
+  const lower = raw.toLowerCase().replace(/[-_]/g, '');
+  // Try exact match first, then partial
+  if (map[raw.toLowerCase()]) return map[raw.toLowerCase()];
+  for (const [k, v] of Object.entries(map)) {
+    if (lower === k.replace(/[-_. ]/g, '')) return v;
+  }
+  // Capitalize first letter of each word
+  return raw.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 // ====== RAW AI CALL (for journals etc. — non-streaming) ======

@@ -188,6 +188,10 @@ function init() {
   [orModelSelect, puterModelSelect, geminiModelSelect, ollamaModelSelect].forEach(sel => {
     sel.addEventListener('change', () => setTimeout(renderSettingsBenchHint, 50));
   });
+  // Show model info when Ollama model changes
+  ollamaModelSelect.addEventListener('change', () => {
+    if (typeof updateOllamaModelInfo === 'function') updateOllamaModelInfo(ollamaModelSelect.value);
+  });
   settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) closeSettings(); });
 
   // Theme
