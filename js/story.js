@@ -461,9 +461,9 @@ Choices:`;
     if (choices.length < 3) choices = parseBareLineChoices(lines);
 
     if (choices.length >= 3 && choices.length <= 5) return choices.slice(0, 4);
-    console.warn('[STORY] AI choices could not be parsed. Raw:', result);
+    console.warn('[STORY] AI choices could not be parsed. Raw:\n' + result);
   } catch (e) {
-    // Silent fail — fall back to static choices
+    console.warn('[STORY] AI choice generation error:', e?.message || e);
   }
   return null; // Signal to use fallback
 }
@@ -471,8 +471,9 @@ Choices:`;
 function parseNumberedChoices(lines) {
   const choices = [];
   for (const line of lines) {
-    const m = line.match(/^\d[.):\-]\s*(.+)/);
-    if (m && m[1].trim().length >= 10) choices.push(m[1].trim().replace(/^["']|["']$/g, ''));
+    // Handle: 1. / 1) / 1: / 1- and bold variants like **1.** or **1)**
+    const m = line.match(/^(?:\*\*)?(\d+)[.):\-](?:\*\*)?\s*(.+)/);
+    if (m && m[2].trim().length >= 5) choices.push(m[2].trim().replace(/^["']|["']$/g, ''));
   }
   return choices;
 }
@@ -481,14 +482,14 @@ function parseBulletChoices(lines) {
   const choices = [];
   for (const line of lines) {
     const m = line.match(/^[-*•]\s+(.+)/);
-    if (m && m[1].trim().length >= 10) choices.push(m[1].trim().replace(/^["']|["']$/g, ''));
+    if (m && m[1].trim().length >= 5) choices.push(m[1].trim().replace(/^["']|["']$/g, ''));
   }
   return choices;
 }
 
 function parseBareLineChoices(lines) {
   // Only use if exactly 3-5 non-empty lines of reasonable length
-  const candidates = lines.filter(l => l.length >= 10 && l.length <= 120);
+  const candidates = lines.filter(l => l.length >= 5 && l.length <= 120);
   if (candidates.length >= 3 && candidates.length <= 5) {
     return candidates.map(l => l.replace(/^["']|["']$/g, '').replace(/^\d+\.\s*/, ''));
   }
