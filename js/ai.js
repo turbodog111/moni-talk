@@ -165,6 +165,12 @@ function sanitizeMessages(msgs) {
       merged.push(cur);
     }
   }
+  // Ensure first non-system message is 'user' (required by Gemma 3 and others).
+  // If conversation starts with assistant (e.g. Monika's greeting), prepend a user turn.
+  const firstNonSys = merged.findIndex(m => m.role !== 'system');
+  if (firstNonSys !== -1 && merged[firstNonSys].role === 'assistant') {
+    merged.splice(firstNonSys, 0, { role: 'user', content: '[Start]' });
+  }
   return merged;
 }
 
