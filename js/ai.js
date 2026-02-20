@@ -129,6 +129,45 @@ function buildTimeContext(chat) {
   return lines.join(' ');
 }
 
+// ====== MESSAGE SANITIZER ======
+// Ensures strict role alternation (system, user, assistant, user, assistant, ...)
+// Required by Gemma 3 and other models with strict Jinja chat templates.
+// - Keeps the first system message as-is
+// - Converts mid-conversation system messages to user messages
+// - Merges consecutive same-role messages
+function sanitizeMessages(msgs) {
+  if (msgs.length === 0) return msgs;
+  const result = [];
+  let i = 0;
+  // Keep first system message
+  if (msgs[0].role === 'system') {
+    result.push({ role: 'system', content: msgs[0].content });
+    i = 1;
+  }
+  // Convert mid-conversation system messages to user role
+  for (; i < msgs.length; i++) {
+    const m = msgs[i];
+    const content = typeof m.content === 'string' ? m.content : m.content;
+    if (m.role === 'system') {
+      result.push({ role: 'user', content: `[System: ${content}]` });
+    } else {
+      result.push({ role: m.role, content });
+    }
+  }
+  // Merge consecutive same-role messages
+  const merged = [result[0]];
+  for (let j = 1; j < result.length; j++) {
+    const prev = merged[merged.length - 1];
+    const cur = result[j];
+    if (prev.role === cur.role && typeof prev.content === 'string' && typeof cur.content === 'string') {
+      prev.content += '\n\n' + cur.content;
+    } else {
+      merged.push(cur);
+    }
+  }
+  return merged;
+}
+
 // ====== BUILD MESSAGES ======
 // Condensed character reminder injected when conversation is long
 const CHARACTER_REMINDER = `[Character quick-ref: Sayori=coral pink hair+red bow, sky blue eyes, bubbly/cheerful childhood friend. Natsuki=pink bob+ribbon clips, fuchsia eyes, tsundere with sharp tongue. Yuri=long dark purple hair, soft violet eyes, shy bookworm. Monika=chestnut ponytail+white bow, emerald green eyes, confident club president. Write their dialogue in-character.]`;
@@ -192,7 +231,7 @@ function buildMessages(chat) {
       msgs.push({ role: 'system', content: phaseInstruction + `\n\nREMINDER: Write ONLY this scene. Do NOT skip ahead to later parts of the day. Do NOT summarize the whole day. Stay in this moment.` });
     }
 
-    return msgs;
+    return sanitizeMessages(msgs);
   }
   // Adventure mode: use ADVENTURE_PROMPT with game state
   if (chat.mode === 'adventure') {
@@ -210,7 +249,7 @@ function buildMessages(chat) {
       recentMessages = recentMessages.slice(-CHAT_MSG_LIMIT);
     }
     const msgs = recentMessages.map(m => ({ role: m.role, content: m.content }));
-    return [{ role: 'system', content: sys }, ...msgs];
+    return sanitizeMessages([{ role: 'system', content: sys }, ...msgs]);
   }
 
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
@@ -253,10 +292,10 @@ function buildMessages(chat) {
     return { role: m.role, content: content };
   });
 
-  return [
+  return sanitizeMessages([
     { role: 'system', content: sys },
     ...msgs
-  ];
+  ]);
 }
 
 // ====== NON-STREAMING PROVIDER DISPATCH (used by callAI for journals) ======
