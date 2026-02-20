@@ -349,9 +349,12 @@ function openChat(id) {
 
   // Teardown room mode if switching away
   if (!isRoom) teardownRoomMode();
-  // Hide adventure status bar if not adventure
-  if (!isAdventure) { const bar = $('adventureStatusBar'); if (bar) bar.style.display = 'none'; }
-  if (!isAdventure) closeAdventurePanel();
+  // Hide adventure UI if not adventure
+  if (!isAdventure) {
+    const bar = $('adventureStatusBar'); if (bar) bar.style.display = 'none';
+    const actions = $('adventureActions'); if (actions) actions.style.display = 'none';
+    closeAdventurePanel();
+  }
 
   $('inputArea').style.display = isStory ? 'none' : '';
   $('storyRetryBtn').style.display = isStory ? '' : 'none';
@@ -392,6 +395,7 @@ async function generateGreeting(chat) {
   activeAbortController = new AbortController();
   const cancelBtn = $('cancelBtn');
   if (cancelBtn) { cancelBtn.style.display = ''; sendBtn.style.display = 'none'; }
+  if (chat.mode === 'adventure') updateAdventureActions(chat);
   typingIndicator.classList.add('visible'); scrollToBottom();
 
   // Build a greeting-specific prompt using the existing system prompt + a trigger message
@@ -469,6 +473,7 @@ async function generateGreeting(chat) {
     activeAbortController = null;
     const cb = $('cancelBtn');
     if (cb) { cb.style.display = 'none'; sendBtn.style.display = ''; }
+    if (chat.mode === 'adventure') updateAdventureActions(chat);
     userInput.focus();
   }
 }
@@ -587,6 +592,7 @@ async function regenerateLastResponse() {
   const cancelBtn = $('cancelBtn');
   if (cancelBtn) { cancelBtn.style.display = ''; sendBtn.style.display = 'none'; }
   if (chat.mode === 'room') drawMasSprite('think');
+  if (chat.mode === 'adventure') updateAdventureActions(chat);
   typingIndicator.classList.add('visible'); scrollToBottom();
 
   let msgBubble = null;
@@ -658,6 +664,7 @@ async function regenerateLastResponse() {
     activeAbortController = null;
     const cb = $('cancelBtn');
     if (cb) { cb.style.display = 'none'; sendBtn.style.display = ''; }
+    if (chat.mode === 'adventure') updateAdventureActions(chat);
     userInput.focus();
   }
 }
@@ -859,6 +866,7 @@ async function sendMessage() {
   const cancelBtn = $('cancelBtn');
   if (cancelBtn) { cancelBtn.style.display = ''; sendBtn.style.display = 'none'; }
   if (chat.mode === 'room') drawMasSprite('think');
+  if (chat.mode === 'adventure') updateAdventureActions(chat);
   typingIndicator.classList.add('visible'); scrollToBottom();
 
   let msgBubble = null;
@@ -951,8 +959,9 @@ async function sendMessage() {
   } finally {
     isGenerating = false; sendBtn.disabled = false;
     activeAbortController = null;
-    const cancelBtn = $('cancelBtn');
-    if (cancelBtn) { cancelBtn.style.display = 'none'; sendBtn.style.display = ''; }
+    const cb2 = $('cancelBtn');
+    if (cb2) { cb2.style.display = 'none'; sendBtn.style.display = ''; }
+    if (chat.mode === 'adventure') updateAdventureActions(chat);
     userInput.focus();
   }
 }

@@ -703,8 +703,9 @@
 .adventure-status {
   display: flex; align-items: center; gap: 12px; padding: 8px 16px;
   background: linear-gradient(90deg, var(--green-pale) 0%, rgba(76,175,80,0.08) 100%);
-  border-bottom: 1px solid var(--gray-mid); flex-shrink: 0;
+  border-bottom: 3px solid var(--green-mid); flex-shrink: 0;
   overflow-x: auto; white-space: nowrap;
+  transition: border-color 0.4s, background 0.3s;
 }
 .adv-stat { display: flex; align-items: center; gap: 6px; font-size: 12px; }
 .adv-stat-label { font-weight: 700; color: var(--green-dark); text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; }
@@ -714,7 +715,66 @@
 .adv-hp-stat { min-width: 120px; }
 .adv-hp-track { width: 60px; height: 6px; background: var(--gray-mid); border-radius: 3px; overflow: hidden; }
 .adv-hp-fill { height: 100%; border-radius: 3px; transition: width 0.4s, background 0.4s; }
-.adv-hp-num { font-weight: 700; font-size: 12px; color: var(--text); min-width: 20px; }
+.adv-hp-num { font-weight: 700; font-size: 12px; color: var(--text); min-width: 20px; transition: color 0.3s; }
+
+/* HP Flash Animations */
+.adv-hp-damage { animation: hpDamageFlash 0.6s ease; }
+.adv-hp-heal { animation: hpHealFlash 0.6s ease; }
+@keyframes hpDamageFlash {
+  0%, 100% { background-color: transparent; }
+  25% { background-color: rgba(192, 57, 43, 0.2); }
+  50% { background-color: rgba(192, 57, 43, 0.35); }
+  75% { background-color: rgba(192, 57, 43, 0.15); }
+}
+@keyframes hpHealFlash {
+  0%, 100% { background-color: transparent; }
+  25% { background-color: rgba(39, 174, 96, 0.15); }
+  50% { background-color: rgba(39, 174, 96, 0.3); }
+  75% { background-color: rgba(39, 174, 96, 0.1); }
+}
+
+/* === Adventure Action Bar === */
+.adventure-actions {
+  display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+  background: var(--bg); border-top: 1px solid var(--gray-mid); flex-shrink: 0;
+  overflow-x: auto; white-space: nowrap;
+}
+.adv-action-btn {
+  padding: 7px 14px; border: 2px solid var(--gray-mid); border-radius: 18px;
+  background: var(--bg); color: var(--text); font-size: 12px; font-weight: 600;
+  font-family: inherit; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.adv-action-btn:hover:not(:disabled) { border-color: var(--green-mid); background: var(--green-pale); color: var(--green-dark); }
+.adv-action-btn:active:not(:disabled) { transform: scale(0.95); }
+.adv-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.adv-action-btn[data-action="attack"] { border-color: #e74c3c; color: #c0392b; }
+.adv-action-btn[data-action="attack"]:hover:not(:disabled) { background: rgba(231,76,60,0.1); border-color: #c0392b; }
+.adv-action-btn[data-action="defend"] { border-color: #3498db; color: #2980b9; }
+.adv-action-btn[data-action="defend"]:hover:not(:disabled) { background: rgba(52,152,219,0.1); border-color: #2980b9; }
+.adv-action-btn[data-action="flee"] { border-color: #f39c12; color: #d68910; }
+.adv-action-btn[data-action="flee"]:hover:not(:disabled) { background: rgba(243,156,18,0.1); border-color: #d68910; }
+.adv-hub-btn { border-color: var(--green-mid); color: var(--green-dark); }
+.adv-hub-btn:hover:not(:disabled) { background: var(--green-pale); }
+
+/* === Item Picker === */
+.adv-item-picker {
+  padding: 10px 16px; background: var(--bg); border-top: 1px solid var(--gray-mid);
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex-shrink: 0;
+  animation: fadeIn 0.2s ease;
+}
+.adv-item-picker-title { font-size: 12px; font-weight: 700; color: var(--green-dark); margin-right: 8px; }
+.adv-item-pick-btn {
+  padding: 6px 14px; border: 2px solid var(--green-mid); border-radius: 16px;
+  background: var(--bg); color: var(--text); font-size: 12px; font-family: inherit;
+  cursor: pointer; transition: all 0.2s;
+}
+.adv-item-pick-btn:hover { background: var(--green-pale); border-color: var(--green-dark); }
+.adv-item-pick-cancel {
+  padding: 6px 14px; border: 1px solid var(--gray-mid); border-radius: 16px;
+  background: none; color: var(--gray-text); font-size: 12px; font-family: inherit;
+  cursor: pointer; transition: all 0.2s;
+}
+.adv-item-pick-cancel:hover { border-color: #c0392b; color: #c0392b; }
 
 /* === Adventure Side Panel === */
 .adv-panel-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 49; }
@@ -737,6 +797,13 @@
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 .adv-panel-header h3 { font-size: 16px; margin: 0; font-weight: 700; color: #e0eaf5; }
+.adv-panel-header-actions { display: flex; align-items: center; gap: 4px; }
+.adv-save-btn {
+  background: none; border: none; color: #e0eaf5;
+  font-size: 18px; cursor: pointer; padding: 4px 8px;
+  border-radius: 4px; transition: background 0.2s;
+}
+.adv-save-btn:hover { background: rgba(255,255,255,0.1); }
 .adv-panel-close {
   background: none; border: none; color: #e0eaf5;
   font-size: 22px; cursor: pointer; padding: 4px 8px;
@@ -749,6 +816,25 @@
   font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
   color: rgba(255,255,255,0.4); margin-bottom: 12px; font-weight: 600;
 }
+
+/* Domain Map */
+.adv-domain-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 6px;
+  font-size: 13px; color: rgba(255,255,255,0.5);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-left: 3px solid var(--domain-color, rgba(255,255,255,0.1));
+  transition: all 0.2s;
+}
+.adv-domain-item.current {
+  color: #e0eaf5; background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.15);
+  box-shadow: 0 0 8px rgba(255,255,255,0.05);
+}
+.adv-domain-item.locked { opacity: 0.5; }
+.adv-domain-icon { font-size: 18px; flex-shrink: 0; }
+.adv-domain-name { flex: 1; font-weight: 500; }
+.adv-domain-status { font-size: 14px; flex-shrink: 0; }
 
 /* Fragment List */
 .adv-frag-item {
@@ -777,12 +863,41 @@
 .adv-panel-stat span:first-child { color: rgba(255,255,255,0.45); }
 .adv-panel-stat span:last-child { color: #e0eaf5; font-weight: 600; }
 
+/* Checkpoint Items */
+.adv-cp-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; background: rgba(255,255,255,0.04); border-radius: 8px;
+  margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.06);
+}
+.adv-cp-info { flex: 1; min-width: 0; }
+.adv-cp-label { font-size: 12px; font-weight: 600; color: #e0eaf5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adv-cp-detail { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+.adv-cp-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.adv-cp-load, .adv-cp-delete {
+  background: none; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.6);
+  width: 26px; height: 26px; border-radius: 6px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 13px;
+  transition: all 0.2s;
+}
+.adv-cp-load:hover { border-color: rgba(100,180,255,0.5); color: #b8d8ff; background: rgba(100,180,255,0.1); }
+.adv-cp-delete:hover { border-color: rgba(239,83,80,0.5); color: #ef5350; background: rgba(239,83,80,0.1); }
+
 /* Guide */
 .adv-guide, .adv-guide-text { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.5; }
 
 /* Dark Mode overrides */
-[data-theme="dark"] .adventure-status { background: linear-gradient(90deg, #1a2e23 0%, rgba(72,187,120,0.06) 100%); border-bottom-color: #333; }
+[data-theme="dark"] .adventure-status { background: linear-gradient(90deg, #1a2e23 0%, rgba(72,187,120,0.06) 100%); }
 [data-theme="dark"] .adv-stat-label { color: var(--green-mid); }
+[data-theme="dark"] .adventure-actions { background: #1e1e1e; border-top-color: var(--gray-mid); }
+[data-theme="dark"] .adv-action-btn { background: #2a2a2a; border-color: var(--gray-mid); color: var(--text); }
+[data-theme="dark"] .adv-action-btn[data-action="attack"] { border-color: #8b3a3a; color: #e74c3c; }
+[data-theme="dark"] .adv-action-btn[data-action="defend"] { border-color: #2a6496; color: #5dade2; }
+[data-theme="dark"] .adv-action-btn[data-action="flee"] { border-color: #8b6914; color: #f5b041; }
+[data-theme="dark"] .adv-hub-btn { border-color: #2e8b57; color: #48bb78; }
+[data-theme="dark"] .adv-item-picker { background: #1e1e1e; border-top-color: var(--gray-mid); }
+[data-theme="dark"] .adv-item-pick-btn { background: #2a2a2a; border-color: var(--gray-mid); color: var(--text); }
+[data-theme="dark"] .adv-item-pick-btn:hover { background: #333; border-color: var(--green-mid); }
+[data-theme="dark"] .adv-item-pick-cancel { border-color: #444; color: #888; }
 
 /* Adventure mobile */
 @media (max-width: 600px) {
@@ -790,4 +905,9 @@
   .adventure-status { gap: 8px; padding: 6px 12px; }
   .adv-stat { font-size: 11px; }
   .adv-hp-track { width: 40px; }
+  .adventure-actions { gap: 4px; padding: 6px 10px; }
+  .adv-action-btn { padding: 5px 10px; font-size: 11px; }
 }
+
+/* Keyboard-open: hide action bar to save space */
+.keyboard-open .adventure-actions { display: none !important; }

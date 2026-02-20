@@ -301,13 +301,21 @@ moni-talk/
 - **Yuri's Library of Shadows** — infinite gothic library, knowledge/mystery theme, Ink Wraiths and riddles
 - **Monika's Void** — unlocked after collecting all 3 fragments, digital space, final conversation challenge
 
-**Game mechanics:** HP system (100 max), inventory, 3 collectible Heart Fragments (one per domain). Death = respawn at hub with full HP but lose some items.
+**Game mechanics:** HP system (100 max), inventory, 3 collectible Heart Fragments (one per domain). Death = auto-respawn at hub with full HP but lose non-essential items (fragments and keys are kept).
+
+**Domain tracking:** Each domain's status is tracked (entered, fragment collected). When entering a new domain, a toast notification fires. Monika's Void auto-unlocks when all 3 fragments are collected.
+
+**Combat action bar:** Quick-action buttons always visible in adventure mode: Attack, Defend, Use Item, Flee, Return to Hub. Item button shows usable item count and opens an item picker for multi-item inventories. Hub button is disabled when already at the Clubroom. All buttons disable during AI generation.
 
 **State tags:** `[SCENE:location] [HP:number] [ITEM:name] [REMOVE:name]` — parsed and stripped from display.
 
-**Status bar:** Location, HP bar (color-coded), item count, fragment progress (X/3).
+**Status bar:** Domain-themed breadcrumb trail (Hub > Domain > Location), HP bar (color-coded with damage/heal flash animations), item count, fragment progress (X/3). Border color changes per domain.
 
-**Side panel:** Full inventory list, fragment checklist by domain, detailed stats.
+**Side panel:** Domain map (shows all 4 domains with visited/completed/locked status, highlights current domain), heart fragment checklist, full inventory, detailed stats (HP, location, domain, turns, domains explored, fragments, deaths), checkpoint system (save/load), guide.
+
+**Checkpoint system:** Manual save (floppy disk icon in panel header) + auto-save every 10 turns. Up to 5 auto + 5 manual per adventure. Each checkpoint stores full advState and messages. Shared storage key with story checkpoints.
+
+**Death handling:** When HP reaches 0, the client auto-handles respawn: restores HP, teleports to Clubroom, removes non-essential items (keeps fragments/keys), increments death counter, updates UI.
 
 **DM style:** Mix of narration and Monika's meta-commentary ("Oh, you actually went left? Bold choice~"). 2-4 paragraphs per response.
 

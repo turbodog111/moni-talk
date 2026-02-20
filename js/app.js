@@ -54,6 +54,18 @@ function init() {
   $('advPanelBtn').addEventListener('click', toggleAdventurePanel);
   $('advPanelClose').addEventListener('click', closeAdventurePanel);
   $('adventurePanelBackdrop').addEventListener('click', closeAdventurePanel);
+  // Adventure action buttons
+  $('adventureActions').addEventListener('click', (e) => {
+    const btn = e.target.closest('.adv-action-btn');
+    if (btn && btn.dataset.action) handleAdventureAction(btn.dataset.action);
+  });
+  // Adventure checkpoint save
+  $('advSaveBtn').addEventListener('click', () => {
+    const chat = getChat();
+    if (!chat || chat.mode !== 'adventure') return;
+    createAdventureCheckpoint(chat, false);
+    updateAdventurePanel();
+  });
   // Memory delete delegation
   $('memoryList').addEventListener('click', (e) => {
     const delBtn = e.target.closest('.memory-delete');
@@ -103,7 +115,7 @@ function init() {
       showToast('Memory forgotten.', 'success');
     }
   });
-  $('chatBackBtn').addEventListener('click', () => { if (typeof stopTTS === 'function') stopTTS(); activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); screens.chat.classList.remove('adventure-mode'); teardownRoomMode(); closeVnPanel(); closeChatPanel(); closeAdventurePanel(); showScreen('chatList'); renderChatList(); });
+  $('chatBackBtn').addEventListener('click', () => { if (typeof stopTTS === 'function') stopTTS(); activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); screens.chat.classList.remove('adventure-mode'); teardownRoomMode(); closeVnPanel(); closeChatPanel(); closeAdventurePanel(); const advAct = $('adventureActions'); if (advAct) advAct.style.display = 'none'; const picker = document.querySelector('.adv-item-picker'); if (picker) picker.remove(); showScreen('chatList'); renderChatList(); });
   $('trimBtn').addEventListener('click', trimContext);
   $('regenBtn').addEventListener('click', regenerateLastResponse);
   $('cancelBtn').addEventListener('click', () => { if (activeAbortController) activeAbortController.abort(); });
