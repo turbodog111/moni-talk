@@ -233,7 +233,7 @@ function buildMessages(chat) {
 
   // Strip legacy expression tags from old room mode messages
   // Handle multimodal messages (content arrays with images)
-  const supportsVision = ['gemini', 'openrouter', 'puter'].includes(provider);
+  const supportsVision = ['puter'].includes(provider);
   const msgs = recentChatMessages.map(m => {
     let content = m.content;
     // Handle multimodal content arrays
@@ -262,10 +262,9 @@ function buildMessages(chat) {
 // ====== NON-STREAMING PROVIDER DISPATCH (used by callAI for journals) ======
 async function callProvider(chat) {
   let result;
-  if (provider === 'gemini') result = await callGemini(chat);
+  if (provider === 'llamacpp') result = await callLlamaCpp(chat);
   else if (provider === 'ollama') result = await callOllama(chat);
-  else if (provider === 'puter') result = await callPuter(chat);
-  else result = await callOpenRouter(chat);
+  else result = await callPuter(chat);
   return stripThinkTags(result);
 }
 
@@ -273,9 +272,8 @@ async function callProvider(chat) {
 async function callProviderStreaming(chat, onChunk, signal) {
   const filter = createThinkFilter(onChunk);
   let result;
-  if (provider === 'gemini') result = await streamGemini(chat, c => filter.chunk(c), signal);
+  if (provider === 'llamacpp') result = await streamLlamaCpp(chat, c => filter.chunk(c), signal);
   else if (provider === 'ollama') result = await streamOllama(chat, c => filter.chunk(c), signal);
-  else if (provider === 'openrouter') result = await streamOpenRouter(chat, c => filter.chunk(c), signal);
   else {
     // Puter: no streaming API, fall back to single callback
     result = await callPuter(chat);
@@ -287,22 +285,36 @@ async function callProviderStreaming(chat, onChunk, signal) {
   return stripThinkTags(result);
 }
 
-// ====== API: OPENROUTER (non-streaming, kept for callAI) ======
-async function callOpenRouter(chat) {
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': window.location.href, 'X-Title': 'Moni-Talk' },
-    body: JSON.stringify({ model: selectedModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 1500 : 400, temperature: chat.mode === 'story' ? 0.85 : 0.8 })
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    if (res.status === 401) throw new Error('Invalid API key. Get a free one at openrouter.ai.');
-    if (res.status === 429) throw new Error('Rate limited. Switch to Ollama for unlimited local use.');
-    if (res.status === 402) throw new Error('Out of credits. Switch to Ollama for free.');
-    throw new Error(data?.error?.message || `OpenRouter error (${res.status})`);
+// ====== API: LLAMA.CPP (OpenAI-compatible, non-streaming) ======
+async function callLlamaCpp(chat) {
+  const isStory = chat.mode === 'story';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), isStory ? 300000 : 180000);
+  try {
+    const res = await fetch(`${llamacppEndpoint}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        messages: buildMessages(chat),
+        max_tokens: isStory ? 2048 : 1000,
+        temperature: isStory ? 0.8 : 0.75,
+        top_p: 0.92,
+        repeat_penalty: 1.18
+      })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.error?.message || `llama.cpp error (${res.status})`);
+    }
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || '';
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('llama.cpp request timed out.');
+    throw new Error(err?.message || 'Cannot reach llama-server. Is it running?');
+  } finally {
+    clearTimeout(timer);
   }
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content?.trim() || '';
 }
 
 // ====== API: PUTER ======
@@ -329,28 +341,6 @@ async function callPuter(chat) {
       throw new Error('Puter needs you to sign in. Allow the popup and try again.');
     throw new Error(err?.message || 'Puter request failed.');
   }
-}
-
-// ====== API: GEMINI (non-streaming, kept for callAI) ======
-async function callGemini(chat) {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${geminiKey}` },
-    body: JSON.stringify({
-      model: geminiModel,
-      messages: buildMessages(chat),
-      max_tokens: chat.mode === 'story' ? 2000 : 400,
-      temperature: chat.mode === 'story' ? 0.85 : 0.8
-    })
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    if (res.status === 401 || res.status === 403) throw new Error('Invalid Gemini API key. Get one at aistudio.google.com.');
-    if (res.status === 429) throw new Error('Gemini rate limit hit. Free tier allows 15 req/min, 1500/day. Wait a moment.');
-    throw new Error(data?.error?.message || `Gemini error (${res.status})`);
-  }
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content?.trim() || '';
 }
 
 // ====== API: OLLAMA (non-streaming, kept for callAI) ======
@@ -486,20 +476,12 @@ async function streamSSE(url, headers, body, onChunk, signal) {
   return full.trim() || '';
 }
 
-async function streamGemini(chat, onChunk, signal) {
+async function streamLlamaCpp(chat, onChunk, signal) {
+  const isStory = chat.mode === 'story';
   return await streamSSE(
-    'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    { 'Content-Type': 'application/json', 'Authorization': `Bearer ${geminiKey}` },
-    { model: geminiModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 2000 : 400, temperature: chat.mode === 'story' ? 0.85 : 0.8 },
-    onChunk, signal
-  );
-}
-
-async function streamOpenRouter(chat, onChunk, signal) {
-  return await streamSSE(
-    'https://openrouter.ai/api/v1/chat/completions',
-    { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': window.location.href, 'X-Title': 'Moni-Talk' },
-    { model: selectedModel, messages: buildMessages(chat), max_tokens: chat.mode === 'story' ? 1500 : 400, temperature: chat.mode === 'story' ? 0.85 : 0.8 },
+    `${llamacppEndpoint}/v1/chat/completions`,
+    { 'Content-Type': 'application/json' },
+    { messages: buildMessages(chat), max_tokens: isStory ? 2048 : 1000, temperature: isStory ? 0.8 : 0.75, top_p: 0.92, repeat_penalty: 1.18 },
     onChunk, signal
   );
 }
@@ -562,6 +544,21 @@ function prettifyFamily(raw) {
   return raw.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// ====== FETCH LLAMA.CPP MODEL ======
+async function fetchLlamaCppModel() {
+  try {
+    const res = await fetch(`${llamacppEndpoint}/v1/models`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const model = data.data?.[0];
+    if (model) {
+      llamacppModel = model.id;
+      return model.id;
+    }
+  } catch {}
+  return null;
+}
+
 // ====== RAW AI CALL (for journals etc. — non-streaming) ======
 async function callAI(messages, maxTokens = 1000, options = {}) {
   let raw;
@@ -572,18 +569,28 @@ async function callAI(messages, maxTokens = 1000, options = {}) {
     } catch (err) {
       throw new Error(err?.message || 'Puter request failed.');
     }
-  } else if (provider === 'gemini') {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${geminiKey}` },
-      body: JSON.stringify({ model: geminiModel, messages, max_tokens: maxTokens, temperature: 0.9 })
-    });
-    if (!res.ok) throw new Error('Gemini API error');
-    const data = await res.json();
-    raw = data.choices?.[0]?.message?.content?.trim() || '';
+  } else if (provider === 'llamacpp') {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 300000);
+    try {
+      const res = await fetch(`${llamacppEndpoint}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({ messages, max_tokens: maxTokens, temperature: 0.85 })
+      });
+      if (!res.ok) throw new Error('llama.cpp error');
+      const data = await res.json();
+      raw = data.choices?.[0]?.message?.content?.trim() || '';
+    } catch (err) {
+      if (err.name === 'AbortError') throw new Error('llama.cpp request timed out.');
+      throw new Error(err?.message || 'Cannot reach llama-server.');
+    } finally {
+      clearTimeout(timer);
+    }
   } else if (provider === 'ollama') {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 300000); // 5 min — slow models need time
+    const timer = setTimeout(() => controller.abort(), 300000);
     try {
       const res = await fetch(`${ollamaEndpoint}/api/chat`, {
         method: 'POST',
@@ -616,14 +623,13 @@ async function callAI(messages, maxTokens = 1000, options = {}) {
       clearTimeout(timer);
     }
   } else {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'HTTP-Referer': window.location.href, 'X-Title': 'Moni-Talk' },
-      body: JSON.stringify({ model: selectedModel, messages, max_tokens: maxTokens, temperature: 0.9 })
-    });
-    if (!res.ok) throw new Error('API error');
-    const data = await res.json();
-    raw = data.choices?.[0]?.message?.content?.trim() || '';
+    // Puter fallback
+    try {
+      const r = await puter.ai.chat(messages, { model: puterModel, stream: false });
+      raw = extractPuterText(r).trim() || '';
+    } catch (err) {
+      throw new Error(err?.message || 'Puter request failed.');
+    }
   }
   return stripThinkTags(raw);
 }

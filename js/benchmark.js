@@ -23,9 +23,8 @@ function loadAlphaResults() {
 
 // --- Helpers ---
 function getCurrentModelKey() {
+  if (provider === 'llamacpp') return `llamacpp:${llamacppModel || 'unknown'}`;
   if (provider === 'ollama') return `ollama:${ollamaModel}`;
-  if (provider === 'gemini') return `gemini:${geminiModel}`;
-  if (provider === 'openrouter') return `openrouter:${selectedModel}`;
   return `puter:${puterModel}`;
 }
 
@@ -1434,9 +1433,8 @@ function computeRankings(all, excludeKeys) {
 function getSettingsModelKey() {
   // Read from form dropdowns (may not be saved yet)
   const p = providerSelect.value;
+  if (p === 'llamacpp') return `llamacpp:${llamacppModel || 'unknown'}`;
   if (p === 'ollama') return `ollama:${ollamaModelSelect.value}`;
-  if (p === 'gemini') return `gemini:${geminiModelSelect.value}`;
-  if (p === 'openrouter') return `openrouter:${orModelSelect.value}`;
   return `puter:${puterModelSelect.value}`;
 }
 

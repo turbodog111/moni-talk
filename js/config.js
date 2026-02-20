@@ -1,21 +1,12 @@
 // ====== CONFIG ======
 const STORAGE = {
-  API: 'moni_talk_api_key', PROVIDER: 'moni_talk_provider',
-  MODEL_OR: 'moni_talk_model', MODEL_PUTER: 'moni_talk_puter_model',
+  PROVIDER: 'moni_talk_provider',
+  MODEL_PUTER: 'moni_talk_puter_model',
   MODEL_OLLAMA: 'moni_talk_ollama_model', OLLAMA_ENDPOINT: 'moni_talk_ollama_endpoint',
-  GEMINI_API: 'moni_talk_gemini_key', MODEL_GEMINI: 'moni_talk_gemini_model',
+  LLAMACPP_ENDPOINT: 'moni_talk_llamacpp_endpoint',
   CHATS: 'moni_talk_chats_v2', PROFILE: 'moni_talk_profile',
   CHECKPOINTS: 'moni_talk_checkpoints', MEMORIES: 'moni_talk_memories'
 };
-
-const OPENROUTER_MODELS = [
-  { id: 'nousresearch/hermes-3-llama-3.1-405b:free', label: 'Hermes 3 405B (best for roleplay)' },
-  { id: 'meta-llama/llama-3.1-405b-instruct:free', label: 'Llama 3.1 405B (very capable)' },
-  { id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B (fast, great quality)' },
-  { id: 'deepseek/deepseek-chat-v3-0324:free', label: 'DeepSeek V3 (strong reasoning)' },
-  { id: 'google/gemini-2.0-flash-exp:free', label: 'Gemini 2.0 Flash (1M context)' },
-  { id: 'mistralai/mistral-small-3.1-24b-instruct:free', label: 'Mistral Small 3.1 (fast)' },
-];
 
 const PUTER_MODELS = [
   { id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5 (excellent roleplay)' },
@@ -26,18 +17,10 @@ const PUTER_MODELS = [
   { id: 'mistral-large-latest', label: 'Mistral Large (creative)' },
 ];
 
-const GEMINI_MODELS = [
-  { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (fast, great quality)' },
-  { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite (fastest)' },
-  { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (stable, proven)' },
-  { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (best quality, slower)' },
-];
-
 const PROVIDER_HINTS = {
-  openrouter: 'Free tier: ~50 req/day. Needs a free API key from openrouter.ai.',
+  llamacpp: 'llama-server with OpenAI-compatible API. Best performance on DGX Spark / local GPU.',
   puter: 'No limits, no API key. Uses your Puter account.',
   ollama: 'Runs locally on your computer. Free, unlimited, private. Requires Ollama installed (ollama.com).',
-  gemini: 'Google Gemini API. Free tier: 15 req/min, 1500/day. Get a key at aistudio.google.com.'
 };
 
 const MAX_CONTEXT_MSGS = 80; // soft cap for context bar display

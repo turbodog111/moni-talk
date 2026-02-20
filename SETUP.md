@@ -252,10 +252,9 @@ moni-talk/
 
 | Provider | Setup | Notes |
 |----------|-------|-------|
-| **Ollama** | Local WSL2 service | Free, unlimited, private. Best for local use. |
+| **llama.cpp** | llama-server on DGX Spark or local GPU | Best performance. OpenAI-compatible API. Auto-detects loaded model. |
+| **Ollama** | Local WSL2 service | Free, unlimited, private. Convenient model management. |
 | **Puter** | Built-in (no key needed) | Free tier via puter.js. Claude Sonnet, GPT-4o Mini, etc. |
-| **OpenRouter** | API key from openrouter.ai | Free tier models available. |
-| **Gemini** | API key from aistudio.google.com | Free tier: 15 req/min, 1500/day. |
 
 ---
 

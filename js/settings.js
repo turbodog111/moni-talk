@@ -1,17 +1,16 @@
 // ====== SETTINGS ======
 function toggleProviderFields(p) {
-  openrouterFields.style.display = p === 'openrouter' ? '' : 'none';
   puterFields.style.display = p === 'puter' ? '' : 'none';
   ollamaFields.style.display = p === 'ollama' ? '' : 'none';
-  geminiFields.style.display = p === 'gemini' ? '' : 'none';
+  llamacppFields.style.display = p === 'llamacpp' ? '' : 'none';
   providerHint.textContent = PROVIDER_HINTS[p];
   if (p === 'ollama') refreshOllamaModels();
+  if (p === 'llamacpp') refreshLlamaCppModel();
 }
 function openSettings() {
-  providerSelect.value = provider; apiKeyInput.value = apiKey;
-  orModelSelect.value = selectedModel; puterModelSelect.value = puterModel;
+  providerSelect.value = provider; puterModelSelect.value = puterModel;
   ollamaEndpointInput.value = ollamaEndpoint;
-  geminiKeyInput.value = geminiKey; geminiModelSelect.value = geminiModel;
+  llamacppEndpointInput.value = llamacppEndpoint;
   toggleProviderFields(provider);
   const ts = $('themeSelect');
   if (ts) ts.value = currentTheme;
@@ -37,22 +36,14 @@ function openSettings() {
 function closeSettings() { settingsModal.classList.remove('open'); }
 function saveSettings() {
   const p = providerSelect.value;
-  if (p === 'openrouter') {
-    const k = apiKeyInput.value.trim();
-    if (!k) { showToast('Enter an OpenRouter API key.'); return; }
-    apiKey = k; selectedModel = orModelSelect.value;
-    localStorage.setItem(STORAGE.API, apiKey); localStorage.setItem(STORAGE.MODEL_OR, selectedModel);
+  if (p === 'llamacpp') {
+    llamacppEndpoint = llamacppEndpointInput.value.trim().replace(/\/+$/, '') || 'http://localhost:8080';
+    localStorage.setItem(STORAGE.LLAMACPP_ENDPOINT, llamacppEndpoint);
   } else if (p === 'ollama') {
     ollamaModel = ollamaModelSelect.value;
     ollamaEndpoint = ollamaEndpointInput.value.trim().replace(/\/+$/, '') || 'http://localhost:11434';
     localStorage.setItem(STORAGE.MODEL_OLLAMA, ollamaModel);
     localStorage.setItem(STORAGE.OLLAMA_ENDPOINT, ollamaEndpoint);
-  } else if (p === 'gemini') {
-    const k = geminiKeyInput.value.trim();
-    if (!k) { showToast('Enter a Gemini API key.'); return; }
-    geminiKey = k; geminiModel = geminiModelSelect.value;
-    localStorage.setItem(STORAGE.GEMINI_API, geminiKey);
-    localStorage.setItem(STORAGE.MODEL_GEMINI, geminiModel);
   } else {
     puterModel = puterModelSelect.value;
     localStorage.setItem(STORAGE.MODEL_PUTER, puterModel);
@@ -78,10 +69,7 @@ function saveSettings() {
   closeSettings(); showToast('Settings saved!', 'success');
 }
 function clearKey() {
-  apiKey = ''; geminiKey = '';
-  localStorage.removeItem(STORAGE.API); localStorage.removeItem(STORAGE.GEMINI_API);
-  apiKeyInput.value = ''; geminiKeyInput.value = '';
-  showToast('Keys cleared.');
+  showToast('No API keys to clear — all providers are local or keyless.');
 }
 
 let _ollamaModelsMeta = []; // cache for model info display
@@ -150,6 +138,20 @@ function updateOllamaModelInfo(modelId) {
   if (m.sizeGB) parts.push(`${m.sizeGB} on disk`);
   el.innerHTML = parts.join(' &middot; ');
   el.classList.add('visible');
+}
+
+async function refreshLlamaCppModel() {
+  const el = $('llamacppModelInfo');
+  if (el) { el.textContent = 'Connecting...'; el.classList.add('visible'); }
+  const modelId = await fetchLlamaCppModel();
+  if (el) {
+    if (modelId) {
+      el.innerHTML = `<strong>Loaded model:</strong> ${modelId}`;
+    } else {
+      el.innerHTML = 'Could not connect — is llama-server running?';
+    }
+    el.classList.add('visible');
+  }
 }
 
 function updateTTSVoiceDesc(key) {

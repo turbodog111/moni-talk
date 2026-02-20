@@ -29,12 +29,8 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 
 // ====== INIT ======
 function init() {
-  OPENROUTER_MODELS.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.label; orModelSelect.appendChild(o); });
-  orModelSelect.value = selectedModel;
   PUTER_MODELS.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.label; puterModelSelect.appendChild(o); });
   puterModelSelect.value = puterModel;
-  GEMINI_MODELS.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.label; geminiModelSelect.appendChild(o); });
-  geminiModelSelect.value = geminiModel;
 
   applyTheme();
   renderChatList();
@@ -185,7 +181,7 @@ function init() {
   $('clearKeyBtn').addEventListener('click', clearKey);
   providerSelect.addEventListener('change', () => { toggleProviderFields(providerSelect.value); setTimeout(renderSettingsBenchHint, 100); });
   // Update bench hint when model selects change
-  [orModelSelect, puterModelSelect, geminiModelSelect, ollamaModelSelect].forEach(sel => {
+  [puterModelSelect, ollamaModelSelect].forEach(sel => {
     sel.addEventListener('change', () => setTimeout(renderSettingsBenchHint, 50));
   });
   // Show model info when Ollama model changes

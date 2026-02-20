@@ -834,8 +834,6 @@ async function sendMessage() {
   if (!text && !pendingImage) return;
   if (isGenerating) return;
   if (!chat) return;
-  if (provider === 'openrouter' && !apiKey) { openSettings(); showToast('Enter your OpenRouter API key first.'); return; }
-  if (provider === 'gemini' && !geminiKey) { openSettings(); showToast('Enter your Gemini API key first.'); return; }
 
   const attachedImage = pendingImage;
   removeAttachedImage();

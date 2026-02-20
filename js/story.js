@@ -801,8 +801,6 @@ function validateDayTransition(chat) {
 async function generateStoryBeat(chat) {
   console.log('[STORY] generateStoryBeat called', { phase: chat.storyPhase, beat: chat.storyBeatInPhase, isGenerating, msgCount: chat.messages.length });
   if (isGenerating) { console.log('[STORY] BLOCKED — isGenerating is true, returning early'); return; }
-  if (provider === 'openrouter' && !apiKey) { openSettings(); showToast('Enter your OpenRouter API key first.'); return; }
-  if (provider === 'gemini' && !geminiKey) { openSettings(); showToast('Enter your Gemini API key first.'); return; }
 
   // Ensure phase is initialized and valid
   ensurePhase(chat);
