@@ -234,7 +234,13 @@ function buildMessages(chat) {
     // This is the most influential position in the context window for small models
     // that tend to follow recent context over distant system prompts.
     if (phaseInstruction) {
-      msgs.push({ role: 'system', content: phaseInstruction + `\n\nREMINDER: Write ONLY this scene. Do NOT skip ahead to later parts of the day. Do NOT summarize the whole day. Stay in this moment.` });
+      const beat = chat.storyBeatInPhase || 0;
+      if (beat > 0) {
+        // Continuation beat — scene was already narrated, model must advance, not rewrite
+        msgs.push({ role: 'system', content: `=== CONTINUE THE SCENE ===\nThe scene is already in progress — you wrote the previous part above. The player has responded with their choice. Now write what happens NEXT in this same scene. Pick up exactly where you left off.\n\nDo NOT rewrite, repeat, or summarize the previous scene. Do NOT re-describe the setting or re-introduce characters. Write only NEW content that follows from the player's action.\n\nScene context for reference (already narrated — do NOT repeat): ${phaseInstruction}\n\nREMINDER: Continue forward. New dialogue, new actions, new developments only.` });
+      } else {
+        msgs.push({ role: 'system', content: `=== CURRENT SCENE ===\n${phaseInstruction}\n\nREMINDER: Write ONLY this scene. Do NOT skip ahead to later parts of the day. Do NOT summarize the whole day. Stay in this moment.` });
+      }
     }
 
     return sanitizeMessages(msgs);

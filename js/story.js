@@ -497,11 +497,12 @@ ${sceneHint ? `Upcoming scene context: ${sceneHint}\nChoices should naturally le
 Rules:
 - Choices must be grounded in the scene above. If a character just said or did something, choices should react to THAT.
 - Reference specific character names, dialogue, or actions from the scene text.
-- Each choice: one sentence, under 80 characters. Each choice should hint at a consequence or emotional direction — use an em-dash with a brief flavor note.
+- Each choice: one sentence, under 80 characters. Plain action text ONLY.
 - Write in IMPERATIVE or SECOND PERSON ("Tell Sayori...", "Ask about...", "Compliment her..."). Do NOT use first person ("I").
 - ${name} IS the player character — NEVER refer to ${name} in third person. The player IS ${name}.
 - Vary the tone: mix bold, cautious, funny, and sincere options.
-- Format: numbered list (1. 2. 3. 4.) — output ONLY the choices, no preamble or commentary.
+- NEVER add annotations, notes, explanations, or commentary after any choice. No em-dashes followed by effects, no italicized notes, no "(increases affinity)" or "*builds rapport*" or anything similar. Each line is JUST the action — nothing else.
+- Format: numbered list (1. 2. 3. 4.) — output ONLY the 4 choices, nothing else. No intro, no outro.
 ${staticChoices && staticChoices.length > 0 ? `
 Here are the default generic choices for this phase. You MUST write NEW choices that are MORE SPECIFIC to the actual scene content above. Do NOT repeat or rephrase these defaults:
 ${staticChoices.join('\n')}` : ''}
@@ -536,12 +537,22 @@ Choices:`;
   return null; // Signal to use fallback
 }
 
+// Strip trailing annotations from choices (e.g. "—*Builds rapport.*" or "— (increases affinity)")
+function cleanChoiceText(text) {
+  return text
+    .replace(/^["']|["']$/g, '')
+    .replace(/\s*[—–-]{1,2}\s*\*[^*]+\*\s*$/, '')   // —*italic annotation*
+    .replace(/\s*[—–-]{1,2}\s*\([^)]+\)\s*$/, '')     // —(parenthetical)
+    .replace(/\s*[—–-]{1,2}\s*[A-Z][^.!?]{5,}$/, '')  // —Sentence-like annotation
+    .trim();
+}
+
 function parseNumberedChoices(lines) {
   const choices = [];
   for (const line of lines) {
     // Handle: 1. / 1) / 1: / 1- and bold variants like **1.** or **1)**
     const m = line.match(/^(?:\*\*)?(\d+)[.):\-](?:\*\*)?\s*(.+)/);
-    if (m && m[2].trim().length >= 5) choices.push(m[2].trim().replace(/^["']|["']$/g, ''));
+    if (m && m[2].trim().length >= 5) choices.push(cleanChoiceText(m[2].trim()));
   }
   return choices;
 }
@@ -550,7 +561,7 @@ function parseBulletChoices(lines) {
   const choices = [];
   for (const line of lines) {
     const m = line.match(/^[-*•]\s+(.+)/);
-    if (m && m[1].trim().length >= 5) choices.push(m[1].trim().replace(/^["']|["']$/g, ''));
+    if (m && m[1].trim().length >= 5) choices.push(cleanChoiceText(m[1].trim()));
   }
   return choices;
 }
@@ -559,7 +570,7 @@ function parseBareLineChoices(lines) {
   // Only use if exactly 3-5 non-empty lines of reasonable length
   const candidates = lines.filter(l => l.length >= 5 && l.length <= 120);
   if (candidates.length >= 3 && candidates.length <= 5) {
-    return candidates.map(l => l.replace(/^["']|["']$/g, '').replace(/^\d+\.\s*/, ''));
+    return candidates.map(l => cleanChoiceText(l.replace(/^\d+\.\s*/, '')));
   }
   return [];
 }
@@ -849,9 +860,11 @@ async function selectStoryChoice(choice) {
       saveChats();
     }
   } else {
-    chat.messages.push({ role: 'user', content: choice });
+    // Clean any residual annotations from AI-generated choices (e.g. "—*Builds rapport.*")
+    const cleanedChoice = typeof cleanChoiceText === 'function' ? cleanChoiceText(choice) : choice;
+    chat.messages.push({ role: 'user', content: cleanedChoice });
     saveChats();
-    insertMessageEl('user', choice);
+    insertMessageEl('user', cleanedChoice);
     scrollToBottom();
   }
   updateContextBar();
