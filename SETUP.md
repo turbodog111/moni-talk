@@ -52,10 +52,37 @@ curl http://localhost:8080/v1/models
 | `--models-dir PATH` | Auto-discover all GGUF files in directory (router mode) |
 | `--models-max N` | Max models loaded simultaneously (use 1 for large models) |
 
+#### Available models
+
+| Model | Quant | Size | Speed (est.) |
+|-------|-------|------|-------------|
+| Qwen3-32B | Q8_0 | ~34 GB | ~7 t/s |
+| Gemma 3 27B | Q8_0 | ~27 GB | ~8 t/s |
+| Mistral Small 3.1 24B | Q8_0 | ~25 GB | ~10 t/s |
+
 #### Downloading new models
 
+Run these on the Spark via SSH. Models download directly to the Spark's storage.
+
 ```bash
+# Generic format
 wget -O ~/models/<filename>.gguf "https://huggingface.co/<user>/<repo>/resolve/main/<filename>.gguf"
+
+# Gemma 3 27B Q8
+wget -O ~/models/gemma-3-27b-it-Q8_0.gguf \
+  "https://huggingface.co/bartowski/google_gemma-3-27b-it-GGUF/resolve/main/google_gemma-3-27b-it-Q8_0.gguf"
+
+# Mistral Small 3.1 24B Q8
+wget -O ~/models/Mistral-Small-3.1-24B-Instruct-Q8_0.gguf \
+  "https://huggingface.co/bartowski/Mistral-Small-3.1-24B-Instruct-2503-GGUF/resolve/main/Mistral-Small-3.1-24B-Instruct-2503-Q8_0.gguf"
+
+# Qwen2.5-72B Q4_K_M (larger, slower, richer writing)
+wget -O ~/models/qwen2.5-72b-instruct-q4_k_m.gguf \
+  "https://huggingface.co/Qwen/Qwen2.5-72B-Instruct-GGUF/resolve/main/qwen2.5-72b-instruct-q4_k_m.gguf"
+
+# Llama 3.3 70B Q4_K_M
+wget -O ~/models/Llama-3.3-70B-Instruct-Q4_K_M.gguf \
+  "https://huggingface.co/bartowski/Llama-3.3-70B-Instruct-GGUF/resolve/main/Llama-3.3-70B-Instruct-Q4_K_M.gguf"
 ```
 
 #### Rebuilding llama.cpp (after updates)
@@ -129,6 +156,7 @@ C:\Users\joshu\moni-talk\index.html
 In the app settings:
 - **Provider** is set to llama.cpp
 - **llama.cpp endpoint** is your Spark's Tailscale HTTPS URL (for remote/GitHub Pages) or `http://spark-0af9:8080` (for local use)
+- **Model** dropdown shows all GGUF files discovered by the server — select which model to use (switching models unloads the current one and loads the new one)
 - **TTS endpoint** is `http://localhost:8880`
 
 ---
@@ -142,6 +170,8 @@ In the app settings:
 | CORS error in browser console | llama-server enables CORS automatically for all origins — verify the server is running and reachable |
 | Mixed content error from GitHub Pages | Use the Tailscale HTTPS URL, not plain HTTP |
 | Tailscale serve not working | Re-run `tailscale serve --bg http://localhost:8080` after Spark restart |
+| ERR_CERTIFICATE_TRANSPARENCY_REQUIRED | New Tailscale certs need time for CT log propagation (~hours to a day). Try incognito mode or Firefox |
+| Model switching is slow | First request to a new model takes time to load into VRAM. Subsequent requests are fast |
 | TTS server crashes on startup | Make sure GPU drivers are loaded in WSL2. Check CUDA: `nvidia-smi` |
 | `sudo` commands hang in Claude Code | Run sudo commands in a real terminal instead |
 
@@ -287,7 +317,7 @@ moni-talk/
 
 | Provider | Setup | Notes |
 |----------|-------|-------|
-| **llama.cpp** | llama-server on DGX Spark or local GPU | Best performance. OpenAI-compatible API. Auto-detects loaded model. |
+| **llama.cpp** | llama-server on DGX Spark or local GPU | Best performance. OpenAI-compatible API. Router mode for multi-model switching. |
 | **Ollama** | Local WSL2 service | Free, unlimited, private. Convenient model management. |
 | **Puter** | Built-in (no key needed) | Free tier via puter.js. Claude Sonnet, GPT-4o Mini, etc. |
 
