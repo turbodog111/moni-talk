@@ -462,9 +462,7 @@
 
 /* === Keyboard-open compact mode (VN) === */
 .keyboard-open .vn-sprites { display: none; }
-.keyboard-open .screen.vn-mode .header { padding-top: 6px; padding-bottom: 6px; }
-.keyboard-open .screen.vn-mode .header-avatar { width: 28px; height: 28px; }
-.keyboard-open .screen.vn-mode .header-sub { display: none; }
+.keyboard-open .screen.vn-mode .message.narrator .msg-bubble { padding: 10px 14px; font-size: 13px; line-height: 1.6; }
 
 /* === Tablet breakpoint (VN) === */
 @media (min-width: 601px) and (max-width: 1024px) {

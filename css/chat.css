@@ -249,14 +249,28 @@
 .chat-item-rename:hover { color: var(--green-mid); }
 
 /* === Keyboard-open compact mode === */
-.keyboard-open .header { padding-top: 6px; padding-bottom: 6px; }
-.keyboard-open .header-avatar { width: 28px; height: 28px; }
+/* Hide non-essential chrome to maximize visible chat area when keyboard is open */
+.keyboard-open .header { padding: 4px 12px; gap: 8px; }
+.keyboard-open .header-avatar { display: none; }
+.keyboard-open .header-name { font-size: 14px; }
 .keyboard-open .header-sub { display: none; }
+.keyboard-open .header-actions .icon-btn { width: 28px; height: 28px; font-size: 14px; }
 .keyboard-open .context-bar { display: none; }
-.keyboard-open .input-area { padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); }
-.keyboard-open .input-area textarea { padding: 8px 14px; font-size: 14px; }
-.keyboard-open .send-btn { width: 38px; height: 38px; font-size: 18px; }
-.keyboard-open .cancel-btn { width: 38px; height: 38px; font-size: 18px; }
+.keyboard-open .affinity-panel { display: none !important; }
+.keyboard-open .adventure-status { display: none; }
+.keyboard-open .chat-area { padding: 8px 12px; gap: 4px; }
+.keyboard-open .msg-avatar, .keyboard-open .msg-avatar-letter { display: none; }
+.keyboard-open .msg-name { display: none; }
+.keyboard-open .msg-model { display: none; }
+.keyboard-open .msg-actions { display: none; }
+.keyboard-open .msg-bubble { padding: 8px 12px; font-size: 14px; }
+.keyboard-open .input-area { padding: 6px 10px; }
+.keyboard-open .input-area textarea { padding: 7px 12px; font-size: 14px; }
+.keyboard-open .send-btn { width: 36px; height: 36px; font-size: 17px; }
+.keyboard-open .cancel-btn { width: 36px; height: 36px; font-size: 17px; }
+.keyboard-open .image-attach-btn { display: none; }
+.keyboard-open .story-choices { padding: 6px 10px; gap: 4px; }
+.keyboard-open .story-choice-btn { padding: 8px 12px; font-size: 13px; }
 
 /* === Dark Mode Chat Overrides === */
 [data-theme="dark"] .message.monika .msg-bubble { background: #1a2e23; border-left-color: #48bb78; }
