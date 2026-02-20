@@ -225,9 +225,22 @@
 .word-picker-title { font-size: 15px; font-weight: 700; color: var(--green-dark); margin-bottom: 2px; text-align: center; }
 .word-picker-hint { font-size: 12px; color: var(--gray-text); margin-bottom: 10px; text-align: center; }
 .word-grid { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
-.word-chip { padding: 6px 12px; border: 2px solid var(--gray-mid); border-radius: 18px; background: var(--bg); color: var(--text); font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.15s; user-select: none; }
+.word-chip { padding: 6px 12px; border: 2px solid var(--gray-mid); border-radius: 18px; background: var(--bg); color: var(--text); font-size: 13px; font-family: inherit; cursor: pointer; transition: all 0.15s; user-select: none; animation: wordFadeIn 0.3s ease-out backwards; }
+@keyframes wordFadeIn { from { opacity: 0; transform: scale(0.8) translateY(8px); } }
 .word-chip:hover { border-color: var(--green-mid); }
-.word-chip.selected { border-color: var(--green-dark); background: var(--green-light); color: var(--green-dark); font-weight: 600; }
+.word-chip.selected { border-color: var(--green-dark); background: var(--green-light); color: var(--green-dark); font-weight: 600; animation: wordPop 0.2s ease-out; }
+@keyframes wordPop { 50% { transform: scale(1.15); } }
+
+/* === Poem Resonance Meter === */
+.poem-resonance { padding: 4px 16px 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.poem-res-row { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 45%; }
+.poem-res-icon { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+.poem-res-track { flex: 1; height: 6px; background: var(--gray-light, #e0e0e0); border-radius: 3px; overflow: hidden; }
+.poem-res-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; width: 0%; }
+.poem-res-fill.sayori { background: #FF91A4; }
+.poem-res-fill.natsuki { background: #FF69B4; }
+.poem-res-fill.yuri { background: #9370DB; }
+.poem-res-fill.monika { background: #3CB371; }
 .word-submit-btn { display: block; margin: 0 auto; padding: 10px 32px; border: none; border-radius: 20px; background: var(--green-dark); color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
 .word-submit-btn:hover { background: var(--green-mid); }
 .word-submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -304,6 +317,7 @@
 [data-theme="dark"] .word-chip { background: #2a2a2a; border-color: var(--gray-mid); color: var(--text); }
 [data-theme="dark"] .word-chip:hover { border-color: var(--green-mid); }
 [data-theme="dark"] .word-chip.selected { border-color: var(--green-dark); background: var(--green-light); color: var(--green-mid); }
+[data-theme="dark"] .poem-res-track { background: #333; }
 [data-theme="dark"] .msg-bubble code { background: rgba(255,255,255,0.08); }
 [data-theme="dark"] .image-attach-btn { color: #888; }
 [data-theme="dark"] .image-attach-btn:hover { color: var(--green-mid); }

@@ -230,6 +230,12 @@
   <div class="word-picker" id="wordPicker" style="display:none;">
     <div class="word-picker-title">Write Your Poem</div>
     <div class="word-picker-hint">Pick 5 words that inspire you. <span id="wordCount">0/5</span></div>
+    <div class="poem-resonance" id="poemResonance" style="display:none;">
+      <div class="poem-res-row"><img src="Sayori PFP.png" class="poem-res-icon" alt="S"><div class="poem-res-track"><div class="poem-res-fill sayori" id="poemResSayori"></div></div></div>
+      <div class="poem-res-row"><img src="Natsuki PFP.png" class="poem-res-icon" alt="N"><div class="poem-res-track"><div class="poem-res-fill natsuki" id="poemResNatsuki"></div></div></div>
+      <div class="poem-res-row"><img src="Yuri PFP.png" class="poem-res-icon" alt="Y"><div class="poem-res-track"><div class="poem-res-fill yuri" id="poemResYuri"></div></div></div>
+      <div class="poem-res-row"><img src="Monika PFP.png" class="poem-res-icon" alt="M"><div class="poem-res-track"><div class="poem-res-fill monika" id="poemResMonika"></div></div></div>
+    </div>
     <div class="word-grid" id="wordGrid"></div>
     <button class="word-submit-btn" id="wordSubmitBtn" disabled>Share Poem</button>
   </div>
@@ -421,7 +427,7 @@
     <div class="vn-panel-section">
       <div class="vn-day-display">
         <div class="vn-day-number" id="vnDayNumber">1</div>
-        <div class="vn-day-label">School Day</div>
+        <div class="vn-day-label" id="vnDayLabel">School Day</div>
         <div class="vn-scene-label" id="vnSceneLabel"></div>
       </div>
     </div>
@@ -459,6 +465,10 @@
     <div class="vn-panel-section" id="dynamicsSection" style="display:none;">
       <h4>Dynamics</h4>
       <div class="vn-dynamics-list" id="vnDynamicsList"></div>
+    </div>
+    <div class="vn-panel-section" id="statsSection" style="display:none;">
+      <h4>Stats</h4>
+      <div class="vn-stats-list" id="vnStatsList"></div>
     </div>
     <div class="vn-panel-section">
       <h4>Guide</h4>

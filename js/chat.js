@@ -369,6 +369,7 @@ function openChat(id) {
     updatePhaseDisplay(chat);
     updateRouteIndicator(chat);
     updateDynamicsPanel(chat);
+    updateStatsPanel(chat);
     renderCheckpointList(chat);
   }
   hideAffinityPanel();

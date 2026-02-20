@@ -16,6 +16,11 @@ function hideAffinityPanel() { $('affinityPanel').classList.remove('visible'); }
 function updateVnDay(day) {
   const el = $('vnDayNumber');
   if (el) el.textContent = day;
+  const labelEl = $('vnDayLabel');
+  if (labelEl) {
+    const event = STORY_EVENTS[day];
+    labelEl.textContent = event ? event.name : 'School Day';
+  }
 }
 
 function updatePhaseDisplay(chat) {
@@ -237,6 +242,9 @@ function closeJournal() {
   chat.storyDay = (chat.storyDay || 1) + 1;
   initPhaseForDay(chat);
   chat.lastChoices = null; // Clear stale choices from previous day
+  // Show event toast if this day has a special event
+  const event = STORY_EVENTS[chat.storyDay];
+  if (event) showToast(event.toast, 'success');
   // Build yesterday hint for the day-break message
   const y = chat.storyYesterday;
   let yesterdayHint = '';
@@ -252,8 +260,63 @@ function closeJournal() {
   updateVnDay(chat.storyDay);
   updatePhaseDisplay(chat);
   updateDynamicsPanel(chat);
+  updateStatsPanel(chat);
   saveChats();
   generateStoryBeat(chat);
+}
+
+// ====== STATS PANEL ======
+function updateStatsPanel(chat) {
+  const section = $('statsSection');
+  const list = $('vnStatsList');
+  if (!section || !list) return;
+
+  if (!chat || chat.mode !== 'story') {
+    section.style.display = 'none';
+    return;
+  }
+
+  const stats = computeStoryStats(chat);
+  section.style.display = '';
+
+  const capName = n => n.charAt(0).toUpperCase() + n.slice(1);
+  const girls = ['sayori', 'natsuki', 'yuri', 'monika'];
+  const colors = { sayori: '#FF91A4', natsuki: '#FF69B4', yuri: '#9370DB', monika: '#3CB371' };
+
+  // Total time spent for bar scaling
+  const totalFT = girls.reduce((s, g) => s + stats.freeTime[g], 0) || 1;
+  const totalWH = girls.reduce((s, g) => s + stats.walkHome[g], 0) || 1;
+
+  let html = `
+    <div class="vn-stat-row"><span class="vn-stat-label">Days</span><span class="vn-stat-value">${stats.days}</span></div>
+    <div class="vn-stat-row"><span class="vn-stat-label">Poems</span><span class="vn-stat-value">${stats.poems}</span></div>
+    <div class="vn-stat-row"><span class="vn-stat-label">Milestones</span><span class="vn-stat-value">${stats.milestones}</span></div>`;
+
+  // Free time breakdown
+  if (totalFT > 0) {
+    html += '<div class="vn-stat-section">Free Time With</div>';
+    girls.forEach(g => {
+      const count = stats.freeTime[g];
+      if (count > 0) {
+        const pct = Math.round((count / totalFT) * 100);
+        html += `<div class="vn-stat-bar-row"><span class="vn-stat-bar-label">${capName(g)}</span><div class="vn-stat-bar-track"><div class="vn-stat-bar-fill" style="width:${pct}%;background:${colors[g]}"></div></div><span class="vn-stat-bar-count">${count}</span></div>`;
+      }
+    });
+  }
+
+  // Walk home breakdown
+  if (totalWH > 0) {
+    html += '<div class="vn-stat-section">Walked Home With</div>';
+    girls.forEach(g => {
+      const count = stats.walkHome[g];
+      if (count > 0) {
+        const pct = Math.round((count / totalWH) * 100);
+        html += `<div class="vn-stat-bar-row"><span class="vn-stat-bar-label">${capName(g)}</span><div class="vn-stat-bar-track"><div class="vn-stat-bar-fill" style="width:${pct}%;background:${colors[g]}"></div></div><span class="vn-stat-bar-count">${count}</span></div>`;
+      }
+    });
+  }
+
+  list.innerHTML = html;
 }
 
 // ====== DYNAMICS PANEL ======

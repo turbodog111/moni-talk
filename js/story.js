@@ -65,6 +65,18 @@ function advancePhase(chat) {
 }
 
 function buildPhaseInstruction(chat) {
+  // Check for active cutscene — overrides normal phase instruction for one beat
+  if (chat._activeCutscene) {
+    const cs = chat._activeCutscene;
+    delete chat._activeCutscene;
+    const capName = cs.girl.charAt(0).toUpperCase() + cs.girl.slice(1);
+    return `=== MILESTONE CUTSCENE — ${capName} (Affinity ${cs.threshold}) ===
+This is a special character moment. Write a dedicated scene focused ENTIRELY on this event:
+${cs.description}
+Write 3-4 paragraphs of rich, emotional prose. This is a pivotal moment in MC's relationship with ${capName}. Take your time — describe body language, facial expressions, the atmosphere. Make the player feel the significance of this bond deepening.
+Do NOT include [END_OF_DAY], [POETRY], or [CHOICE] tags.`;
+  }
+
   const phaseKey = chat.storyPhase;
   const phase = STORY_PHASES[phaseKey];
   if (!phase) return '';
@@ -171,6 +183,42 @@ function buildPhaseInstruction(chat) {
     instruction = `Scene: Monika announces the meeting is over for today. MC walks home with ${name}${isSayori ? ' (they always walk together as neighbors)' : ' (she offered to walk together)'}. A nice bonding moment on the walk. End your response with [END_OF_DAY] on its own line.`;
   }
 
+  // Confession scene — overrides normal walk_home
+  if (!instruction && phaseKey === 'walk_home' && chat.confessionTarget) {
+    const target = chat.confessionTarget;
+    delete chat.confessionTarget; // consumed
+    chat.confessions = chat.confessions || {};
+    chat.confessions[target.toLowerCase()] = true;
+    const isSayori = target.toLowerCase() === 'sayori';
+    const beat = chat.storyBeatInPhase || 0;
+
+    if (beat === 0) {
+      instruction = `Day ${day} — CONFESSION SCENE: MC walks home with ${target}${isSayori ? ' (they always walk together as neighbors)' : ''}.
+
+This is one of the most important scenes in the story. MC has decided to confess his feelings.
+
+Set the scene: golden evening light, the walk home feels different tonight. MC is nervous — describe the physical sensations of anxiety and anticipation. His heart is pounding, palms sweating, words rehearsed and forgotten.
+
+${target} senses something is off — MC is quieter than usual, stealing glances. She asks if everything is okay.
+
+Build the tension. Let the moment breathe. MC is searching for the right words, the right moment. Maybe they stop at a particular spot — a bridge, a park bench, under a tree.
+
+Do NOT include the actual confession yet — save that for the next beat. End on the precipice of the moment.
+Do NOT include [END_OF_DAY], [POETRY], or [CHOICE] tags.`;
+    } else {
+      instruction = `Day ${day} — CONFESSION SCENE (Part 2): MC confesses his feelings to ${target}.
+
+This is THE moment. MC finally speaks from the heart. Write the confession as raw, genuine, imperfect — not a rehearsed speech but real words from a real person.
+
+Show ${target}'s reaction in exquisite detail — the moment of surprise, the processing, the emotional response. This must feel earned based on their relationship. ${target}'s reaction should reflect her personality:
+${target === 'Sayori' ? "Sayori's eyes fill with happy tears. She's been holding these feelings too, afraid they'd ruin their friendship." : ''}${target === 'Natsuki' ? "Natsuki's tsundere armor cracks completely. She tries to deflect but can't — her voice breaks and she admits she's felt the same way, then gets embarrassed and threatens him if he tells anyone." : ''}${target === 'Yuri' ? "Yuri is overwhelmed — her hands tremble, she can barely meet his eyes. She whispers that she's been writing poems about him, that he's the first person who made her feel understood." : ''}${target === 'Monika' ? "Monika's composure wavers for the first time. Her eyes glisten. She tells him she's been afraid to hope for this — afraid it would hurt too much if it wasn't real." : ''}
+
+End with a warm, intimate moment — not a kiss necessarily, but a clear mutual acknowledgment that everything has changed between them.
+
+End your response with [END_OF_DAY] on its own line.`;
+    }
+  }
+
   // Dynamic walk_home instruction — 2-beat atmospheric scene
   if (!instruction && phaseKey === 'walk_home') {
     let companion = 'Sayori';
@@ -207,6 +255,14 @@ Rich sensory detail: the light is changing, the world is settling into evening. 
 Bring the walk to a warm, memorable close. This should feel like the moment the player remembers from today.
 
 End your response with [END_OF_DAY] on its own line.`;
+    }
+  }
+
+  // Check for special day event overrides
+  if (!instruction) {
+    const event = STORY_EVENTS[day];
+    if (event && event.phaseOverrides[phaseKey]) {
+      instruction = event.phaseOverrides[phaseKey];
     }
   }
 
@@ -264,7 +320,7 @@ function buildWalkHomeChoices(chat) {
     monika: "she's organizing the club papers into a neat folder"
   };
 
-  return sorted.map(g => {
+  const walkChoices = sorted.map(g => {
     const name = capName(g.name);
     const activity = activities[g.name];
     if (g.val >= 40) {
@@ -287,6 +343,14 @@ function buildWalkHomeChoices(chat) {
       return `Walk home with ${name} — ${distant[g.name]}`;
     }
   });
+
+  // Add confession options for girls at 75+ affinity (once per girl)
+  const confessions = chat.confessions || {};
+  const confessionChoices = sorted
+    .filter(g => g.val >= 75 && !confessions[g.name])
+    .map(g => `Confess your feelings to ${capName(g.name)}`);
+
+  return [...confessionChoices, ...walkChoices];
 }
 
 // Build free-time choices sorted by affinity with activity-grounded flavor text
@@ -613,15 +677,23 @@ function showWordPicker() {
     shuffled.forEach(w => { allWords.push(w); wordMap[w] = girl; });
   }
   allWords.sort(() => Math.random() - 0.5);
-  allWords.forEach(word => {
+  allWords.forEach((word, i) => {
     const chip = document.createElement('button');
     chip.className = 'word-chip';
     chip.textContent = word;
+    chip.style.animationDelay = (i * 0.03) + 's';
     chip.addEventListener('click', () => toggleWord(word, chip));
     grid.appendChild(chip);
   });
   $('wordCount').textContent = '0/5';
   $('wordSubmitBtn').disabled = true;
+  // Reset resonance meter
+  const res = $('poemResonance');
+  if (res) res.style.display = 'none';
+  ['sayori', 'natsuki', 'yuri', 'monika'].forEach(g => {
+    const fill = $('poemRes' + g.charAt(0).toUpperCase() + g.slice(1));
+    if (fill) fill.style.width = '0%';
+  });
   $('wordPicker').style.display = '';
   hideStoryChoices();
 }
@@ -641,6 +713,20 @@ function toggleWord(word, chip) {
   }
   $('wordCount').textContent = `${selectedWords.length}/5`;
   $('wordSubmitBtn').disabled = selectedWords.length !== 5;
+  updatePoemResonance();
+}
+
+function updatePoemResonance() {
+  const res = $('poemResonance');
+  if (!res) return;
+  const counts = { sayori: 0, natsuki: 0, yuri: 0, monika: 0 };
+  selectedWords.forEach(w => { if (wordMap[w]) counts[wordMap[w]]++; });
+  const hasAny = selectedWords.length > 0;
+  res.style.display = hasAny ? '' : 'none';
+  ['sayori', 'natsuki', 'yuri', 'monika'].forEach(g => {
+    const fill = $('poemRes' + g.charAt(0).toUpperCase() + g.slice(1));
+    if (fill) fill.style.width = (counts[g] * 20) + '%';
+  });
 }
 
 async function submitPoem() {
@@ -694,6 +780,21 @@ async function selectStoryChoice(choice) {
     return;
   }
 
+  // "Confess your feelings to X" — player chose to confess
+  if (choice.startsWith('Confess your feelings to ')) {
+    const girl = choice.replace('Confess your feelings to ', '');
+    chat.confessionTarget = girl;
+    chat.messages.push({ role: 'user', content: choice });
+    saveChats();
+    insertMessageEl('user', choice);
+    scrollToBottom();
+    advancePhase(chat); // meeting_end → walk_home
+    updatePhaseDisplay(chat);
+    updateContextBar();
+    await generateStoryBeat(chat);
+    return;
+  }
+
   // "Walk home with X" — player chose a companion
   if (choice.startsWith('Walk home with ')) {
     chat.messages.push({ role: 'user', content: choice });
@@ -720,6 +821,8 @@ async function selectStoryChoice(choice) {
       updateChatHeader(chat);
       updateVnDay(chat.storyDay);
       updatePhaseDisplay(chat);
+      const dayEvent = STORY_EVENTS[chat.storyDay];
+      if (dayEvent) showToast(dayEvent.toast, 'success');
     }
     // Build yesterday hint for the day-break message
     const y = chat.storyYesterday;
@@ -888,15 +991,18 @@ async function generateStoryBeat(chat) {
 
     // Affinity fallback — merge with existing, never lose values
     // Rule-based filter: only accept affinity changes for characters actually present in the scene
-    // Delta cap: max ±6 per beat (matches prompt instruction), prevents model from ignoring rules
-    const MAX_AFFINITY_DELTA = 6;
+    // Asymmetric delta cap: max +6 gain, max -2 loss per beat. Day 1: no negatives at all.
+    const MAX_AFFINITY_GAIN = 6;
+    const MAX_AFFINITY_LOSS = 2;
     const prev = { ...(chat.storyAffinity || { sayori: 15, natsuki: 1, yuri: 1, monika: 10 }) };
     if (affinity) {
       const sceneLower = narrative.toLowerCase();
       const clampDelta = (name) => {
         if (!sceneLower.includes(name) || affinity[name] == null) return prev[name];
         const delta = affinity[name] - prev[name];
-        const clamped = Math.max(-MAX_AFFINITY_DELTA, Math.min(MAX_AFFINITY_DELTA, delta));
+        // Day 1: no negatives (first impressions only)
+        const minDelta = (chat.storyDay || 1) === 1 ? 0 : -MAX_AFFINITY_LOSS;
+        const clamped = Math.max(minDelta, Math.min(MAX_AFFINITY_GAIN, delta));
         return Math.min(100, Math.max(0, prev[name] + clamped));
       };
       chat.storyAffinity = {
@@ -913,6 +1019,7 @@ async function generateStoryBeat(chat) {
     updateAffinityPanel(chat.storyAffinity);
     updateRouteIndicator(chat);
     updateDynamicsPanel(chat);
+    updateStatsPanel(chat);
 
     chat.messages.push({ role: 'assistant', content: rawReply, model: getCurrentModelKey() });
     updateVnSprites(narrative);
@@ -923,6 +1030,18 @@ async function generateStoryBeat(chat) {
     chat.storyBeatInPhase = (chat.storyBeatInPhase || 0) + 1;
     const phase = STORY_PHASES[chat.storyPhase];
     const isWrapPhase = isEndOfDayPhase(chat.storyPhase);
+
+    // 0. Check for pending cutscene (milestone events)
+    if (chat._cutsceneQueue && chat._cutsceneQueue.length > 0) {
+      const cs = chat._cutsceneQueue.shift();
+      chat._activeCutscene = cs;
+      saveChats();
+      const capName = cs.girl.charAt(0).toUpperCase() + cs.girl.slice(1);
+      console.log('[STORY] → path 0: cutscene for', capName, 'at', cs.threshold);
+      renderStoryChoices([`A special moment with ${capName}...`]);
+      scrollToBottom();
+      return;
+    }
 
     // 1. Handle end of day — ONLY honor [END_OF_DAY] during wrap-up/walk_home phases
     if ((isEndOfDay && isWrapPhase) || (phase && phase.forceEndOfDay && chat.storyBeatInPhase >= phase.maxBeats)) {
@@ -1030,12 +1149,30 @@ function forceStoryRetry() {
   generateStoryBeat(chat);
 }
 
+// ====== STORY STATISTICS ======
+function computeStoryStats(chat) {
+  const stats = { days: chat.storyDay || 1, messages: 0, poems: 0, freeTime: {}, walkHome: {}, milestones: 0 };
+  const girls = ['sayori', 'natsuki', 'yuri', 'monika'];
+  girls.forEach(g => { stats.freeTime[g] = 0; stats.walkHome[g] = 0; });
+  for (const m of chat.messages) {
+    stats.messages++;
+    if (m.role === 'user') {
+      const ft = m.content.match(/^Spend time with (\w+)/i);
+      if (ft) stats.freeTime[ft[1].toLowerCase()]++;
+      const wh = m.content.match(/^Walk home with (\w+)/i);
+      if (wh) stats.walkHome[wh[1].toLowerCase()]++;
+      if (m.content.startsWith('[Poem words:')) stats.poems++;
+    }
+  }
+  stats.milestones = Object.keys(chat.milestonesCrossed || {}).length;
+  return stats;
+}
+
 // ====== MILESTONE DETECTION ======
 function detectMilestones(chat, prevAffinity, newAffinity) {
   if (!prevAffinity || !newAffinity) return;
   const thresholds = [25, 50, 75];
   const crossed = chat.milestonesCrossed || {};
-  const pending = [];
 
   for (const girl of AFFINITY_GIRL_NAMES) {
     const prev = prevAffinity[girl] || 0;
@@ -1046,7 +1183,9 @@ function detectMilestones(chat, prevAffinity, newAffinity) {
         crossed[key] = true;
         const milestoneData = AFFINITY_MILESTONES[girl]?.[t];
         if (milestoneData) {
-          pending.push({ girl, threshold: t, description: milestoneData });
+          // Push to cutscene queue for dedicated milestone scenes
+          chat._cutsceneQueue = chat._cutsceneQueue || [];
+          chat._cutsceneQueue.push({ girl, threshold: t, description: milestoneData });
           const capName = girl.charAt(0).toUpperCase() + girl.slice(1);
           showToast(`${capName} reached ${t} affinity!`, 'success');
         }
@@ -1055,12 +1194,13 @@ function detectMilestones(chat, prevAffinity, newAffinity) {
   }
 
   chat.milestonesCrossed = crossed;
-  if (pending.length > 0) {
-    chat._pendingMilestones = pending;
-  }
 }
 
 function buildMilestoneNote(chat) {
+  // If cutscene queue has items, milestones are handled as dedicated cutscenes — skip injection
+  if (chat._cutsceneQueue && chat._cutsceneQueue.length > 0) return '';
+
+  // Backwards compat: old saves may still have _pendingMilestones
   const pending = chat._pendingMilestones;
   if (!pending || pending.length === 0) return '';
 
@@ -1092,6 +1232,17 @@ function createCheckpoint(chat, isAuto = false) {
   const all = getCheckpoints();
   const chatCPs = all[chat.id] || [];
 
+  // Capture text preview from last assistant message
+  let preview = '';
+  for (let i = chat.messages.length - 1; i >= 0; i--) {
+    if (chat.messages[i].role === 'assistant') {
+      const { narrative } = parseStoryResponse(chat.messages[i].content);
+      preview = narrative.slice(0, 100).replace(/\n/g, ' ');
+      if (narrative.length > 100) preview += '...';
+      break;
+    }
+  }
+
   const cp = {
     id: crypto.randomUUID(),
     auto: isAuto,
@@ -1103,7 +1254,9 @@ function createCheckpoint(chat, isAuto = false) {
     mcName: chat.mcName || 'MC',
     messages: chat.messages.map(m => ({ role: m.role, content: m.content })),
     milestonesCrossed: { ...(chat.milestonesCrossed || {}) },
-    storyYesterday: chat.storyYesterday || null
+    storyYesterday: chat.storyYesterday || null,
+    confessions: { ...(chat.confessions || {}) },
+    preview
   };
 
   chatCPs.push(cp);
@@ -1134,6 +1287,7 @@ function loadCheckpoint(chat, cpId) {
   chat.messages = cp.messages.map(m => ({ role: m.role, content: m.content }));
   chat.milestonesCrossed = { ...(cp.milestonesCrossed || {}) };
   chat.storyYesterday = cp.storyYesterday || null;
+  chat.confessions = { ...(cp.confessions || {}) };
   chat.lastChoices = null;
 
   saveChats();
@@ -1168,10 +1322,12 @@ function renderCheckpointList(chat) {
       return `<span class="cp-dot" style="background:${girlColors[g]};opacity:${0.3 + (val / 100) * 0.7}" title="${g.charAt(0).toUpperCase() + g.slice(1)}: ${val}"></span>`;
     }).join('');
 
+    const previewHtml = cp.preview ? `<div class="cp-preview">${escapeHtml(cp.preview)}</div>` : '';
     return `<div class="cp-item" data-cpid="${cp.id}">
       <div class="cp-info">
         <div class="cp-label">${cp.auto ? 'Auto' : 'Manual'} — Day ${cp.day}</div>
         <div class="cp-time">${timeStr}</div>
+        ${previewHtml}
         <div class="cp-dots">${dots}</div>
       </div>
       <div class="cp-actions">
@@ -1195,6 +1351,7 @@ function renderCheckpointList(chat) {
         updateAffinityPanel(chat.storyAffinity);
         updateRouteIndicator(chat);
         updateDynamicsPanel(chat);
+        updateStatsPanel(chat);
         renderMessages();
         updateContextBar();
         showToast('Checkpoint loaded!', 'success');

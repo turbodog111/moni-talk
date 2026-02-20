@@ -627,6 +627,34 @@ const PHASE_SEQUENCES = {
   regular_day: ['morning', 'club_arrival', 'club_activity', 'free_time', 'meeting_end', 'walk_home']
 };
 
+// ====== STORY EVENTS (special day overrides) ======
+const STORY_EVENTS = {
+  4: {
+    name: 'Rainy Day',
+    toast: 'The rain changes everything...',
+    phaseOverrides: {
+      morning: `Day {{DAY}} — Scene: It's raining heavily. MC and Sayori share an umbrella on the walk to school. The rain creates an intimate atmosphere — puddles splashing, the sound of droplets on fabric, their shoulders pressed together under the umbrella. Keep it short and atmospheric. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+      club_activity: `Day {{DAY}} — RAINY DAY SPECIAL: The rain drums against the windows. The club feels cozier than usual. Monika suggests everyone write a poem inspired by the rain. The girls settle into different spots — Yuri by the window watching the rain, Natsuki curled up with hot chocolate, Sayori watching the droplets race down the glass. Write a warm, atmospheric scene. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`
+    }
+  },
+  7: {
+    name: 'Festival Prep',
+    toast: 'The school festival is coming!',
+    phaseOverrides: {
+      club_arrival: `Day {{DAY}} — Scene: There's a buzz in the air. Monika announces the Literature Club will have a booth at the school festival! They need to prepare — decorations, a poetry display, maybe baked goods. The girls react with excitement (and Natsuki pretends not to care). Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+      club_activity: `Day {{DAY}} — FESTIVAL PREP: The club works together planning their festival booth. Monika delegates tasks. Natsuki volunteers to bake. Yuri suggests a poetry reading corner. Sayori wants to make decorations. Show the girls working together — collaboration, mild disagreements about aesthetics, creative problem-solving. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`
+    }
+  },
+  10: {
+    name: 'Summer Festival',
+    toast: 'Festival day has arrived!',
+    phaseOverrides: {
+      morning: `Day {{DAY}} — Scene: Festival day! MC and Sayori are excited walking to school. The campus is transformed with stalls and decorations. The air buzzes with energy. Keep it short and vibrant. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`,
+      club_activity: `Day {{DAY}} — FESTIVAL: The Literature Club booth is open! Visitors come and go. The girls are in their element — Monika charms visitors, Natsuki's cupcakes sell out fast, Yuri does dramatic poetry readings that leave people stunned, Sayori drags passersby over with boundless energy. A fun, bustling scene that shows each girl at her best. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`
+    }
+  }
+};
+
 function isPoemDay(day) {
   if (day < 2) return false;
   return (day - 2) % 3 === 0; // Days 2, 5, 8, 11, ...

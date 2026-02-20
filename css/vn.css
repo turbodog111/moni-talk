@@ -195,6 +195,18 @@
   flex-shrink: 0;
 }
 
+/* VN Stats Panel */
+.vn-stats-list { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.vn-stat-row { display: flex; justify-content: space-between; padding: 2px 0; }
+.vn-stat-label { color: rgba(255,255,255,0.45); }
+.vn-stat-value { font-weight: 600; color: #e8f5e9; }
+.vn-stat-section { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.3); margin-top: 8px; margin-bottom: 4px; }
+.vn-stat-bar-row { display: flex; align-items: center; gap: 6px; padding: 1px 0; }
+.vn-stat-bar-label { font-size: 11px; color: rgba(255,255,255,0.55); min-width: 55px; }
+.vn-stat-bar-track { flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+.vn-stat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.vn-stat-bar-count { font-size: 10px; color: rgba(255,255,255,0.4); min-width: 16px; text-align: right; }
+
 /* VN Scene Info */
 .vn-scene-info {
   padding: 10px 14px;
@@ -270,6 +282,8 @@
   background: rgba(60,179,113,0.15);
   color: #90EE90;
 }
+.screen.vn-mode .poem-resonance { padding: 4px 16px 8px; }
+.screen.vn-mode .poem-res-track { background: rgba(255,255,255,0.1); }
 
 /* Journal Overlay */
 .journal-overlay {
@@ -420,6 +434,26 @@
   height: 8px;
   border-radius: 50%;
   display: inline-block;
+}
+.cp-preview {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  font-style: italic;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+.adv-cp-preview {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  font-style: italic;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
 }
 .cp-actions {
   display: flex;

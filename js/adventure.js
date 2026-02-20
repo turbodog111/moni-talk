@@ -359,12 +359,25 @@ function createAdventureCheckpoint(chat, isAuto = false) {
   const key = `adv_${chat.id}`;
   const chatCPs = all[key] || [];
 
+  // Capture text preview from last assistant message
+  let preview = '';
+  for (let i = chat.messages.length - 1; i >= 0; i--) {
+    if (chat.messages[i].role === 'assistant') {
+      const raw = chat.messages[i].content || '';
+      const text = raw.replace(/\[(?:MOOD|DRIFT|SCENE|HP|ITEM|REMOVE)[^\]]*\]\s*/gi, '').trim();
+      preview = text.slice(0, 100).replace(/\n/g, ' ');
+      if (text.length > 100) preview += '...';
+      break;
+    }
+  }
+
   const cp = {
     id: crypto.randomUUID(),
     auto: isAuto,
     timestamp: Date.now(),
     advState: JSON.parse(JSON.stringify(chat.advState)),
     messages: chat.messages.map(m => ({ role: m.role, content: m.content })),
+    preview
   };
 
   chatCPs.push(cp);
@@ -422,10 +435,12 @@ function renderAdventureCheckpoints(chat) {
     const domain = detectDomain(s.location);
     const domainInfo = ADVENTURE_DOMAINS[domain];
 
+    const advPreview = cp.preview ? `<div class="adv-cp-preview">${escapeHtml(cp.preview)}</div>` : '';
     return `<div class="adv-cp-item" data-cpid="${cp.id}">
       <div class="adv-cp-info">
         <div class="adv-cp-label">${cp.auto ? 'Auto' : 'Save'} \u2014 ${domainInfo.icon} ${escapeHtml(s.location)}</div>
         <div class="adv-cp-detail">${timeStr} \u2022 HP ${s.hp}/${s.maxHp} \u2022 ${s.fragments.length}/3 \u{1F48E} \u2022 Turn ${s.turns}</div>
+        ${advPreview}
       </div>
       <div class="adv-cp-actions">
         <button class="adv-cp-load" title="Load">\u25B6</button>
