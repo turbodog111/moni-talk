@@ -1,38 +1,89 @@
 # Moni-Talk Setup & Reference Guide
 
-## Quick Start (After PC Restart)
+## Quick Start (After Restart)
 
-Everything runs in WSL2 Ubuntu. Open a WSL terminal and follow these steps in order.
+### 1. Start llama-server on the DGX Spark
 
-### 1. Start Ollama (LLM Server)
-
-Ollama is a systemd service, so it should auto-start with WSL. Verify:
+SSH into the Spark and start llama-server with the model you want:
 
 ```bash
-systemctl status ollama
-```
+ssh xturbo@spark-0af9.local
 
-If it's not running:
-
-```bash
-sudo systemctl start ollama
+~/llama.cpp/build/bin/llama-server \
+    --no-mmap \
+    -ngl 999 \
+    -fa on \
+    --jinja \
+    --host 0.0.0.0 \
+    --port 8080 \
+    --ctx-size 32768 \
+    -m ~/models/Qwen3-32B-Q8_0.gguf
 ```
 
 Confirm it's responding:
 
 ```bash
-curl http://localhost:11434/v1/models
+curl http://localhost:8080/v1/models
 ```
 
-You should see a JSON list of your installed models.
+**Endpoint (local):** `http://spark-0af9:8080`
+**Models directory:** `~/models/` (GGUF format)
+**Build location:** `~/llama.cpp/`
 
-**Endpoint:** `http://localhost:11434`
-**Config:** `/etc/systemd/system/ollama.service`
-**Environment:** `OLLAMA_HOST=0.0.0.0`, `OLLAMA_ORIGINS=*`
+#### Key flags
+
+| Flag | Purpose |
+|------|---------|
+| `--no-mmap` | Faster model loading on Spark |
+| `-ngl 999` | Offload all layers to GPU |
+| `-fa on` | Flash Attention — reduces memory, improves speed |
+| `--jinja` | Chat template support |
+| `--ctx-size 32768` | Context window size |
+
+#### Downloading new models
+
+```bash
+wget -O ~/models/<filename>.gguf "https://huggingface.co/<user>/<repo>/resolve/main/<filename>.gguf"
+```
+
+#### Rebuilding llama.cpp (after updates)
+
+```bash
+cd ~/llama.cpp
+git pull
+cmake -B build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DGGML_CUDA=ON \
+    -DGGML_CUDA_F16=ON \
+    -DCMAKE_CUDA_ARCHITECTURES=121 \
+    -DLLAMA_CURL=ON \
+    -DLLAMA_OPENSSL=ON
+cmake --build build --config Release -j 20
+```
 
 ---
 
-### 2. Start the TTS Server (Voice)
+### 2. Start Tailscale on the DGX Spark (Remote Access)
+
+Tailscale proxies the llama-server over HTTPS so it can be reached from GitHub Pages (which requires HTTPS).
+
+```bash
+tailscale serve --bg http://localhost:8080
+```
+
+**Important:** After every Spark restart, the Tailscale serve config is lost. You must re-run this command.
+
+Verify:
+
+```bash
+tailscale serve status
+```
+
+**Tailscale HTTPS URL:** Use this as the llama.cpp endpoint in Moni-Talk settings.
+
+---
+
+### 3. Start the TTS Server (Voice — runs on PC in WSL2)
 
 ```bash
 cd /mnt/c/Users/joshu/moni-talk/server
@@ -48,42 +99,12 @@ python tts_server.py --port 8880
 
 Wait for `"Model loaded"` and `"Uvicorn running on 0.0.0.0:8880"` in the output.
 
-Confirm it's responding:
-
-```bash
-curl http://localhost:8880/api/tts/health
-```
-
-Should return `{"status":"ok","model":"loaded"}`.
-
 **Endpoint:** `http://localhost:8880`
 **Reference voice:** `server/voices/monika.wav`
 
 ---
 
-### 3. Start Tailscale (Remote Access)
-
-Tailscale allows you to use Moni-Talk from your iPad/iPhone via the Ollama server.
-
-```bash
-tailscale serve --bg http://localhost:11434
-```
-
-**Important:** After every WSL restart, the Tailscale serve config is lost. You must re-run this command.
-
-Verify Tailscale is connected:
-
-```bash
-tailscale status
-```
-
-**Tailscale URL:** `https://xturbo-1.tail3b3470.ts.net`
-
----
-
 ### 4. Open Moni-Talk
-
-The app itself is a static GitHub Pages site. No server needed for the frontend.
 
 **URL:** https://turbodog111.github.io/moni-talk/
 
@@ -93,9 +114,9 @@ Or open the local file directly:
 C:\Users\joshu\moni-talk\index.html
 ```
 
-In the app settings, make sure:
-- **Provider** is set to Ollama
-- **Ollama endpoint** is `http://localhost:11434` (or `http://[::1]:11434` if IPv4 is flaky)
+In the app settings:
+- **Provider** is set to llama.cpp
+- **llama.cpp endpoint** is your Spark's Tailscale HTTPS URL (for remote/GitHub Pages) or `http://spark-0af9:8080` (for local use)
 - **TTS endpoint** is `http://localhost:8880`
 
 ---
@@ -104,11 +125,13 @@ In the app settings, make sure:
 
 | Problem | Fix |
 |---------|-----|
-| Browser can't reach localhost:11434 | Try `http://[::1]:11434` (IPv6) or restart WSL: `wsl --shutdown` then reopen |
-| Ollama won't start | Check logs: `journalctl -u ollama -n 50` |
-| TTS server crashes on startup | Make sure GPU drivers are loaded. Check CUDA: `nvidia-smi` |
-| Tailscale serve not working | Make sure WSL is in NAT mode (default), NOT mirrored networking |
-| `sudo` commands hang in Claude Code | Run sudo commands in a real WSL terminal instead |
+| llama-server won't start | Check CUDA: `nvidia-smi`. Verify model file exists in `~/models/` |
+| "Could not connect" in settings | Is llama-server running? Check `curl http://localhost:8080/v1/models` on the Spark |
+| CORS error in browser console | llama-server enables CORS automatically for all origins — verify the server is running and reachable |
+| Mixed content error from GitHub Pages | Use the Tailscale HTTPS URL, not plain HTTP |
+| Tailscale serve not working | Re-run `tailscale serve --bg http://localhost:8080` after Spark restart |
+| TTS server crashes on startup | Make sure GPU drivers are loaded in WSL2. Check CUDA: `nvidia-smi` |
+| `sudo` commands hang in Claude Code | Run sudo commands in a real terminal instead |
 
 ---
 
@@ -130,7 +153,7 @@ moni-talk/
 │   ├── state.js            Global state variables, DOM refs, screen management
 │   ├── app.js              Init, event listeners, theme toggle
 │   ├── chat.js             Chat CRUD, message rendering, send/receive, streaming
-│   ├── ai.js               AI provider dispatch (OpenRouter, Puter, Ollama, Gemini)
+│   ├── ai.js               AI provider dispatch (llama.cpp, Ollama, Puter)
 │   ├── story.js            Story mode: phases, days, affinity, poem writing
 │   ├── adventure.js        Adventure mode: tag parsing, game state, status bar
 │   ├── vn.js               Visual novel sprites, affinity panel, day display
@@ -262,7 +285,8 @@ moni-talk/
 
 - **State persistence:** LocalStorage (`moni_talk_chats_v2`, `moni_talk_profile`, etc.)
 - **Cloud sync:** Puter.js KV store (optional sign-in)
-- **Streaming:** All providers support streaming responses (SSE for Gemini/OpenRouter, NDJSON for Ollama)
+- **CORS:** llama-server enables CORS automatically (reflects Origin header) — no flag needed
+- **Streaming:** All providers support streaming responses (SSE for llama.cpp, NDJSON for Ollama)
 - **Think-tag filtering:** Strips `<think>...</think>` blocks from models like Qwen3 in real-time
 - **State tags:** AI responses start with `[MOOD:word:intensity] [DRIFT:category]` tags (parsed and stripped before display)
 - **Adventure tags:** `[SCENE:location] [HP:number] [ITEM:name] [REMOVE:name]` parsed for game state
