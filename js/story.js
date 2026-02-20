@@ -860,15 +860,18 @@ async function selectStoryChoice(choice) {
 
 // ====== LIVE TAG STRIPPING (for streaming display) ======
 function liveStripTags(text) {
-  return text
+  let t = text
     .replace(/\[DAY:\d+\]\s*/g, '')
     .replace(/\[(?:AFFINITY|ASSIMILATION)[:\s][^\]]*\]\s*/gi, '')
     .replace(/\[CHOICE[_ ]?\d?\]\s*.+/gi, '')
     .replace(/\[END_OF_DAY\]\s*/gi, '')
     .replace(/\[POETRY\]\s*/gi, '')
+    .replace(/\[(?:SCENE|ITEM|REMOVE|HP|DOMAIN|END_SCENE|MOOD|DRIFT)[^\]]*\]\s*/gi, '')
     // Strip bare affinity lines during streaming
-    .replace(/(?:^|\n)\s*(?:(?:Sayori|Natsuki|Yuri|Monika)\s*[:=]\s*-?\d+[\s,]*){2,}\s*$/gi, '')
-    .trim();
+    .replace(/(?:^|\n)\s*(?:(?:Sayori|Natsuki|Yuri|Monika)\s*[:=]\s*-?\d+[\s,]*){2,}\s*$/gi, '');
+  // Strip incomplete trailing tag (e.g. "[AFFINITY:say" still streaming)
+  t = t.replace(/\[[A-Z_]{2,}[^\]]*$/i, '');
+  return t.trim();
 }
 
 // ====== DAY TRANSITION RECOVERY ======

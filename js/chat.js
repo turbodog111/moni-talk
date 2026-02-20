@@ -7,23 +7,17 @@ const MOOD_COLORS = {
 
 // ====== STREAMING DISPLAY HELPER ======
 function getStreamingDisplay(fullText) {
-  // If text starts with '[', check all leading bracket tags are complete
-  let i = 0;
-  while (i < fullText.length && fullText[i] === '[') {
-    const close = fullText.indexOf(']', i);
-    if (close === -1) return null; // Incomplete tag — hold display
-    i = close + 1;
-    // Skip whitespace between tags
-    while (i < fullText.length && /\s/.test(fullText[i])) i++;
-  }
-  // Strip all leading [TAG...] sequences generically
-  let display = fullText.replace(/^(\[[^\]]*\]\s*)+/, '');
+  if (!fullText) return '';
+  // Strip all known [TAG:...] patterns anywhere in the text
+  let display = fullText.replace(/\[(?:SCENE|ITEM|REMOVE|HP|AFFINITY|ASSIMILATION|END_SCENE|DOMAIN|CHOICE|END_OF_DAY|POETRY|DAY|MOOD|DRIFT)[^\]]*\]/gi, '');
+  // Strip incomplete trailing tag that hasn't closed yet (e.g. "[AFFINITY:say")
+  display = display.replace(/\[[A-Z_]{2,}[^\]]*$/i, '');
   // If [POEM] appears without [/POEM], truncate to content before the poem block
   const poemOpen = display.indexOf('[POEM]');
   if (poemOpen !== -1 && display.indexOf('[/POEM]') === -1) {
     display = display.slice(0, poemOpen);
   }
-  return display;
+  return display.trim() || null;
 }
 
 // ====== CHAT LIST ======
@@ -386,7 +380,13 @@ function openChat(id) {
   } else if (!isStory && chat.messages.length === 0) {
     generateGreeting(chat);
   } else if (!isStory) {
-    userInput.focus();
+    // Auto-generate if last message is from user (AI response was interrupted)
+    const lastMsg = chat.messages[chat.messages.length - 1];
+    if (lastMsg && lastMsg.role === 'user') {
+      setTimeout(() => regenerateLastResponse(), 500);
+    } else {
+      userInput.focus();
+    }
   }
 }
 
@@ -534,7 +534,7 @@ function updateContextBar() {
   const regenBtn = $('regenBtn');
   if (regenBtn) {
     const lastMsg = chat.messages[chat.messages.length - 1];
-    const show = lastMsg && lastMsg.role === 'assistant' && !isGenerating && chat.mode !== 'story';
+    const show = lastMsg && (lastMsg.role === 'assistant' || lastMsg.role === 'user') && !isGenerating && chat.mode !== 'story';
     regenBtn.style.display = show ? '' : 'none';
   }
   updateEditButton();
@@ -575,13 +575,17 @@ async function regenerateLastResponse() {
   const chat = getChat();
   if (!chat || isGenerating) return;
   const lastMsg = chat.messages[chat.messages.length - 1];
-  if (!lastMsg || lastMsg.role !== 'assistant') { showToast('Nothing to regenerate.'); return; }
+  if (!lastMsg) { showToast('Nothing to regenerate.'); return; }
 
-  // Remove last assistant message
-  chat.messages.pop();
-  saveChats();
-  renderMessages();
-  updateContextBar();
+  // Remove last assistant message for true regen; if last is user, just generate
+  if (lastMsg.role === 'assistant') {
+    chat.messages.pop();
+    saveChats();
+    renderMessages();
+    updateContextBar();
+  } else if (lastMsg.role !== 'user') {
+    showToast('Nothing to regenerate.'); return;
+  }
 
   // Find the last user message text to pass to memory extraction later
   const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');

@@ -178,7 +178,7 @@ function updateAdventureActions(chat) {
   const itemBtn = actions.querySelector('[data-action="item"]');
   if (itemBtn) {
     const usable = chat.advState.inventory.filter(i => !i.toLowerCase().includes('heart fragment'));
-    itemBtn.textContent = usable.length > 0 ? `Use Item (${usable.length})` : 'Use Item';
+    itemBtn.textContent = usable.length === 0 ? 'Use Item' : usable.length === 1 ? `Use Item: ${usable[0]}` : `Use Item (${usable.length})`;
     if (usable.length === 0) itemBtn.disabled = true;
   }
 
@@ -219,12 +219,7 @@ function handleAdventureAction(action) {
     case 'item': {
       const items = chat.advState.inventory.filter(i => !i.toLowerCase().includes('heart fragment'));
       if (items.length === 0) { showToast('No usable items!'); return; }
-      if (items.length === 1) {
-        userInput.value = `I use ${items[0]}.`;
-        sendMessage();
-      } else {
-        showItemPicker(items);
-      }
+      showItemPicker(items);
       break;
     }
   }
