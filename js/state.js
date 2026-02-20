@@ -4,7 +4,7 @@ let puterModel = localStorage.getItem(STORAGE.MODEL_PUTER) || PUTER_MODELS[0].id
 let ollamaModel = localStorage.getItem(STORAGE.MODEL_OLLAMA) || 'qwen2.5:14b-instruct-q6_K';
 let ollamaEndpoint = localStorage.getItem(STORAGE.OLLAMA_ENDPOINT) || 'http://localhost:11434';
 let llamacppEndpoint = localStorage.getItem(STORAGE.LLAMACPP_ENDPOINT) || 'http://localhost:8080';
-let llamacppModel = ''; // auto-detected from server
+let llamacppModel = localStorage.getItem(STORAGE.LLAMACPP_MODEL) || '';
 let chats = JSON.parse(localStorage.getItem(STORAGE.CHATS) || '[]');
 let profile = JSON.parse(localStorage.getItem(STORAGE.PROFILE) || '{}');
 let activeChatId = null;
@@ -44,6 +44,7 @@ const puterFields = $('puterFields'), ollamaFields = $('ollamaFields'), llamacpp
 const toast = $('toast');
 const ollamaModelSelect = $('ollamaModelSelect'), ollamaEndpointInput = $('ollamaEndpointInput');
 const llamacppEndpointInput = $('llamacppEndpointInput');
+const llamacppModelSelect = $('llamacppModelSelect');
 
 function showScreen(name) {
   Object.values(screens).forEach(s => s.classList.remove('active'));

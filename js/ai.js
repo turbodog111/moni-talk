@@ -296,6 +296,7 @@ async function callLlamaCpp(chat) {
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
       body: JSON.stringify({
+        ...(llamacppModel ? { model: llamacppModel } : {}),
         messages: buildMessages(chat),
         max_tokens: isStory ? 2048 : 1000,
         temperature: isStory ? 0.8 : 0.75,
@@ -481,7 +482,7 @@ async function streamLlamaCpp(chat, onChunk, signal) {
   return await streamSSE(
     `${llamacppEndpoint}/v1/chat/completions`,
     { 'Content-Type': 'application/json' },
-    { messages: buildMessages(chat), max_tokens: isStory ? 2048 : 1000, temperature: isStory ? 0.8 : 0.75, top_p: 0.92, repeat_penalty: 1.18 },
+    { ...(llamacppModel ? { model: llamacppModel } : {}), messages: buildMessages(chat), max_tokens: isStory ? 2048 : 1000, temperature: isStory ? 0.8 : 0.75, top_p: 0.92, repeat_penalty: 1.18 },
     onChunk, signal
   );
 }
@@ -544,19 +545,15 @@ function prettifyFamily(raw) {
   return raw.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-// ====== FETCH LLAMA.CPP MODEL ======
-async function fetchLlamaCppModel() {
+// ====== FETCH LLAMA.CPP MODELS ======
+async function fetchLlamaCppModels() {
   try {
     const res = await fetch(`${llamacppEndpoint}/v1/models`);
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const data = await res.json();
-    const model = data.data?.[0];
-    if (model) {
-      llamacppModel = model.id;
-      return model.id;
-    }
+    return (data.data || []).map(m => m.id).filter(Boolean);
   } catch {}
-  return null;
+  return [];
 }
 
 // ====== RAW AI CALL (for journals etc. — non-streaming) ======
@@ -577,7 +574,7 @@ async function callAI(messages, maxTokens = 1000, options = {}) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
-        body: JSON.stringify({ messages, max_tokens: maxTokens, temperature: 0.85 })
+        body: JSON.stringify({ ...(llamacppModel ? { model: llamacppModel } : {}), messages, max_tokens: maxTokens, temperature: 0.85 })
       });
       if (!res.ok) throw new Error('llama.cpp error');
       const data = await res.json();

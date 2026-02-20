@@ -1433,7 +1433,7 @@ function computeRankings(all, excludeKeys) {
 function getSettingsModelKey() {
   // Read from form dropdowns (may not be saved yet)
   const p = providerSelect.value;
-  if (p === 'llamacpp') return `llamacpp:${llamacppModel || 'unknown'}`;
+  if (p === 'llamacpp') return `llamacpp:${llamacppModelSelect.value || llamacppModel || 'unknown'}`;
   if (p === 'ollama') return `ollama:${ollamaModelSelect.value}`;
   return `puter:${puterModelSelect.value}`;
 }

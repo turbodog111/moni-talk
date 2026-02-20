@@ -4,7 +4,7 @@
 
 ### 1. Start llama-server on the DGX Spark
 
-SSH into the Spark and start llama-server with the model you want:
+SSH into the Spark and start llama-server in **router mode** (auto-discovers all GGUF files, switch models without restarting):
 
 ```bash
 ssh xturbo@spark-0af9.local
@@ -17,6 +17,16 @@ ssh xturbo@spark-0af9.local
     --host 0.0.0.0 \
     --port 8080 \
     --ctx-size 32768 \
+    --models-dir ~/models \
+    --models-max 1
+```
+
+Or to load a single specific model instead:
+
+```bash
+~/llama.cpp/build/bin/llama-server \
+    --no-mmap -ngl 999 -fa on --jinja \
+    --host 0.0.0.0 --port 8080 --ctx-size 32768 \
     -m ~/models/Qwen3-32B-Q8_0.gguf
 ```
 
@@ -39,6 +49,8 @@ curl http://localhost:8080/v1/models
 | `-fa on` | Flash Attention — reduces memory, improves speed |
 | `--jinja` | Chat template support |
 | `--ctx-size 32768` | Context window size |
+| `--models-dir PATH` | Auto-discover all GGUF files in directory (router mode) |
+| `--models-max N` | Max models loaded simultaneously (use 1 for large models) |
 
 #### Downloading new models
 

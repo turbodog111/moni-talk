@@ -5,7 +5,7 @@ function toggleProviderFields(p) {
   llamacppFields.style.display = p === 'llamacpp' ? '' : 'none';
   providerHint.textContent = PROVIDER_HINTS[p];
   if (p === 'ollama') refreshOllamaModels();
-  if (p === 'llamacpp') refreshLlamaCppModel();
+  if (p === 'llamacpp') refreshLlamaCppModels();
 }
 function openSettings() {
   providerSelect.value = provider; puterModelSelect.value = puterModel;
@@ -38,7 +38,9 @@ function saveSettings() {
   const p = providerSelect.value;
   if (p === 'llamacpp') {
     llamacppEndpoint = llamacppEndpointInput.value.trim().replace(/\/+$/, '') || 'http://localhost:8080';
+    llamacppModel = llamacppModelSelect.value || '';
     localStorage.setItem(STORAGE.LLAMACPP_ENDPOINT, llamacppEndpoint);
+    localStorage.setItem(STORAGE.LLAMACPP_MODEL, llamacppModel);
   } else if (p === 'ollama') {
     ollamaModel = ollamaModelSelect.value;
     ollamaEndpoint = ollamaEndpointInput.value.trim().replace(/\/+$/, '') || 'http://localhost:11434';
@@ -140,16 +142,31 @@ function updateOllamaModelInfo(modelId) {
   el.classList.add('visible');
 }
 
-async function refreshLlamaCppModel() {
+async function refreshLlamaCppModels() {
+  llamacppModelSelect.innerHTML = '';
   const el = $('llamacppModelInfo');
   if (el) { el.textContent = 'Connecting...'; el.classList.add('visible'); }
-  const modelId = await fetchLlamaCppModel();
+  const models = await fetchLlamaCppModels();
+  if (models.length === 0) {
+    const o = document.createElement('option');
+    o.value = ''; o.textContent = 'No models found \u2014 is llama-server running?';
+    llamacppModelSelect.appendChild(o);
+    if (el) { el.innerHTML = 'Could not connect \u2014 check endpoint and server status.'; el.classList.add('visible'); }
+    return;
+  }
+  models.forEach(id => {
+    const o = document.createElement('option');
+    o.value = id; o.textContent = id;
+    llamacppModelSelect.appendChild(o);
+  });
+  // Restore saved selection if available
+  if (llamacppModel && models.includes(llamacppModel)) {
+    llamacppModelSelect.value = llamacppModel;
+  } else {
+    llamacppModelSelect.value = models[0];
+  }
   if (el) {
-    if (modelId) {
-      el.innerHTML = `<strong>Loaded model:</strong> ${modelId}`;
-    } else {
-      el.innerHTML = 'Could not connect — is llama-server running?';
-    }
+    el.innerHTML = `${models.length} model${models.length > 1 ? 's' : ''} available`;
     el.classList.add('visible');
   }
 }

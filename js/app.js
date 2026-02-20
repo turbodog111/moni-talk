@@ -181,8 +181,13 @@ function init() {
   $('clearKeyBtn').addEventListener('click', clearKey);
   providerSelect.addEventListener('change', () => { toggleProviderFields(providerSelect.value); setTimeout(renderSettingsBenchHint, 100); });
   // Update bench hint when model selects change
-  [puterModelSelect, ollamaModelSelect].forEach(sel => {
+  [puterModelSelect, ollamaModelSelect, llamacppModelSelect].forEach(sel => {
     sel.addEventListener('change', () => setTimeout(renderSettingsBenchHint, 50));
+  });
+  // Re-fetch llama.cpp models when endpoint is changed and user tabs/clicks away
+  llamacppEndpointInput.addEventListener('change', () => {
+    llamacppEndpoint = llamacppEndpointInput.value.trim().replace(/\/+$/, '') || 'http://localhost:8080';
+    refreshLlamaCppModels();
   });
   // Show model info when Ollama model changes
   ollamaModelSelect.addEventListener('change', () => {

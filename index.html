@@ -249,11 +249,14 @@
         <div class="hint" id="providerHint"></div>
         <div class="field-gap"></div>
         <div id="llamacppFields" style="display:none;">
-          <div class="ollama-model-info visible" id="llamacppModelInfo">Not connected</div>
+          <label for="llamacppModelSelect">Model</label>
+          <select id="llamacppModelSelect"></select>
+          <div class="hint">Models discovered from your llama-server. Use <code>--models-dir</code> for multi-model support.</div>
+          <div class="ollama-model-info" id="llamacppModelInfo"></div>
           <div class="field-gap"></div>
           <label for="llamacppEndpointInput">Endpoint</label>
           <input type="text" id="llamacppEndpointInput" placeholder="http://spark-0af9:8080" autocomplete="off">
-          <div class="hint">URL where llama-server is running. Model is auto-detected.</div>
+          <div class="hint">URL where llama-server is running.</div>
         </div>
         <div id="ollamaFields" style="display:none;">
           <label for="ollamaModelSelect">Model</label>

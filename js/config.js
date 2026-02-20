@@ -3,7 +3,7 @@ const STORAGE = {
   PROVIDER: 'moni_talk_provider',
   MODEL_PUTER: 'moni_talk_puter_model',
   MODEL_OLLAMA: 'moni_talk_ollama_model', OLLAMA_ENDPOINT: 'moni_talk_ollama_endpoint',
-  LLAMACPP_ENDPOINT: 'moni_talk_llamacpp_endpoint',
+  LLAMACPP_ENDPOINT: 'moni_talk_llamacpp_endpoint', LLAMACPP_MODEL: 'moni_talk_llamacpp_model',
   CHATS: 'moni_talk_chats_v2', PROFILE: 'moni_talk_profile',
   CHECKPOINTS: 'moni_talk_checkpoints', MEMORIES: 'moni_talk_memories'
 };
