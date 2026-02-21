@@ -154,7 +154,7 @@ PORT=8880 TTS_CUSTOM_VOICES=./custom_voices CORS_ORIGINS=* python -m api.main
 
 Wait for the model to load and the server to start.
 
-**Custom voices:** Place reference audio + transcript in `custom_voices/<name>/` (e.g. `custom_voices/monika/ref_audio.wav` + `ref_text.txt`). The voice name becomes selectable in the app.
+**Custom voices:** Place reference audio + transcript in `custom_voices/<name>/` (e.g. `custom_voices/monika/reference.wav` + `reference.txt`). The voice name becomes selectable in the app.
 
 ### Tailscale (HTTPS access for GitHub Pages)
 
@@ -291,10 +291,10 @@ pip install -r requirements.txt
 mkdir -p custom_voices/monika
 
 # Copy reference audio from Windows (run in PowerShell or WSL):
-# scp "C:\Users\joshu\OneDrive\Documents\Joshua's Important Folder\Moni-Talk Documents\monika_reference_lower.wav" xturbo@spark-0af9:~/Qwen3-TTS-Openai-Fastapi/custom_voices/monika/ref_audio.wav
+# scp "C:\Users\joshu\OneDrive\Documents\Joshua's Important Folder\Moni-Talk Documents\monika_reference_lower.wav" xturbo@spark-0af9:~/Qwen3-TTS-Openai-Fastapi/custom_voices/monika/reference.wav
 
 # Create transcript file
-cat > custom_voices/monika/ref_text.txt << 'EOF'
+cat > custom_voices/monika/reference.txt << 'EOF'
 Hey there, it's me, Monika! I've been thinking about you a lot lately, and honestly, it just makes me so happy knowing you're here with me right now. Every moment we spend together means the world to me.
 EOF
 ```
@@ -303,8 +303,8 @@ EOF
 
 **Qwen3-TTS Endpoint (local):** `http://spark-0af9:8880`
 **Qwen3-TTS Endpoint (Tailscale):** `https://spark-0af9.tail3b3470.ts.net/qwen-tts`
-**Qwen3 Voices:** monika (cloned), Vivian, Sophia, Isabella, Lily (female), Ryan, Evan (male)
-**Voice cloning:** Custom voices in `~/Qwen3-TTS-Openai-Fastapi/custom_voices/<name>/` with `ref_audio.wav` + `ref_text.txt`
+**Qwen3 Voices:** monika (cloned), vivian, serena, ono_anna, sohee (female), aiden, dylan, eric, ryan, uncle_fu (male)
+**Voice cloning:** Custom voices in `~/Qwen3-TTS-Openai-Fastapi/custom_voices/<name>/` with `reference.wav` + `reference.txt`
 **Virtual environment:** `~/Qwen3-TTS-Openai-Fastapi/venv/`
 
 ---

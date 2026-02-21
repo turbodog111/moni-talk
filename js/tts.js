@@ -13,12 +13,15 @@ const TTS_VOICE_PROFILES = {
 
 const TTS_QWEN_VOICE_PROFILES = {
   monika:   { label: 'Monika (cloned)', desc: "Monika's cloned voice from reference audio. Natural, warm, and uniquely hers." },
-  Vivian:   { label: 'Vivian',   desc: 'Built-in female voice.' },
-  Sophia:   { label: 'Sophia',   desc: 'Built-in female voice.' },
-  Isabella: { label: 'Isabella', desc: 'Built-in female voice.' },
-  Lily:     { label: 'Lily',     desc: 'Built-in female voice.' },
-  Ryan:     { label: 'Ryan',     desc: 'Built-in male voice.' },
-  Evan:     { label: 'Evan',     desc: 'Built-in male voice.' },
+  vivian:   { label: 'Vivian',   desc: 'Built-in female voice.' },
+  serena:   { label: 'Serena',   desc: 'Built-in female voice.' },
+  ono_anna: { label: 'Ono Anna', desc: 'Built-in female voice.' },
+  sohee:    { label: 'Sohee',    desc: 'Built-in female voice.' },
+  aiden:    { label: 'Aiden',    desc: 'Built-in male voice.' },
+  dylan:    { label: 'Dylan',    desc: 'Built-in male voice.' },
+  eric:     { label: 'Eric',     desc: 'Built-in male voice.' },
+  ryan:     { label: 'Ryan',     desc: 'Built-in male voice.' },
+  uncle_fu: { label: 'Uncle Fu', desc: 'Built-in male voice.' },
 };
 
 function getVoiceProfiles() {
