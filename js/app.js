@@ -231,7 +231,7 @@ function init() {
   // TTS test connection
   $('ttsTestBtn').addEventListener('click', () => {
     const input = $('ttsEndpointInput');
-    if (input) ttsEndpoint = input.value.trim().replace(/\/+$/, '') || 'http://localhost:8880';
+    if (input) ttsEndpoint = input.value.trim().replace(/\/+$/, '') || 'http://spark-0af9:5005';
     testTTSConnection();
   });
   // TTS voice select — update description on change
@@ -243,7 +243,7 @@ function init() {
     const sel = $('ttsVoiceSelect');
     if (!sel) return;
     const input = $('ttsEndpointInput');
-    if (input) ttsEndpoint = input.value.trim().replace(/\/+$/, '') || 'http://localhost:8880';
+    if (input) ttsEndpoint = input.value.trim().replace(/\/+$/, '') || 'http://spark-0af9:5005';
     previewVoice(sel.value);
   });
   updateTTSIcon();

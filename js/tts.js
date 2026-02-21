@@ -1,61 +1,39 @@
 // ====== TTS (Text-to-Speech) ======
 
 const TTS_VOICE_PROFILES = {
-  classic: {
-    label: 'Classic',
-    desc: 'Warm and confident with a clear, articulate voice. Slightly playful with genuine warmth.',
-    instruct: 'A warm, confident young woman with a clear, articulate voice. Natural American English. Slightly playful with genuine warmth.',
-    seed: 42
-  },
-  soft: {
-    label: 'Soft & Gentle',
-    desc: 'Quiet and intimate, like a whispered conversation. Soothing and delicate.',
-    instruct: 'A soft-spoken, gentle young woman with a quiet, intimate voice. Natural American English. Delicate and soothing, as if speaking closely and privately.',
-    seed: 88
-  },
-  bright: {
-    label: 'Bright & Energetic',
-    desc: 'Upbeat and lively with a higher register. Bubbly and expressive.',
-    instruct: 'A bright, energetic young woman with a lively, expressive voice. Natural American English. Upbeat and bubbly with a slightly higher pitch.',
-    seed: 137
-  },
-  cool: {
-    label: 'Cool & Composed',
-    desc: 'Calm and measured with a deeper tone. Poised and elegant.',
-    instruct: 'A calm, composed young woman with a smooth, slightly deeper voice. Natural American English. Poised, elegant, and self-assured with measured delivery.',
-    seed: 256
-  },
-  sweet: {
-    label: 'Sweet & Cute',
-    desc: 'Cheerful and adorable with a higher, softer tone. Endearing and youthful.',
-    instruct: 'A sweet, adorable young woman with a cute, higher-pitched voice. Natural American English. Cheerful and endearing with youthful charm.',
-    seed: 314
-  },
-  jarvis: {
-    label: 'Jarvis (Dev)',
-    desc: 'Smooth, composed male assistant. Dry wit with calm authority.',
-    instruct: 'A smooth, composed man with a clear, refined baritone voice. British English. Calm and authoritative with subtle dry wit, like an intelligent personal assistant.',
-    seed: 777
-  }
+  tara:  { label: 'Tara',  desc: 'Warm and confident female voice. Clear and expressive — best default for Monika.' },
+  leah:  { label: 'Leah',  desc: 'Soft and gentle female voice. Intimate and soothing.' },
+  jess:  { label: 'Jess',  desc: 'Bright and energetic female voice. Upbeat and lively.' },
+  mia:   { label: 'Mia',   desc: 'Sweet and youthful female voice. Cheerful and endearing.' },
+  zoe:   { label: 'Zoe',   desc: 'Cool and composed female voice. Calm and poised.' },
+  leo:   { label: 'Leo',   desc: 'Warm male voice. Friendly and natural.' },
+  dan:   { label: 'Dan',   desc: 'Deep male voice. Smooth and confident.' },
+  zac:   { label: 'Zac',   desc: 'Energetic male voice. Bright and expressive.' }
 };
 
 function getVoiceProfile() {
-  return TTS_VOICE_PROFILES[ttsVoice] || TTS_VOICE_PROFILES.classic;
+  return TTS_VOICE_PROFILES[ttsVoice] || TTS_VOICE_PROFILES.tara;
 }
 
-const TTS_MOOD_INSTRUCTS = {
-  cheerful:    'Speak cheerfully with bright energy.',
-  playful:     'Speak playfully with teasing lightness.',
-  thoughtful:  'Speak thoughtfully with a measured, contemplative pace.',
-  melancholic: 'Speak softly with gentle melancholy and wistfulness.',
-  excited:     'Speak with excitement and high energy.',
-  tender:      'Speak tenderly and gently, with soft warmth.',
-  teasing:     'Speak with a teasing, mischievous tone.',
-  curious:     'Speak with curious interest and engaged energy.',
-  nostalgic:   'Speak with warm nostalgia and bittersweet softness.',
-  flustered:   'Speak with slight nervousness and flustered embarrassment.',
-  calm:        'Speak calmly and evenly, with peaceful composure.',
-  passionate:  'Speak with intense passion and conviction.'
+function getVoiceId() {
+  return ttsVoice || 'tara';
+}
+
+// Map moods to Orpheus emotion tags injected into text
+// Tags: <laugh> <chuckle> <sigh> <gasp> <groan> <yawn> <sniffle> <cough>
+const TTS_MOOD_TAGS = {
+  cheerful:    '<chuckle>',
+  playful:     '<laugh>',
+  thoughtful:  '<sigh>',
+  melancholic: '<sigh>',
+  excited:     '<gasp>',
+  tender:      '',
+  teasing:     '<chuckle>',
+  curious:     '',
+  nostalgic:   '<sigh>',
+  flustered:   '<gasp>',
+  calm:        '',
+  passionate:  ''
 };
 
 let ttsAudio = null;
@@ -93,16 +71,12 @@ document.addEventListener('click', unlockAudioContext, true);
 const ttsCache = new Map();
 const TTS_CACHE_MAX = 50; // max cached entries
 
-function buildTTSInstruct(mood, intensity) {
-  const profile = getVoiceProfile();
-  const moodText = TTS_MOOD_INSTRUCTS[mood] || TTS_MOOD_INSTRUCTS.cheerful;
-  let adjusted = moodText;
-  if (intensity === 'strong') {
-    adjusted = 'Very strongly ' + moodText.charAt(0).toLowerCase() + moodText.slice(1);
-  }
-  // subtle = no mood modifier at all
-  if (intensity === 'subtle') return profile.instruct;
-  return profile.instruct + ' ' + adjusted;
+// Inject Orpheus emotion tag at the start of text based on mood
+function injectEmotionTag(text, mood, intensity) {
+  if (intensity === 'subtle') return text; // no emotion tag for subtle moods
+  const tag = TTS_MOOD_TAGS[mood] || '';
+  if (!tag) return text;
+  return tag + ' ' + text;
 }
 
 function cleanTextForTTS(text) {
@@ -227,7 +201,7 @@ function stopTTS() {
 }
 
 // Fetch audio for a single chunk of text (with caching)
-async function fetchTTSAudio(text, instruct) {
+async function fetchTTSAudio(text) {
   // Check cache first
   const cacheKey = text;
   if (ttsCache.has(cacheKey)) {
@@ -235,11 +209,15 @@ async function fetchTTSAudio(text, instruct) {
     return ttsCache.get(cacheKey);
   }
 
-  const profile = getVoiceProfile();
-  const resp = await fetch(ttsEndpoint + '/api/tts', {
+  const resp = await fetch(ttsEndpoint + '/v1/audio/speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, language: 'English', instruct, seed: profile.seed })
+    body: JSON.stringify({
+      model: 'orpheus',
+      input: text,
+      voice: getVoiceId(),
+      response_format: 'wav'
+    })
   });
   if (!resp.ok) throw new Error('TTS server error ' + resp.status);
   const blob = await resp.blob();
@@ -264,14 +242,14 @@ async function previewVoice(profileKey) {
   ttsLoading = true;
   updateTTSIcon();
   try {
-    const resp = await fetch(ttsEndpoint + '/api/tts', {
+    const resp = await fetch(ttsEndpoint + '/v1/audio/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        text: 'Hey, it\'s me, Monika! How are you doing today?',
-        language: 'English',
-        instruct: profile.instruct,
-        seed: profile.seed
+        model: 'orpheus',
+        input: 'Hey, it\'s me, Monika! <chuckle> How are you doing today?',
+        voice: profileKey,
+        response_format: 'wav'
       })
     });
     if (!resp.ok) throw new Error('TTS server error ' + resp.status);
@@ -326,7 +304,10 @@ async function speakText(text, mood, intensity) {
   if (!cleaned) { console.log('[TTS] cleaned text is empty, skipping'); return; }
 
   const sentences = splitSentences(cleaned);
-  const instruct = buildTTSInstruct(mood || 'cheerful', intensity || 'moderate');
+  // Inject emotion tag into the first sentence based on mood
+  if (sentences.length > 0) {
+    sentences[0] = injectEmotionTag(sentences[0], mood || 'cheerful', intensity || 'moderate');
+  }
   console.log('[TTS] pipelined generation —', sentences.length, 'sentences');
 
   ttsLoading = true;
@@ -334,7 +315,7 @@ async function speakText(text, mood, intensity) {
 
   try {
     // Pipeline: fetch next sentence while playing current one
-    let nextFetch = fetchTTSAudio(sentences[0], instruct);
+    let nextFetch = fetchTTSAudio(sentences[0]);
 
     for (let i = 0; i < sentences.length; i++) {
       if (ttsCancelled) break;
@@ -346,7 +327,7 @@ async function speakText(text, mood, intensity) {
 
       // Start fetching the NEXT sentence while we play this one
       if (i + 1 < sentences.length) {
-        nextFetch = fetchTTSAudio(sentences[i + 1], instruct);
+        nextFetch = fetchTTSAudio(sentences[i + 1]);
       }
 
       // Play current sentence
@@ -382,14 +363,13 @@ async function speakText(text, mood, intensity) {
 
 async function testTTSConnection() {
   try {
-    const resp = await fetch(ttsEndpoint + '/api/tts/health', { signal: AbortSignal.timeout(5000) });
+    const resp = await fetch(ttsEndpoint + '/v1/audio/voices', { signal: AbortSignal.timeout(5000) });
     if (!resp.ok) throw new Error('status ' + resp.status);
     const data = await resp.json();
-    if (data.status === 'ok') {
-      showToast('TTS connected! Model: ' + (data.model || 'unknown'), 'success');
-      return true;
-    }
-    throw new Error('unexpected response');
+    const voices = data.voices || data;
+    const count = Array.isArray(voices) ? voices.length : Object.keys(voices).length;
+    showToast(`TTS connected! ${count} voices available`, 'success');
+    return true;
   } catch (err) {
     showToast('TTS connection failed: ' + (err.message || 'unreachable'));
     return false;

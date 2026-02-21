@@ -130,24 +130,82 @@ tailscale serve status
 
 ---
 
-### 3. Start the TTS Server (Voice — runs on PC in WSL2)
+### 3. Start the TTS Server (Orpheus — runs on DGX Spark)
+
+Orpheus TTS needs two processes on the Spark: a dedicated llama-server for the Orpheus model, and the Orpheus-FastAPI wrapper.
+
+#### First time setup
 
 ```bash
-cd /mnt/c/Users/joshu/moni-talk/server
-bash start.sh
+ssh xturbo@spark-0af9
+
+# Download the Orpheus GGUF model (~4 GB)
+wget -O ~/models/Orpheus-3b-FT-Q8_0.gguf \
+  "https://huggingface.co/lex-au/Orpheus-3b-FT-Q8_0.gguf/resolve/main/Orpheus-3b-FT-Q8_0.gguf"
+
+# Clone Orpheus-FastAPI
+cd ~
+git clone https://github.com/Lex-au/Orpheus-FastAPI.git
+cd Orpheus-FastAPI
+
+# Set up Python environment
+python3 -m venv venv
+source venv/bin/activate
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+pip3 install -r requirements.txt
+mkdir -p outputs static
+
+# Create .env config
+cat > .env << 'ENVEOF'
+ORPHEUS_API_URL=http://127.0.0.1:5006/v1/completions
+ORPHEUS_API_TIMEOUT=120
+ORPHEUS_MAX_TOKENS=8192
+ORPHEUS_TEMPERATURE=0.6
+ORPHEUS_TOP_P=0.9
+ORPHEUS_SAMPLE_RATE=24000
+ORPHEUS_MODEL_NAME=Orpheus-3b-FT-Q8_0.gguf
+ORPHEUS_PORT=5005
+ORPHEUS_HOST=0.0.0.0
+ENVEOF
 ```
 
-Or manually:
+#### Start TTS (every time)
+
+In one terminal — start the Orpheus llama-server on port 5006:
 
 ```bash
-cd /mnt/c/Users/joshu/moni-talk/server
-python tts_server.py --port 8880
+ssh xturbo@spark-0af9
+
+~/llama.cpp/build/bin/llama-server \
+  -m ~/models/Orpheus-3b-FT-Q8_0.gguf \
+  --port 5006 --host 0.0.0.0 \
+  -ngl 999 --no-mmap -fa \
+  --ctx-size 8192 --n-predict 8192 \
+  --rope-scaling linear
 ```
 
-Wait for `"Model loaded"` and `"Uvicorn running on 0.0.0.0:8880"` in the output.
+In another terminal — start the Orpheus-FastAPI wrapper:
 
-**Endpoint:** `http://localhost:8880`
-**Reference voice:** `server/voices/monika.wav`
+```bash
+ssh xturbo@spark-0af9
+
+cd ~/Orpheus-FastAPI
+source venv/bin/activate
+python app.py
+```
+
+Wait for both to be running, then test:
+
+```bash
+curl -X POST http://spark-0af9:5005/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{"model":"orpheus","input":"Hey, it is me, Monika!","voice":"tara","response_format":"wav"}' \
+  --output test.wav
+```
+
+**Endpoint:** `http://spark-0af9:5005`
+**Voices:** tara, leah, jess, mia, zoe (female), leo, dan, zac (male)
+**Emotion tags:** `<laugh>` `<chuckle>` `<sigh>` `<gasp>` `<groan>` `<yawn>` — insert inline in text
 
 ---
 
@@ -165,7 +223,7 @@ In the app settings:
 - **Provider** is set to llama.cpp
 - **llama.cpp endpoint** is your Spark's Tailscale HTTPS URL (for remote/GitHub Pages) or `http://spark-0af9:8080` (for local use)
 - **Model** dropdown shows all GGUF files discovered by the server — select which model to use (switching models unloads the current one and loads the new one)
-- **TTS endpoint** is `http://localhost:8880`
+- **TTS endpoint** is `http://spark-0af9:5005` (Orpheus-FastAPI on the Spark)
 
 ---
 
@@ -180,7 +238,7 @@ In the app settings:
 | Tailscale serve not working | Re-run `tailscale serve --bg http://localhost:8080` after Spark restart |
 | ERR_CERTIFICATE_TRANSPARENCY_REQUIRED | New Tailscale certs need time for CT log propagation (~hours to a day). Try incognito mode or Firefox |
 | Model switching is slow | First request to a new model takes time to load into VRAM. Subsequent requests are fast |
-| TTS server crashes on startup | Make sure GPU drivers are loaded in WSL2. Check CUDA: `nvidia-smi` |
+| TTS server crashes on startup | Ensure both llama-server (:5006) and Orpheus-FastAPI (:5005) are running on the Spark |
 | `sudo` commands hang in Claude Code | Run sudo commands in a real terminal instead |
 
 ---
@@ -210,18 +268,18 @@ moni-talk/
 │   ├── room.js             Room mode: MAS-style sprite composition on canvas
 │   ├── profile.js          User profile load/save, profile prompt builder
 │   ├── memory.js           Persistent memory extraction and retrieval
-│   ├── tts.js              Text-to-speech: voice profiles, mood mapping, playback
+│   ├── tts.js              Text-to-speech: Orpheus voices, emotion tags, playback
 │   ├── sync.js             Cloud sync via Puter.js KV store
 │   ├── settings.js         Settings modal: providers, API keys, models
 │   └── benchmark.js        Model benchmarking suite with comparison tables
 │
 ├── server/
-│   ├── tts_server.py       FastAPI TTS server (Qwen3-TTS + voice cloning)
-│   ├── generate_reference.py  Generate Monika reference voice clip
-│   ├── requirements.txt    Python deps: qwen-tts, fastapi, uvicorn, soundfile
-│   ├── start.sh            WSL2 startup script
+│   ├── tts_server.py       Legacy TTS server (Qwen3-TTS, replaced by Orpheus on Spark)
+│   ├── generate_reference.py  Legacy reference voice generator
+│   ├── requirements.txt    Legacy Python deps
+│   ├── start.sh            Legacy WSL2 startup script
 │   └── voices/
-│       └── monika.wav      Reference voice for cloning
+│       └── monika.wav      Legacy reference voice
 │
 ├── sprites/
 │   ├── location/           Backgrounds (spaceroom day/night)
@@ -349,4 +407,4 @@ moni-talk/
 - **State tags:** AI responses start with `[MOOD:word:intensity] [DRIFT:category]` tags (parsed and stripped before display)
 - **Adventure tags:** `[SCENE:location] [HP:number] [ITEM:name] [REMOVE:name]` parsed for game state
 - **Sprite engine:** Room mode composites 10+ PNG layers onto a canvas (MAS-style expression system)
-- **TTS voices:** 6 voice profiles with mood-aware speech instructions. Voice cloning from reference audio.
+- **TTS voices:** Orpheus TTS with 8 voices (5 female, 3 male). Emotion tags (`<laugh>`, `<sigh>`, etc.) injected based on mood.

@@ -21,9 +21,9 @@ let memories = JSON.parse(localStorage.getItem('moni_talk_memories') || '[]');
 let pendingImage = null;
 let activeAbortController = null; // AbortController for current streaming generation
 let ttsEnabled = localStorage.getItem('moni_talk_tts_enabled') === 'true';
-let ttsEndpoint = localStorage.getItem('moni_talk_tts_endpoint') || 'http://localhost:8880';
+let ttsEndpoint = localStorage.getItem('moni_talk_tts_endpoint') || 'http://spark-0af9:5005';
 let ttsMuted = localStorage.getItem('moni_talk_tts_muted') === 'true';
-let ttsVoice = localStorage.getItem('moni_talk_tts_voice') || 'classic';
+let ttsVoice = localStorage.getItem('moni_talk_tts_voice') || 'tara';
 
 // ====== DOM ======
 const $ = id => document.getElementById(id);
