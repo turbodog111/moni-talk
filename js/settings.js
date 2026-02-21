@@ -7,6 +7,37 @@ function toggleProviderFields(p) {
   if (p === 'ollama') refreshOllamaModels();
   if (p === 'llamacpp') refreshLlamaCppModels();
 }
+function toggleTTSProviderFields(p) {
+  const orpheusFields = $('ttsOrpheusFields');
+  const qwenFields = $('ttsQwenFields');
+  const hint = $('ttsProviderHint');
+  if (orpheusFields) orpheusFields.style.display = p === 'orpheus' ? '' : 'none';
+  if (qwenFields) qwenFields.style.display = p === 'qwen3' ? '' : 'none';
+  if (hint) hint.textContent = p === 'qwen3'
+    ? 'Qwen3-TTS with voice cloning support. Custom voices loaded from server.'
+    : 'Orpheus TTS via Orpheus-FastAPI on the DGX Spark.';
+  populateTTSVoices(p);
+}
+
+function populateTTSVoices(providerKey) {
+  const voiceSel = $('ttsVoiceSelect');
+  if (!voiceSel) return;
+  const profiles = providerKey === 'qwen3' ? TTS_QWEN_VOICE_PROFILES : TTS_VOICE_PROFILES;
+  voiceSel.innerHTML = '';
+  for (const [key, profile] of Object.entries(profiles)) {
+    const o = document.createElement('option');
+    o.value = key; o.textContent = profile.label;
+    voiceSel.appendChild(o);
+  }
+  // Try to keep current voice if it exists in the new profile set
+  if (profiles[ttsVoice]) {
+    voiceSel.value = ttsVoice;
+  } else {
+    voiceSel.value = Object.keys(profiles)[0];
+  }
+  updateTTSVoiceDesc(voiceSel.value);
+}
+
 function openSettings() {
   providerSelect.value = provider; puterModelSelect.value = puterModel;
   ollamaEndpointInput.value = ollamaEndpoint;
@@ -19,17 +50,12 @@ function openSettings() {
   if (ttsCheck) ttsCheck.checked = ttsEnabled;
   const ttsInput = $('ttsEndpointInput');
   if (ttsInput) ttsInput.value = ttsEndpoint;
-  // Populate voice profiles dropdown
-  const voiceSel = $('ttsVoiceSelect');
-  if (voiceSel && typeof TTS_VOICE_PROFILES !== 'undefined') {
-    voiceSel.innerHTML = '';
-    for (const [key, profile] of Object.entries(TTS_VOICE_PROFILES)) {
-      const o = document.createElement('option');
-      o.value = key; o.textContent = profile.label;
-      voiceSel.appendChild(o);
-    }
-    voiceSel.value = ttsVoice;
-    updateTTSVoiceDesc(ttsVoice);
+  const ttsQwenInput = $('ttsQwenEndpointInput');
+  if (ttsQwenInput) ttsQwenInput.value = ttsEndpointQwen;
+  const ttsProv = $('ttsProviderSelect');
+  if (ttsProv) {
+    ttsProv.value = ttsProvider;
+    toggleTTSProviderFields(ttsProvider);
   }
   settingsModal.classList.add('open');
 }
@@ -57,10 +83,26 @@ function saveSettings() {
     ttsEnabled = ttsCheck.checked;
     localStorage.setItem('moni_talk_tts_enabled', ttsEnabled);
   }
+  const ttsProv = $('ttsProviderSelect');
+  if (ttsProv) {
+    const oldProvider = ttsProvider;
+    ttsProvider = ttsProv.value;
+    localStorage.setItem('moni_talk_tts_provider', ttsProvider);
+    // Clear TTS cache when provider changes (cache keys are provider-prefixed)
+    if (oldProvider !== ttsProvider) {
+      ttsCache.forEach((url) => URL.revokeObjectURL(url));
+      ttsCache.clear();
+    }
+  }
   const ttsInput = $('ttsEndpointInput');
   if (ttsInput) {
-    ttsEndpoint = ttsInput.value.trim().replace(/\/+$/, '') || 'http://localhost:8880';
+    ttsEndpoint = ttsInput.value.trim().replace(/\/+$/, '') || 'http://spark-0af9:5005';
     localStorage.setItem('moni_talk_tts_endpoint', ttsEndpoint);
+  }
+  const ttsQwenInput = $('ttsQwenEndpointInput');
+  if (ttsQwenInput) {
+    ttsEndpointQwen = ttsQwenInput.value.trim().replace(/\/+$/, '') || 'http://spark-0af9:8880';
+    localStorage.setItem('moni_talk_tts_endpoint_qwen', ttsEndpointQwen);
   }
   const voiceSel = $('ttsVoiceSelect');
   if (voiceSel) {
@@ -175,8 +217,9 @@ async function refreshLlamaCppModels() {
 
 function updateTTSVoiceDesc(key) {
   const el = $('ttsVoiceDesc');
-  if (!el || typeof TTS_VOICE_PROFILES === 'undefined') return;
-  const profile = TTS_VOICE_PROFILES[key];
+  if (!el) return;
+  const profiles = typeof getVoiceProfiles === 'function' ? getVoiceProfiles() : TTS_VOICE_PROFILES;
+  const profile = profiles[key];
   el.textContent = profile ? profile.desc : '';
 }
 

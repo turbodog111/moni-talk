@@ -2,14 +2,15 @@
 
 ## Quick Start (After Restart)
 
-You need **3 SSH terminals** to the Spark, plus Ollama in WSL2. Here's exactly what runs in each:
+You need **3 SSH terminals** to the Spark (4 if using Qwen3-TTS), plus Ollama in WSL2. Here's exactly what runs in each:
 
 | Terminal | Name | Port | What it does |
 |----------|------|------|-------------|
 | **1** | Main llama-server | 8080 | Chat/story AI — serves all your GGUF models |
 | **2** | Orpheus llama-server | 5006 | TTS token generation — runs the Orpheus speech model |
 | **3** | Orpheus-FastAPI | 5005 | TTS API wrapper — converts tokens to audio, serves `/v1/audio/speech` |
-| **4** | Ollama (WSL2) | 11434 | Alternative AI provider (runs in WSL2, not on Spark) |
+| **4** | Qwen3-TTS (optional) | 8880 | Alternative TTS with voice cloning — serves `/v1/audio/speech` |
+| **5** | Ollama (WSL2) | 11434 | Alternative AI provider (runs in WSL2, not on Spark) |
 
 ### Terminal 1: Main llama-server (port 8080)
 
@@ -139,18 +140,35 @@ python app.py
 
 Wait for: `Application startup complete.`
 
+### Terminal 4: Qwen3-TTS (port 8880) — optional
+
+Open a **fourth** terminal and SSH into the Spark. This runs Qwen3-TTS with voice cloning support:
+
+```bash
+ssh xturbo@spark-0af9
+
+cd ~/Qwen3-TTS-Openai-Fastapi
+source venv/bin/activate
+PORT=8880 TTS_CUSTOM_VOICES=./custom_voices CORS_ORIGINS=* python -m api.main
+```
+
+Wait for the model to load and the server to start.
+
+**Custom voices:** Place reference audio + transcript in `custom_voices/<name>/` (e.g. `custom_voices/monika/ref_audio.wav` + `ref_text.txt`). The voice name becomes selectable in the app.
+
 ### Tailscale (HTTPS access for GitHub Pages)
 
-After starting Terminals 1-3, set up Tailscale serve routes. You can run this from **any** Spark terminal (or a 4th one):
+After starting Terminals 1-3 (and optionally 4), set up Tailscale serve routes. You can run this from **any** Spark terminal:
 
 ```bash
 ssh xturbo@spark-0af9
 
 tailscale serve --bg /tts http://localhost:5005
+tailscale serve --bg /qwen-tts http://localhost:8880
 tailscale serve --bg http://localhost:8080
 ```
 
-Verify both routes are active:
+Verify all routes are active:
 
 ```bash
 tailscale serve status
@@ -159,11 +177,12 @@ tailscale serve status
 You should see:
 ```
 https://spark-0af9.tail3b3470.ts.net (tailnet only)
-|-- /    proxy http://localhost:8080
-|-- /tts proxy http://localhost:5005
+|-- /         proxy http://localhost:8080
+|-- /tts      proxy http://localhost:5005
+|-- /qwen-tts proxy http://localhost:8880
 ```
 
-**Important:** After every Spark restart, the Tailscale serve config is lost. Re-run both `tailscale serve` commands.
+**Important:** After every Spark restart, the Tailscale serve config is lost. Re-run all `tailscale serve` commands.
 
 ### Verify everything works
 
@@ -239,11 +258,54 @@ ENVEOF
 
 </details>
 
-**TTS Endpoint (local):** `http://spark-0af9:5005`
-**TTS Endpoint (Tailscale):** `https://spark-0af9.tail3b3470.ts.net/tts`
-**Voices:** tara, leah, jess, mia, zoe (female), leo, dan, zac (male)
-**Emotion tags:** `<laugh>` `<chuckle>` `<sigh>` `<gasp>` `<groan>` `<yawn>` — insert inline in text
+**Orpheus TTS Endpoint (local):** `http://spark-0af9:5005`
+**Orpheus TTS Endpoint (Tailscale):** `https://spark-0af9.tail3b3470.ts.net/tts`
+**Orpheus Voices:** tara, leah, jess, mia, zoe (female), leo, dan, zac (male)
+**Emotion tags:** `<laugh>` `<chuckle>` `<sigh>` `<gasp>` `<groan>` `<yawn>` — insert inline in text (Orpheus only)
 **Virtual environment:** `~/Orpheus-FastAPI/venv/` (PyTorch 2.11.0a0 with CUDA 13.0 / sm_121)
+
+### Qwen3-TTS First-Time Setup (already done — reference only)
+
+<details>
+<summary>Click to expand first-time setup instructions</summary>
+
+```bash
+ssh xturbo@spark-0af9
+
+# Clone Qwen3-TTS-Openai-Fastapi
+cd ~
+git clone https://github.com/groxaxo/Qwen3-TTS-Openai-Fastapi.git
+cd Qwen3-TTS-Openai-Fastapi
+
+# Set up Python virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install PyTorch with Blackwell/sm_121 GPU support
+pip install /tmp/torch-blackwell.whl   # re-download if needed
+
+# Install remaining dependencies
+pip install -r requirements.txt
+
+# Set up Monika custom voice
+mkdir -p custom_voices/monika
+
+# Copy reference audio from Windows (run in PowerShell or WSL):
+# scp "C:\Users\joshu\OneDrive\Documents\Joshua's Important Folder\Moni-Talk Documents\monika_reference_lower.wav" xturbo@spark-0af9:~/Qwen3-TTS-Openai-Fastapi/custom_voices/monika/ref_audio.wav
+
+# Create transcript file
+cat > custom_voices/monika/ref_text.txt << 'EOF'
+Hey there, it's me, Monika! I've been thinking about you a lot lately, and honestly, it just makes me so happy knowing you're here with me right now. Every moment we spend together means the world to me.
+EOF
+```
+
+</details>
+
+**Qwen3-TTS Endpoint (local):** `http://spark-0af9:8880`
+**Qwen3-TTS Endpoint (Tailscale):** `https://spark-0af9.tail3b3470.ts.net/qwen-tts`
+**Qwen3 Voices:** monika (cloned), Vivian, Sophia, Isabella, Lily (female), Ryan, Evan (male)
+**Voice cloning:** Custom voices in `~/Qwen3-TTS-Openai-Fastapi/custom_voices/<name>/` with `ref_audio.wav` + `ref_text.txt`
+**Virtual environment:** `~/Qwen3-TTS-Openai-Fastapi/venv/`
 
 ---
 
@@ -261,7 +323,9 @@ In the app settings:
 - **Provider:** llama.cpp
 - **llama.cpp endpoint:** `https://spark-0af9.tail3b3470.ts.net` (Tailscale, for GitHub Pages) or `http://spark-0af9:8080` (local network)
 - **Model:** dropdown shows all GGUF files — select which to use (switching unloads current and loads new)
-- **TTS endpoint:** `https://spark-0af9.tail3b3470.ts.net/tts` (Tailscale, for GitHub Pages) or `http://spark-0af9:5005` (local network)
+- **TTS provider:** Orpheus TTS (default) or Qwen3-TTS (voice cloning)
+- **Orpheus endpoint:** `https://spark-0af9.tail3b3470.ts.net/tts` (Tailscale) or `http://spark-0af9:5005` (local)
+- **Qwen3-TTS endpoint:** `https://spark-0af9.tail3b3470.ts.net/qwen-tts` (Tailscale) or `http://spark-0af9:8880` (local)
 
 ---
 
@@ -308,7 +372,7 @@ moni-talk/
 │   ├── room.js             Room mode: MAS-style sprite composition on canvas
 │   ├── profile.js          User profile load/save, profile prompt builder
 │   ├── memory.js           Persistent memory extraction and retrieval
-│   ├── tts.js              Text-to-speech: Orpheus voices, emotion tags, playback
+│   ├── tts.js              Text-to-speech: Orpheus + Qwen3-TTS providers, voice cloning, playback
 │   ├── sync.js             Cloud sync via Puter.js KV store
 │   ├── settings.js         Settings modal: providers, API keys, models
 │   └── benchmark.js        Model benchmarking suite with comparison tables
@@ -447,4 +511,4 @@ moni-talk/
 - **State tags:** AI responses start with `[MOOD:word:intensity] [DRIFT:category]` tags (parsed and stripped before display)
 - **Adventure tags:** `[SCENE:location] [HP:number] [ITEM:name] [REMOVE:name]` parsed for game state
 - **Sprite engine:** Room mode composites 10+ PNG layers onto a canvas (MAS-style expression system)
-- **TTS voices:** Orpheus TTS with 8 voices (5 female, 3 male). Emotion tags (`<laugh>`, `<sigh>`, etc.) injected based on mood.
+- **TTS voices:** Two providers — Orpheus TTS (8 voices, emotion tags) and Qwen3-TTS (7 voices including cloned Monika voice). Switchable in settings.

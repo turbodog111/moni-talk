@@ -11,12 +11,32 @@ const TTS_VOICE_PROFILES = {
   zac:   { label: 'Zac',   desc: 'Energetic male voice. Bright and expressive.' }
 };
 
+const TTS_QWEN_VOICE_PROFILES = {
+  monika:   { label: 'Monika (cloned)', desc: "Monika's cloned voice from reference audio. Natural, warm, and uniquely hers." },
+  Vivian:   { label: 'Vivian',   desc: 'Built-in female voice.' },
+  Sophia:   { label: 'Sophia',   desc: 'Built-in female voice.' },
+  Isabella: { label: 'Isabella', desc: 'Built-in female voice.' },
+  Lily:     { label: 'Lily',     desc: 'Built-in female voice.' },
+  Ryan:     { label: 'Ryan',     desc: 'Built-in male voice.' },
+  Evan:     { label: 'Evan',     desc: 'Built-in male voice.' },
+};
+
+function getVoiceProfiles() {
+  return ttsProvider === 'qwen3' ? TTS_QWEN_VOICE_PROFILES : TTS_VOICE_PROFILES;
+}
+
+function getActiveTTSEndpoint() {
+  return ttsProvider === 'qwen3' ? ttsEndpointQwen : ttsEndpoint;
+}
+
 function getVoiceProfile() {
-  return TTS_VOICE_PROFILES[ttsVoice] || TTS_VOICE_PROFILES.tara;
+  const profiles = getVoiceProfiles();
+  const defaultKey = ttsProvider === 'qwen3' ? 'monika' : 'tara';
+  return profiles[ttsVoice] || profiles[defaultKey];
 }
 
 function getVoiceId() {
-  return ttsVoice || 'tara';
+  return ttsVoice || (ttsProvider === 'qwen3' ? 'monika' : 'tara');
 }
 
 // Map moods to Orpheus emotion tags injected into text
@@ -82,7 +102,9 @@ const ttsCache = new Map();
 const TTS_CACHE_MAX = 50; // max cached entries
 
 // Inject Orpheus emotion tag at the start of text based on mood
+// Qwen3-TTS does not support Orpheus emotion tags, so skip them
 function injectEmotionTag(text, mood, intensity) {
+  if (ttsProvider === 'qwen3') return text;
   if (intensity === 'subtle') return text; // no emotion tag for subtle moods
   const tag = TTS_MOOD_TAGS[mood] || '';
   if (!tag) return text;
@@ -211,18 +233,20 @@ function stopTTS() {
 
 // Fetch audio for a single chunk of text (with caching)
 async function fetchTTSAudio(text) {
-  // Check cache first
-  const cacheKey = text;
+  // Check cache first (prefix with provider so switching providers doesn't serve stale audio)
+  const cacheKey = ttsProvider + ':' + text;
   if (ttsCache.has(cacheKey)) {
     console.log('[TTS] cache hit:', text.slice(0, 30));
     return ttsCache.get(cacheKey);
   }
 
-  const resp = await fetch(ttsEndpoint + '/v1/audio/speech', {
+  const endpoint = getActiveTTSEndpoint();
+  const model = ttsProvider === 'qwen3' ? 'qwen3-tts' : 'orpheus';
+  const resp = await fetch(endpoint + '/v1/audio/speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'orpheus',
+      model: model,
       input: text,
       voice: getVoiceId(),
       response_format: 'wav'
@@ -245,18 +269,24 @@ async function fetchTTSAudio(text) {
 
 // Preview a voice profile with a short sample
 async function previewVoice(profileKey) {
-  const profile = TTS_VOICE_PROFILES[profileKey];
+  const profiles = getVoiceProfiles();
+  const profile = profiles[profileKey];
   if (!profile) return;
   stopTTS();
   ttsLoading = true;
   updateTTSIcon();
   try {
-    const resp = await fetch(ttsEndpoint + '/v1/audio/speech', {
+    const endpoint = getActiveTTSEndpoint();
+    const model = ttsProvider === 'qwen3' ? 'qwen3-tts' : 'orpheus';
+    const sampleText = ttsProvider === 'qwen3'
+      ? "Hey, it's me, Monika! How are you doing today?"
+      : "Hey, it's me, Monika! <chuckle> How are you doing today?";
+    const resp = await fetch(endpoint + '/v1/audio/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'orpheus',
-        input: 'Hey, it\'s me, Monika! <chuckle> How are you doing today?',
+        model: model,
+        input: sampleText,
         voice: profileKey,
         response_format: 'wav'
       })
@@ -365,7 +395,8 @@ async function speakText(text, mood, intensity) {
 
 async function testTTSConnection() {
   try {
-    const resp = await fetch(ttsEndpoint + '/v1/audio/voices', { signal: AbortSignal.timeout(5000) });
+    const endpoint = getActiveTTSEndpoint();
+    const resp = await fetch(endpoint + '/v1/audio/voices', { signal: AbortSignal.timeout(5000) });
     if (!resp.ok) throw new Error('status ' + resp.status);
     const data = await resp.json();
     const voices = data.voices || data;

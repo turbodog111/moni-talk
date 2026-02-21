@@ -24,6 +24,8 @@ let ttsEnabled = localStorage.getItem('moni_talk_tts_enabled') === 'true';
 let ttsEndpoint = localStorage.getItem('moni_talk_tts_endpoint') || 'http://spark-0af9:5005';
 let ttsMuted = localStorage.getItem('moni_talk_tts_muted') === 'true';
 let ttsVoice = localStorage.getItem('moni_talk_tts_voice') || 'tara';
+let ttsProvider = localStorage.getItem('moni_talk_tts_provider') || 'orpheus';
+let ttsEndpointQwen = localStorage.getItem('moni_talk_tts_endpoint_qwen') || 'http://spark-0af9:8880';
 
 // ====== DOM ======
 const $ = id => document.getElementById(id);

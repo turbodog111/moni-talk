@@ -228,11 +228,25 @@ function init() {
     updateTTSIcon();
     showToast(ttsMuted ? 'Voice muted' : 'Voice unmuted', 'success');
   });
+  // TTS provider select — toggle fields
+  $('ttsProviderSelect').addEventListener('change', (e) => {
+    toggleTTSProviderFields(e.target.value);
+  });
   // TTS test connection
   $('ttsTestBtn').addEventListener('click', () => {
-    const input = $('ttsEndpointInput');
-    if (input) ttsEndpoint = input.value.trim().replace(/\/+$/, '') || 'http://spark-0af9:5005';
-    testTTSConnection();
+    const provSel = $('ttsProviderSelect');
+    const selectedProv = provSel ? provSel.value : ttsProvider;
+    if (selectedProv === 'qwen3') {
+      const qwenInput = $('ttsQwenEndpointInput');
+      if (qwenInput) ttsEndpointQwen = qwenInput.value.trim().replace(/\/+$/, '') || 'http://spark-0af9:8880';
+    } else {
+      const input = $('ttsEndpointInput');
+      if (input) ttsEndpoint = input.value.trim().replace(/\/+$/, '') || 'http://spark-0af9:5005';
+    }
+    // Temporarily apply selected provider for the test
+    const prevProv = ttsProvider;
+    ttsProvider = selectedProv;
+    testTTSConnection().finally(() => { ttsProvider = prevProv; });
   });
   // TTS voice select — update description on change
   $('ttsVoiceSelect').addEventListener('change', (e) => {
@@ -242,9 +256,19 @@ function init() {
   $('ttsPreviewBtn').addEventListener('click', () => {
     const sel = $('ttsVoiceSelect');
     if (!sel) return;
-    const input = $('ttsEndpointInput');
-    if (input) ttsEndpoint = input.value.trim().replace(/\/+$/, '') || 'http://spark-0af9:5005';
-    previewVoice(sel.value);
+    const provSel = $('ttsProviderSelect');
+    const selectedProv = provSel ? provSel.value : ttsProvider;
+    // Apply selected provider/endpoint temporarily for preview
+    const prevProv = ttsProvider;
+    ttsProvider = selectedProv;
+    if (selectedProv === 'qwen3') {
+      const qwenInput = $('ttsQwenEndpointInput');
+      if (qwenInput) ttsEndpointQwen = qwenInput.value.trim().replace(/\/+$/, '') || 'http://spark-0af9:8880';
+    } else {
+      const input = $('ttsEndpointInput');
+      if (input) ttsEndpoint = input.value.trim().replace(/\/+$/, '') || 'http://spark-0af9:5005';
+    }
+    previewVoice(sel.value).finally(() => { ttsProvider = prevProv; });
   });
   updateTTSIcon();
 

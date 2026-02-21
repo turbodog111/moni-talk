@@ -307,6 +307,13 @@
         <div class="tts-settings-row">
           <label class="toggle-label"><input type="checkbox" id="ttsEnabledCheck"> Enable Monika's voice</label>
         </div>
+        <label for="ttsProviderSelect">TTS Provider</label>
+        <select id="ttsProviderSelect">
+          <option value="orpheus">Orpheus TTS</option>
+          <option value="qwen3">Qwen3-TTS (voice cloning)</option>
+        </select>
+        <div class="hint" id="ttsProviderHint">Orpheus TTS via Orpheus-FastAPI on the DGX Spark.</div>
+        <div class="field-gap"></div>
         <label for="ttsVoiceSelect">Voice Style</label>
         <div class="tts-voice-row">
           <select id="ttsVoiceSelect"></select>
@@ -314,9 +321,16 @@
         </div>
         <div class="hint" id="ttsVoiceDesc"></div>
         <div class="field-gap"></div>
-        <label for="ttsEndpointInput">TTS Server</label>
-        <input type="text" id="ttsEndpointInput" placeholder="http://spark-0af9:5005" autocomplete="off">
-        <div class="hint">Orpheus TTS via Orpheus-FastAPI on the DGX Spark. See SETUP.md.</div>
+        <div id="ttsOrpheusFields">
+          <label for="ttsEndpointInput">Orpheus Server</label>
+          <input type="text" id="ttsEndpointInput" placeholder="http://spark-0af9:5005" autocomplete="off">
+          <div class="hint">Orpheus-FastAPI endpoint. See SETUP.md.</div>
+        </div>
+        <div id="ttsQwenFields" style="display:none;">
+          <label for="ttsQwenEndpointInput">Qwen3-TTS Server</label>
+          <input type="text" id="ttsQwenEndpointInput" placeholder="http://spark-0af9:8880" autocomplete="off">
+          <div class="hint">Qwen3-TTS-Openai-Fastapi endpoint. Supports voice cloning via custom voices.</div>
+        </div>
         <button class="btn btn-secondary" id="ttsTestBtn" style="width:100%;margin-top:6px;">Test Connection</button>
       </div>
 
