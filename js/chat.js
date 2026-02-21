@@ -374,8 +374,8 @@ function openChat(id) {
   updateContextBar();
   // Show/hide TTS toggle (only for chat/room modes)
   if (typeof updateTTSIcon === 'function') updateTTSIcon();
-  // Show/hide mic button (chat mode only)
-  if (typeof sttSupported !== 'undefined' && sttSupported && chat.mode === 'chat') showMicButton();
+  // Show/hide mic button (chat/room mode — not story or adventure)
+  if (typeof sttSupported !== 'undefined' && sttSupported && !isStory && !isAdventure) showMicButton();
   else if (typeof hideMicButton === 'function') hideMicButton();
 
   if (isStory && chat.messages.length === 0) {
