@@ -36,28 +36,38 @@ const TTS_MOOD_TAGS = {
   passionate:  ''
 };
 
-let ttsAudio = null;
 let ttsPlaying = false;
 let ttsLoading = false;
 let ttsQueue = [];       // queued audio URLs to play next
 let ttsCancelled = false; // flag to abort sentence pipeline
 let ttsAudioUnlocked = false; // iOS audio context unlock state
 
+// Persistent audio element — reused across all TTS playback.
+// Mobile browsers only allow Audio.play() without a gesture if the *same*
+// element was previously activated by a gesture.  Creating `new Audio()`
+// each time loses that activation, which is why auto-play after an async
+// response was blocked while the preview button (direct gesture) worked.
+const ttsAudioEl = new Audio();
+
 // iOS/Safari requires a user gesture to unlock audio playback.
-// We play a tiny silent buffer on the first tap to permanently unlock it.
+// We play a tiny silent buffer on the first tap to permanently unlock
+// the persistent element so future .play() calls succeed without gestures.
 function unlockAudioContext() {
   if (ttsAudioUnlocked) return;
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const buf = ctx.createBuffer(1, 1, 22050);
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  src.connect(ctx.destination);
-  src.start(0);
-  // Also unlock HTMLAudioElement
-  const silent = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
-  silent.play().then(() => { silent.pause(); }).catch(() => {});
+  // Unlock Web Audio API context
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+    ctx.close();
+  } catch (_) {}
+  // Unlock the persistent HTMLAudioElement
+  ttsAudioEl.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+  ttsAudioEl.play().then(() => { ttsAudioEl.pause(); ttsAudioEl.src = ''; }).catch(() => {});
   ttsAudioUnlocked = true;
-  ctx.close();
   // Remove listeners once unlocked
   document.removeEventListener('touchstart', unlockAudioContext, true);
   document.removeEventListener('touchend', unlockAudioContext, true);
@@ -190,11 +200,10 @@ function splitSentences(text) {
 function stopTTS() {
   ttsCancelled = true;
   ttsQueue = [];
-  if (ttsAudio) {
-    ttsAudio.pause();
-    ttsAudio.src = '';
-    ttsAudio = null;
-  }
+  ttsAudioEl.pause();
+  ttsAudioEl.onended = null;
+  ttsAudioEl.onerror = null;
+  ttsAudioEl.src = '';
   ttsPlaying = false;
   ttsLoading = false;
   updateTTSIcon();
@@ -262,33 +271,27 @@ async function previewVoice(profileKey) {
   } finally {
     ttsLoading = false;
     ttsPlaying = false;
-    ttsAudio = null;
     updateTTSIcon();
   }
 }
 
-// Play a single audio URL, returns a promise that resolves when playback ends
+// Play a single audio URL, returns a promise that resolves when playback ends.
+// Reuses the persistent ttsAudioEl so mobile gesture-unlock carries over.
 // skipRevoke=true for preview (URL not from cache)
 function playAudioUrl(url, skipRevoke) {
   return new Promise((resolve, reject) => {
-    ttsAudio = new Audio(url);
-    ttsAudio.addEventListener('ended', () => {
+    const audio = ttsAudioEl;
+    const cleanup = () => {
+      audio.onended = null;
+      audio.onerror = null;
       if (skipRevoke) URL.revokeObjectURL(url);
-      ttsAudio = null;
-      resolve();
-    });
-    ttsAudio.addEventListener('error', (e) => {
-      if (skipRevoke) URL.revokeObjectURL(url);
-      ttsAudio = null;
-      reject(e);
-    });
-    ttsAudio.play().catch(err => {
-      // iOS may need the audio context unlocked — try once more
-      console.warn('[TTS] play() blocked, retrying after unlock:', err.message);
-      unlockAudioContext();
-      setTimeout(() => {
-        if (ttsAudio) ttsAudio.play().catch(reject);
-      }, 100);
+    };
+    audio.onended = () => { cleanup(); resolve(); };
+    audio.onerror = (e) => { cleanup(); reject(e); };
+    audio.src = url;
+    audio.play().catch(err => {
+      cleanup();
+      reject(err);
     });
   });
 }
@@ -355,7 +358,6 @@ async function speakText(text, mood, intensity) {
     ttsPlaying = false;
     ttsLoading = false;
     ttsCancelled = false;
-    ttsAudio = null;
     updateTTSIcon();
     console.log('[TTS] done');
   }

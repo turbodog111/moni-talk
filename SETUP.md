@@ -2,9 +2,18 @@
 
 ## Quick Start (After Restart)
 
-### 1. Start llama-server on the DGX Spark
+You need **3 SSH terminals** to the Spark, plus Ollama in WSL2. Here's exactly what runs in each:
 
-SSH into the Spark and start llama-server in **router mode** (auto-discovers all GGUF files, switch models without restarting):
+| Terminal | Name | Port | What it does |
+|----------|------|------|-------------|
+| **1** | Main llama-server | 8080 | Chat/story AI — serves all your GGUF models |
+| **2** | Orpheus llama-server | 5006 | TTS token generation — runs the Orpheus speech model |
+| **3** | Orpheus-FastAPI | 5005 | TTS API wrapper — converts tokens to audio, serves `/v1/audio/speech` |
+| **4** | Ollama (WSL2) | 11434 | Alternative AI provider (runs in WSL2, not on Spark) |
+
+### Terminal 1: Main llama-server (port 8080)
+
+Open a terminal and SSH into the Spark. This serves all your chat/story models in router mode:
 
 ```bash
 ssh xturbo@spark-0af9
@@ -21,22 +30,10 @@ ssh xturbo@spark-0af9
     --models-max 1
 ```
 
-Or to load a single specific model instead:
-
-```bash
-~/llama.cpp/build/bin/llama-server \
-    --no-mmap -ngl 999 -fa on --jinja \
-    --host 0.0.0.0 --port 8080 --ctx-size 32768 \
-    -m ~/models/Qwen3-32B-Q8_0.gguf
-```
-
-Confirm it's responding:
-
-```bash
-curl http://localhost:8080/v1/models
-```
+Wait for: `router server is listening on http://0.0.0.0:8080`
 
 **Endpoint (local):** `http://spark-0af9:8080`
+**Endpoint (Tailscale):** `https://spark-0af9.tail3b3470.ts.net`
 **Models directory:** `~/models/` (GGUF format)
 **Build location:** `~/llama.cpp/`
 
@@ -108,33 +105,87 @@ cmake -B build \
 cmake --build build --config Release -j 20
 ```
 
----
+### Terminal 2: Orpheus llama-server (port 5006)
 
-### 2. Start Tailscale on the DGX Spark (Remote Access)
-
-Tailscale proxies the llama-server over HTTPS so it can be reached from GitHub Pages (which requires HTTPS).
+Open a **second** terminal and SSH into the Spark. This runs the TTS speech model:
 
 ```bash
+ssh xturbo@spark-0af9
+
+~/llama.cpp/build/bin/llama-server \
+    -m ~/models/Orpheus-3b-FT-Q8_0.gguf \
+    --port 5006 \
+    --host 0.0.0.0 \
+    -ngl 999 \
+    --no-mmap \
+    -fa on \
+    --ctx-size 8192 \
+    --n-predict 8192
+```
+
+Wait for: `server is listening on http://0.0.0.0:5006`
+
+### Terminal 3: Orpheus-FastAPI (port 5005)
+
+Open a **third** terminal and SSH into the Spark. This wraps the llama-server output into audio:
+
+```bash
+ssh xturbo@spark-0af9
+
+cd ~/Orpheus-FastAPI
+source venv/bin/activate
+python app.py
+```
+
+Wait for: `Application startup complete.`
+
+### Tailscale (HTTPS access for GitHub Pages)
+
+After starting Terminals 1-3, set up Tailscale serve routes. You can run this from **any** Spark terminal (or a 4th one):
+
+```bash
+ssh xturbo@spark-0af9
+
+tailscale serve --bg /tts http://localhost:5005
 tailscale serve --bg http://localhost:8080
 ```
 
-**Important:** After every Spark restart, the Tailscale serve config is lost. You must re-run this command.
-
-Verify:
+Verify both routes are active:
 
 ```bash
 tailscale serve status
 ```
 
-**Tailscale HTTPS URL:** Use this as the llama.cpp endpoint in Moni-Talk settings.
+You should see:
+```
+https://spark-0af9.tail3b3470.ts.net (tailnet only)
+|-- /    proxy http://localhost:8080
+|-- /tts proxy http://localhost:5005
+```
+
+**Important:** After every Spark restart, the Tailscale serve config is lost. Re-run both `tailscale serve` commands.
+
+### Verify everything works
+
+From any terminal on the Spark:
+
+```bash
+# Test main llama-server
+curl http://localhost:8080/v1/models
+
+# Test TTS (generates a WAV file)
+curl -X POST http://localhost:5005/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{"model":"orpheus","input":"Hey, it is me, Monika!","voice":"tara","response_format":"wav"}' \
+  --output test.wav
+```
 
 ---
 
-### 3. Start the TTS Server (Orpheus — runs on DGX Spark)
+### TTS First-Time Setup (already done — reference only)
 
-Orpheus TTS needs two processes on the Spark: a dedicated llama-server for the Orpheus model, and the Orpheus-FastAPI wrapper.
-
-#### First time setup
+<details>
+<summary>Click to expand first-time setup instructions</summary>
 
 ```bash
 ssh xturbo@spark-0af9
@@ -148,12 +199,29 @@ cd ~
 git clone https://github.com/Lex-au/Orpheus-FastAPI.git
 cd Orpheus-FastAPI
 
-# Set up Python environment
+# Set up Python virtual environment
 python3 -m venv venv
 source venv/bin/activate
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-pip3 install -r requirements.txt
+
+# Install PyTorch with Blackwell/sm_121 GPU support
+# (standard PyTorch does NOT support the Spark's GB10 GPU)
+wget -O /tmp/torch-blackwell.whl \
+  "https://github.com/cypheritai/pytorch-blackwell/releases/download/v2.11.0-blackwell/torch-2.11.0a0+git00ab8be-cp312-cp312-linux_aarch64.whl"
+pip install /tmp/torch-blackwell.whl
+
+# Install remaining dependencies
+sudo apt install -y libportaudio2 portaudio19-dev libopenblas0
+pip install -r requirements.txt
 mkdir -p outputs static
+
+# Add CORS middleware to app.py (required for GitHub Pages access)
+# Insert after the `app = FastAPI(...)` block:
+#   from fastapi.middleware.cors import CORSMiddleware
+#   app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# Force SNAC decoder to use CUDA (edit tts_engine/speechpipe.py)
+# Change: snac_device = "cuda" if torch.cuda.is_available() else ...
+# (This works because the Blackwell PyTorch wheel supports sm_121)
 
 # Create .env config
 cat > .env << 'ENVEOF'
@@ -169,43 +237,13 @@ ORPHEUS_HOST=0.0.0.0
 ENVEOF
 ```
 
-#### Start TTS (every time)
+</details>
 
-In one terminal — start the Orpheus llama-server on port 5006:
-
-```bash
-ssh xturbo@spark-0af9
-
-~/llama.cpp/build/bin/llama-server \
-  -m ~/models/Orpheus-3b-FT-Q8_0.gguf \
-  --port 5006 --host 0.0.0.0 \
-  -ngl 999 --no-mmap -fa \
-  --ctx-size 8192 --n-predict 8192 \
-  --rope-scaling linear
-```
-
-In another terminal — start the Orpheus-FastAPI wrapper:
-
-```bash
-ssh xturbo@spark-0af9
-
-cd ~/Orpheus-FastAPI
-source venv/bin/activate
-python app.py
-```
-
-Wait for both to be running, then test:
-
-```bash
-curl -X POST http://spark-0af9:5005/v1/audio/speech \
-  -H "Content-Type: application/json" \
-  -d '{"model":"orpheus","input":"Hey, it is me, Monika!","voice":"tara","response_format":"wav"}' \
-  --output test.wav
-```
-
-**Endpoint:** `http://spark-0af9:5005`
+**TTS Endpoint (local):** `http://spark-0af9:5005`
+**TTS Endpoint (Tailscale):** `https://spark-0af9.tail3b3470.ts.net/tts`
 **Voices:** tara, leah, jess, mia, zoe (female), leo, dan, zac (male)
 **Emotion tags:** `<laugh>` `<chuckle>` `<sigh>` `<gasp>` `<groan>` `<yawn>` — insert inline in text
+**Virtual environment:** `~/Orpheus-FastAPI/venv/` (PyTorch 2.11.0a0 with CUDA 13.0 / sm_121)
 
 ---
 
@@ -220,10 +258,10 @@ C:\Users\joshu\moni-talk\index.html
 ```
 
 In the app settings:
-- **Provider** is set to llama.cpp
-- **llama.cpp endpoint** is your Spark's Tailscale HTTPS URL (for remote/GitHub Pages) or `http://spark-0af9:8080` (for local use)
-- **Model** dropdown shows all GGUF files discovered by the server — select which model to use (switching models unloads the current one and loads the new one)
-- **TTS endpoint** is `http://spark-0af9:5005` (Orpheus-FastAPI on the Spark)
+- **Provider:** llama.cpp
+- **llama.cpp endpoint:** `https://spark-0af9.tail3b3470.ts.net` (Tailscale, for GitHub Pages) or `http://spark-0af9:8080` (local network)
+- **Model:** dropdown shows all GGUF files — select which to use (switching unloads current and loads new)
+- **TTS endpoint:** `https://spark-0af9.tail3b3470.ts.net/tts` (Tailscale, for GitHub Pages) or `http://spark-0af9:5005` (local network)
 
 ---
 
@@ -233,12 +271,14 @@ In the app settings:
 |---------|-----|
 | llama-server won't start | Check CUDA: `nvidia-smi`. Verify model file exists in `~/models/` |
 | "Could not connect" in settings | Is llama-server running? Check `curl http://localhost:8080/v1/models` on the Spark |
-| CORS error in browser console | llama-server enables CORS automatically for all origins — verify the server is running and reachable |
-| Mixed content error from GitHub Pages | Use the Tailscale HTTPS URL, not plain HTTP |
-| Tailscale serve not working | Re-run `tailscale serve --bg http://localhost:8080` after Spark restart |
+| CORS error in browser console | Usually means a server isn't running. Check all 3 terminals are up. The 502 Bad Gateway from Tailscale lacks CORS headers, which the browser reports as a CORS error |
+| Mixed content error from GitHub Pages | Use the Tailscale HTTPS URLs, not plain HTTP |
+| Tailscale serve not working | Re-run both `tailscale serve` commands after Spark restart (see Tailscale section above) |
 | ERR_CERTIFICATE_TRANSPARENCY_REQUIRED | New Tailscale certs need time for CT log propagation (~hours to a day). Try incognito mode or Firefox |
 | Model switching is slow | First request to a new model takes time to load into VRAM. Subsequent requests are fast |
-| TTS server crashes on startup | Ensure both llama-server (:5006) and Orpheus-FastAPI (:5005) are running on the Spark |
+| TTS: no audio / empty WAV | Check Terminal 2 (Orpheus llama-server on 5006) is running. Orpheus-FastAPI needs it for token generation |
+| TTS: "Connection error to API at 127.0.0.1:5006" | Terminal 2 is down. Restart the Orpheus llama-server |
+| TTS: "Address already in use" on port 5005 | Another Orpheus-FastAPI instance is still running. Kill it: `pkill -f "python app.py"` then restart |
 | `sudo` commands hang in Claude Code | Run sudo commands in a real terminal instead |
 
 ---

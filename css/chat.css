@@ -135,6 +135,16 @@
 .image-attach-btn { width: 44px; height: 44px; border: none; border-radius: 50%; background: none; color: var(--gray-text); font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s; flex-shrink: 0; align-self: flex-end; }
 .image-attach-btn:hover { color: var(--green-mid); }
 
+/* === Mic (STT) Button === */
+.mic-btn { width: 44px; height: 44px; border: none; border-radius: 50%; background: none; color: var(--gray-text); font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: color 0.2s, background 0.2s; flex-shrink: 0; align-self: flex-end; }
+.mic-btn:hover { color: var(--green-dark); }
+.mic-btn.recording { color: white; background: #e53935; animation: mic-pulse 1s ease-in-out infinite; }
+@keyframes mic-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+.keyboard-open .mic-btn { display: none !important; }
+[data-theme="dark"] .mic-btn { color: #888; }
+[data-theme="dark"] .mic-btn:hover { color: var(--green-mid); }
+[data-theme="dark"] .mic-btn.recording { color: white; background: #e53935; }
+
 /* === Image Preview === */
 .image-preview { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--green-pale); border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
 .image-preview img { max-height: 64px; max-width: 120px; border-radius: 8px; object-fit: cover; border: 2px solid var(--green-mid); }

@@ -374,6 +374,9 @@ function openChat(id) {
   updateContextBar();
   // Show/hide TTS toggle (only for chat/room modes)
   if (typeof updateTTSIcon === 'function') updateTTSIcon();
+  // Show/hide mic button (chat mode only)
+  if (typeof sttSupported !== 'undefined' && sttSupported && chat.mode === 'chat') showMicButton();
+  else if (typeof hideMicButton === 'function') hideMicButton();
 
   if (isStory && chat.messages.length === 0) {
     generateStoryBeat(chat);
@@ -848,6 +851,7 @@ async function sendMessage() {
   if (!text && !pendingImage) return;
   if (isGenerating) return;
   if (!chat) return;
+  if (typeof stopSTT === 'function' && sttActive) stopSTT();
 
   const attachedImage = pendingImage;
   removeAttachedImage();

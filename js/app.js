@@ -115,7 +115,7 @@ function init() {
       showToast('Memory forgotten.', 'success');
     }
   });
-  $('chatBackBtn').addEventListener('click', () => { if (typeof stopTTS === 'function') stopTTS(); activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); screens.chat.classList.remove('adventure-mode'); teardownRoomMode(); closeVnPanel(); closeChatPanel(); closeAdventurePanel(); const advAct = $('adventureActions'); if (advAct) advAct.style.display = 'none'; const picker = document.querySelector('.adv-item-picker'); if (picker) picker.remove(); showScreen('chatList'); renderChatList(); });
+  $('chatBackBtn').addEventListener('click', () => { if (typeof stopTTS === 'function') stopTTS(); if (typeof hideMicButton === 'function') hideMicButton(); activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); screens.chat.classList.remove('adventure-mode'); teardownRoomMode(); closeVnPanel(); closeChatPanel(); closeAdventurePanel(); const advAct = $('adventureActions'); if (advAct) advAct.style.display = 'none'; const picker = document.querySelector('.adv-item-picker'); if (picker) picker.remove(); showScreen('chatList'); renderChatList(); });
   $('trimBtn').addEventListener('click', trimContext);
   $('regenBtn').addEventListener('click', regenerateLastResponse);
   $('cancelBtn').addEventListener('click', () => { if (activeAbortController) activeAbortController.abort(); });
@@ -247,6 +247,10 @@ function init() {
     previewVoice(sel.value);
   });
   updateTTSIcon();
+
+  // STT (voice input)
+  if (typeof initSTT === 'function') initSTT();
+  $('micBtn').addEventListener('click', toggleSTT);
 
   // Benchmark
   $('openBenchmarkBtn').addEventListener('click', () => { closeSettings(); openBenchmarkModal(); });
