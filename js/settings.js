@@ -157,8 +157,8 @@ async function refreshLlamaCppModels() {
   models.forEach(id => {
     const o = document.createElement('option');
     o.value = id;
-    // Clean display name: strip split GGUF suffix (e.g. "-00001-of-00002")
-    o.textContent = id.replace(/-\d+-of-\d+$/, '');
+    // Clean display name: strip split GGUF suffix (e.g. "-00001-of-00002.gguf")
+    o.textContent = id.replace(/-\d+-of-\d+(\.gguf)?$/i, '');
     llamacppModelSelect.appendChild(o);
   });
   // Restore saved selection if available

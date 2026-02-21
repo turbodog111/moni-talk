@@ -52,10 +52,13 @@ curl http://localhost:8080/v1/models
 | `--models-dir PATH` | Auto-discover all GGUF files in directory (router mode) |
 | `--models-max N` | Max models loaded simultaneously (use 1 for large models) |
 
+**Split GGUFs:** Models larger than ~50 GB often come as split files (e.g. `-00001-of-00002.gguf`, `-00002-of-00002.gguf`). Place both parts in `~/models/`. The app's model selector automatically hides continuation parts and shows one clean entry. When loaded, llama-server reads all parts automatically.
+
 #### Available models
 
 | Model | Quant | Size | Speed (est.) |
 |-------|-------|------|-------------|
+| GPT-OSS 120B | Q4_K_M | ~63 GB (split) | ~3 t/s |
 | Qwen3-32B | Q8_0 | ~34 GB | ~7 t/s |
 | Gemma 3 27B | Q8_0 | ~27 GB | ~8 t/s |
 | Mistral Small 3.1 24B | Q8_0 | ~25 GB | ~10 t/s |
@@ -75,6 +78,11 @@ wget -O ~/models/gemma-3-27b-it-Q8_0.gguf \
 # Mistral Small 3.1 24B Q8
 wget -O ~/models/Mistral-Small-3.1-24B-Instruct-Q8_0.gguf \
   "https://huggingface.co/bartowski/Mistral-Small-3.1-24B-Instruct-2503-GGUF/resolve/main/Mistral-Small-3.1-24B-Instruct-2503-Q8_0.gguf"
+
+# GPT-OSS 120B Q4_K_M (split GGUF — 2 files, ~63 GB total)
+cd ~/models && \
+wget "https://huggingface.co/bartowski/openai_gpt-oss-120b-GGUF/resolve/main/openai_gpt-oss-120b-Q4_K_M/openai_gpt-oss-120b-Q4_K_M-00001-of-00002.gguf" && \
+wget "https://huggingface.co/bartowski/openai_gpt-oss-120b-GGUF/resolve/main/openai_gpt-oss-120b-Q4_K_M/openai_gpt-oss-120b-Q4_K_M-00002-of-00002.gguf"
 
 # Qwen2.5-72B Q4_K_M (larger, slower, richer writing)
 wget -O ~/models/qwen2.5-72b-instruct-q4_k_m.gguf \

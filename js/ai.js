@@ -603,10 +603,10 @@ async function fetchLlamaCppModels() {
     if (!res.ok) return [];
     const data = await res.json();
     const ids = (data.data || []).map(m => m.id).filter(Boolean);
-    // Filter out split GGUF continuation parts (e.g. -00002-of-00003)
+    // Filter out split GGUF continuation parts (e.g. -00002-of-00003.gguf)
     // Only keep part 1 (which auto-loads the rest) and non-split models
     return ids.filter(id => {
-      const splitMatch = id.match(/-(\d+)-of-(\d+)$/);
+      const splitMatch = id.match(/-(\d+)-of-(\d+)(\.gguf)?$/i);
       return !splitMatch || parseInt(splitMatch[1]) === 1;
     });
   } catch {}
