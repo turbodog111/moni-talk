@@ -779,7 +779,9 @@ function renderMessages() {
 function formatModelLabel(modelKey) {
   if (!modelKey) return '';
   const parts = modelKey.split(':');
-  return parts.length > 2 ? parts.slice(1).join(':') : parts[1] || modelKey;
+  let label = parts.length > 2 ? parts.slice(1).join(':') : parts[1] || modelKey;
+  // Strip split GGUF suffix (e.g. "-00001-of-00002")
+  return label.replace(/-\d+-of-\d+$/, '');
 }
 
 function insertMessageEl(role, content, animate = true, imageUrl = null, model = null, timestamp = null) {

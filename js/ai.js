@@ -602,7 +602,13 @@ async function fetchLlamaCppModels() {
     const res = await fetch(`${llamacppEndpoint}/v1/models`);
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.data || []).map(m => m.id).filter(Boolean);
+    const ids = (data.data || []).map(m => m.id).filter(Boolean);
+    // Filter out split GGUF continuation parts (e.g. -00002-of-00003)
+    // Only keep part 1 (which auto-loads the rest) and non-split models
+    return ids.filter(id => {
+      const splitMatch = id.match(/-(\d+)-of-(\d+)$/);
+      return !splitMatch || parseInt(splitMatch[1]) === 1;
+    });
   } catch {}
   return [];
 }
