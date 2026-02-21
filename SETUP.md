@@ -149,10 +149,14 @@ ssh xturbo@spark-0af9
 
 cd ~/Qwen3-TTS-Openai-Fastapi
 source venv/bin/activate
-PORT=8880 TTS_CUSTOM_VOICES=./custom_voices CORS_ORIGINS=* python -m api.main
+PORT=8880 TTS_CUSTOM_VOICES=./custom_voices CORS_ORIGINS=* TTS_ATTN=eager TTS_MODEL_ID=Qwen/Qwen3-TTS-12Hz-1.7B-Base python -m api.main
 ```
 
 Wait for the model to load and the server to start.
+
+**Important flags:**
+- `TTS_ATTN=eager` — Required on Blackwell/sm_121. Flash Attention and SDPA CUTLASS kernels are compiled for sm80-sm100 only and produce FATAL errors or corrupted audio on sm_121. Eager mode uses pure PyTorch math attention, which works correctly on any GPU.
+- `TTS_MODEL_ID=Qwen/Qwen3-TTS-12Hz-1.7B-Base` — Required for custom voice cloning. The default CustomVoice model does not support custom voices despite the name; the Base model does.
 
 **Custom voices:** Place reference audio + transcript in `custom_voices/<name>/` (e.g. `custom_voices/monika/reference.wav` + `reference.txt`). The voice name becomes selectable in the app.
 
@@ -224,9 +228,10 @@ source venv/bin/activate
 
 # Install PyTorch with Blackwell/sm_121 GPU support
 # (standard PyTorch does NOT support the Spark's GB10 GPU)
-wget -O /tmp/torch-blackwell.whl \
+# IMPORTANT: Keep the original wheel filename — pip validates it
+wget -O /tmp/torch-2.11.0a0+git00ab8be-cp312-cp312-linux_aarch64.whl \
   "https://github.com/cypheritai/pytorch-blackwell/releases/download/v2.11.0-blackwell/torch-2.11.0a0+git00ab8be-cp312-cp312-linux_aarch64.whl"
-pip install /tmp/torch-blackwell.whl
+pip install /tmp/torch-2.11.0a0+git00ab8be-cp312-cp312-linux_aarch64.whl
 
 # Install remaining dependencies
 sudo apt install -y libportaudio2 portaudio19-dev libopenblas0
@@ -282,10 +287,21 @@ python3 -m venv venv
 source venv/bin/activate
 
 # Install PyTorch with Blackwell/sm_121 GPU support
-pip install /tmp/torch-blackwell.whl   # re-download if needed
+# IMPORTANT: The wheel filename must be preserved exactly — pip validates it.
+# Download if not already present:
+#   wget -O /tmp/torch-2.11.0a0+git00ab8be-cp312-cp312-linux_aarch64.whl \
+#     "https://github.com/cypheritai/pytorch-blackwell/releases/download/v2.11.0-blackwell/torch-2.11.0a0+git00ab8be-cp312-cp312-linux_aarch64.whl"
+pip install /tmp/torch-2.11.0a0+git00ab8be-cp312-cp312-linux_aarch64.whl
 
 # Install remaining dependencies
+# NOTE: If requirements.txt includes torch, this may overwrite the Blackwell wheel
+# with a standard build that lacks sm_121 support. If that happens, re-run the
+# pip install for the Blackwell wheel above AFTER installing requirements.
 pip install -r requirements.txt
+pip install /tmp/torch-2.11.0a0+git00ab8be-cp312-cp312-linux_aarch64.whl  # re-install in case requirements.txt overwrote it
+
+# Install sox (needed for audio processing)
+sudo apt install -y sox
 
 # Set up Monika custom voice
 mkdir -p custom_voices/monika
@@ -305,7 +321,7 @@ EOF
 **Qwen3-TTS Endpoint (Tailscale):** `https://spark-0af9.tail3b3470.ts.net/qwen-tts`
 **Qwen3 Voices:** monika (cloned), vivian, serena, ono_anna, sohee (female), aiden, dylan, eric, ryan, uncle_fu (male)
 **Voice cloning:** Custom voices in `~/Qwen3-TTS-Openai-Fastapi/custom_voices/<name>/` with `reference.wav` + `reference.txt`
-**Virtual environment:** `~/Qwen3-TTS-Openai-Fastapi/venv/`
+**Virtual environment:** `~/Qwen3-TTS-Openai-Fastapi/venv/` (PyTorch 2.11.0a0 with CUDA 13.0 / sm_121, must use eager attention)
 
 ---
 
@@ -343,6 +359,10 @@ In the app settings:
 | TTS: no audio / empty WAV | Check Terminal 2 (Orpheus llama-server on 5006) is running. Orpheus-FastAPI needs it for token generation |
 | TTS: "Connection error to API at 127.0.0.1:5006" | Terminal 2 is down. Restart the Orpheus llama-server |
 | TTS: "Address already in use" on port 5005 | Another Orpheus-FastAPI instance is still running. Kill it: `pkill -f "python app.py"` then restart |
+| Qwen3-TTS: FATAL kernel sm80 errors / corrupted audio | Flash Attention and CUTLASS kernels don't support sm_121. Ensure `TTS_ATTN=eager` is set in the launch command |
+| Qwen3-TTS: "Custom voices require the Base model" | Use `TTS_MODEL_ID=Qwen/Qwen3-TTS-12Hz-1.7B-Base` in the launch command. The CustomVoice model doesn't support custom voices |
+| Qwen3-TTS: model loading on CPU | The Blackwell PyTorch wheel may have been overwritten by `pip install -r requirements.txt`. Re-install: `pip install /tmp/torch-2.11.0a0+git00ab8be-cp312-cp312-linux_aarch64.whl` |
+| pip: "not a valid wheel filename" | Don't rename the wheel file. The full filename `torch-2.11.0a0+git00ab8be-cp312-cp312-linux_aarch64.whl` is required by pip |
 | `sudo` commands hang in Claude Code | Run sudo commands in a real terminal instead |
 
 ---
