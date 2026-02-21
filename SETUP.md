@@ -7,7 +7,7 @@
 SSH into the Spark and start llama-server in **router mode** (auto-discovers all GGUF files, switch models without restarting):
 
 ```bash
-ssh xturbo@spark-0af9.local
+ssh xturbo@spark-0af9
 
 ~/llama.cpp/build/bin/llama-server \
     --no-mmap \
