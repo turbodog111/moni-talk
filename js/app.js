@@ -283,12 +283,7 @@ function init() {
   $('benchTabRun').addEventListener('click', () => switchBenchTab('run'));
   $('benchTabResults').addEventListener('click', () => switchBenchTab('results'));
   $('benchTabCompare').addEventListener('click', () => switchBenchTab('compare'));
-  $('benchRunAllBtn').addEventListener('click', async () => {
-    await runBenchmarkTests(STORY_TESTS, 'story');
-    if (!benchCancelled) await runBenchmarkTests(CHAT_TESTS, 'chat');
-  });
-  $('benchRunStoryBtn').addEventListener('click', () => runBenchmarkTests(STORY_TESTS, 'story'));
-  $('benchRunChatBtn').addEventListener('click', () => runBenchmarkTests(CHAT_TESTS, 'chat'));
+  // benchRunBtn is wired dynamically in renderBenchRunTab (re-wired on each render)
   $('benchCancelBtn').addEventListener('click', cancelBenchmark);
 
   // Sync

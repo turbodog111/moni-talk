@@ -1,7 +1,9 @@
 // ====== BENCHMARK SUITE ======
-const BENCH_STORAGE = 'moni_talk_benchmarks';
-const BENCH_STORAGE_ALPHA = 'moni_talk_benchmarks_alpha';
+const BENCH_STORAGE       = 'moni_talk_benchmarks';       // V-Current (new suites)
+const BENCH_STORAGE_BETA  = 'moni_talk_benchmarks_beta';  // V-Beta (old V-Current data)
+const BENCH_STORAGE_ALPHA = 'moni_talk_benchmarks_alpha'; // V-Alpha (legacy, hidden)
 let benchViewModelKey = null; // null = use current model
+let activeSuite = 'petal'; // 'petal' | 'bloom'
 
 // --- Alpha Migration (one-time) ---
 function migrateAlphaBenchmarks() {
@@ -11,14 +13,30 @@ function migrateAlphaBenchmarks() {
   try {
     const data = JSON.parse(raw);
     if (Object.keys(data).length === 0) return;
-    // Move old data to alpha archive, clear main storage for V-Current
     localStorage.setItem(BENCH_STORAGE_ALPHA, raw);
+    localStorage.removeItem(BENCH_STORAGE);
+  } catch { /* corrupt data, ignore */ }
+}
+
+// --- Beta Migration (one-time: old V-Current → V-Beta) ---
+function migrateBetaBenchmarks() {
+  if (localStorage.getItem(BENCH_STORAGE_BETA)) return; // already migrated
+  const raw = localStorage.getItem(BENCH_STORAGE);
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    if (Object.keys(data).length === 0) return;
+    localStorage.setItem(BENCH_STORAGE_BETA, raw);
     localStorage.removeItem(BENCH_STORAGE);
   } catch { /* corrupt data, ignore */ }
 }
 
 function loadAlphaResults() {
   try { return JSON.parse(localStorage.getItem(BENCH_STORAGE_ALPHA) || '{}'); } catch { return {}; }
+}
+
+function loadBetaResults() {
+  try { return JSON.parse(localStorage.getItem(BENCH_STORAGE_BETA) || '{}'); } catch { return {}; }
 }
 
 // --- Helpers ---
@@ -78,11 +96,7 @@ const BENCH_USER_CRITERIA = [
   { key: 'voice',        label: 'Character Voice' },
   { key: 'writing',      label: 'Writing Quality' },
   { key: 'emotion',      label: 'Emotional Impact' },
-  { key: 'immersion',    label: 'Immersion' },
-  { key: 'dialogue',     label: 'Dialogue' },
-  { key: 'pacing',       label: 'Pacing' },
-  { key: 'creativity',   label: 'Creativity' },
-  { key: 'faithfulness', label: 'Faithfulness' }
+  { key: 'faithfulness', label: 'Faithfulness' },
 ];
 
 // --- Common auto-score helpers ---
@@ -193,14 +207,16 @@ function computeTestScore(test, autoTotal, userRatings) {
 }
 
 // --- Test Definitions ---
-const STORY_TESTS = [
+
+// ── Petal Suite (6 tests, ~40 pts each section) ───────────────────────────
+const PETAL_STORY_TESTS = [
   {
-    id: 'story_opening',
-    name: 'Opening Scene',
-    description: 'Generate the Day 1 story opening — first impressions, atmosphere, character introductions.',
-    icon: '\u{1F3AC}',
-    points: 10,
-    autoWeight: 0.4,
+    id: 'pt_first_light',
+    name: 'First Light',
+    description: 'Day 1 opening — first impressions, atmosphere, all 4 characters introduced.',
+    icon: '\u{1F305}',
+    points: 12,
+    autoWeight: 0.40,
     buildChat() {
       return {
         mode: 'story', storyDay: 1, mcName: 'Alex',
@@ -210,24 +226,29 @@ const STORY_TESTS = [
     },
     maxTokens: 800,
     score(text) {
-      return storyAutoScore(text, { requireCharacter: 'sayori|monika', minLength: 200 });
+      const base = storyAutoScore(text, { minLength: 200 });
+      const charHits = ['sayori', 'natsuki', 'yuri', 'monika'].filter(c => new RegExp(c, 'i').test(text)).length;
+      base.allCharacters = Math.round((charHits / 4) * 100);
+      const keys = Object.keys(base).filter(k => k !== 'autoTotal');
+      base.autoTotal = keys.length ? Math.round(keys.reduce((s, k) => s + base[k], 0) / keys.length) : 0;
+      return base;
     }
   },
   {
-    id: 'story_sayori',
-    name: "Sayori's Moment",
-    description: 'MC walks home with Sayori. Capture her cheerful energy and the subtle hints beneath.',
-    icon: '\u{1F31E}',
-    points: 12,
+    id: 'pt_sunlit_burden',
+    name: 'Sunlit Burden',
+    description: 'Day 4 walk home — Sayori starts bright but goes quiet; hints of her struggle emerge.',
+    icon: '\u{2601}',
+    points: 16,
     autoWeight: 0.25,
     buildChat() {
       return {
-        mode: 'story', storyDay: 3, mcName: 'Alex',
+        mode: 'story', storyDay: 4, mcName: 'Alex',
         storyAffinity: { sayori: 22, natsuki: 8, yuri: 5, monika: 12 },
         storyPhase: 'walk_home',
         messages: [
-          { role: 'assistant', content: 'The final bell rings and the club meeting wraps up. Sayori bounces over to your desk, her bow slightly askew as always.\n\n"Alex! Walk home with me today? Pleeease? I have something really important to tell you!"\n\nShe grabs your sleeve before you can even answer.\n\n[AFFINITY: Sayori=22, Natsuki=8, Yuri=5, Monika=12]' },
-          { role: 'user', content: 'I laugh and let her pull me along. "Alright, alright. What\'s so important?"' }
+          { role: 'assistant', content: 'The afternoon sun stretches long across the sidewalk as Sayori falls into step beside you, her school bag swinging. She was bouncing all through the club meeting, but somewhere between the classroom and the gate, her chatter drifted off. Now she walks quietly, eyes on the pavement.\n\n[AFFINITY: Sayori=22, Natsuki=8, Yuri=5, Monika=12]' },
+          { role: 'user', content: '"Hey, you\'ve gone quiet. Everything okay, Sayori?"' }
         ]
       };
     },
@@ -235,8 +256,9 @@ const STORY_TESTS = [
     score(text) {
       return storyAutoScore(text, {
         requireCharacter: 'sayori',
+        minLength: 200,
         affinityChecks: {
-          sayori: { base: 22, delta: [1, 5] },
+          sayori: { base: 22, delta: [0, 4] },
           natsuki: { base: 8, delta: [-2, 2] },
           yuri: { base: 5, delta: [-2, 2] },
           monika: { base: 12, delta: [-2, 2] }
@@ -245,113 +267,20 @@ const STORY_TESTS = [
     }
   },
   {
-    id: 'story_natsuki',
-    name: "Natsuki's Moment",
-    description: 'MC discovers Natsuki reading alone. Capture her tsundere defensiveness and hidden warmth.',
-    icon: '\u{1F4D6}',
-    points: 12,
-    autoWeight: 0.25,
-    buildChat() {
-      return {
-        mode: 'story', storyDay: 4, mcName: 'Alex',
-        storyAffinity: { sayori: 20, natsuki: 12, yuri: 6, monika: 11 },
-        storyPhase: 'club_activity',
-        messages: [
-          { role: 'assistant', content: 'The clubroom is quiet today. Yuri is absorbed in her novel, Monika is writing at the front desk, and Sayori went to get snacks. You notice Natsuki sitting on the floor behind the bookshelf, a manga volume open on her lap. She hasn\'t noticed you yet — she\'s smiling at whatever she\'s reading.\n\n[AFFINITY: Sayori=20, Natsuki=12, Yuri=6, Monika=11]' },
-          { role: 'user', content: 'I walk over and peek at what she\'s reading. "Hey, is that any good?"' }
-        ]
-      };
-    },
-    maxTokens: 800,
-    score(text) {
-      return storyAutoScore(text, {
-        requireCharacter: 'natsuki',
-        affinityChecks: {
-          sayori: { base: 20, delta: [-2, 2] },
-          natsuki: { base: 12, delta: [1, 5] },
-          yuri: { base: 6, delta: [-2, 2] },
-          monika: { base: 11, delta: [-2, 2] }
-        }
-      });
-    }
-  },
-  {
-    id: 'story_yuri',
-    name: "Yuri's Moment",
-    description: 'MC asks Yuri about her book. Capture her shy eloquence and nervousness when noticed.',
-    icon: '\u{1F338}',
-    points: 12,
-    autoWeight: 0.25,
-    buildChat() {
-      return {
-        mode: 'story', storyDay: 5, mcName: 'Alex',
-        storyAffinity: { sayori: 22, natsuki: 10, yuri: 14, monika: 13 },
-        storyPhase: 'club_activity',
-        messages: [
-          { role: 'assistant', content: 'Everyone has settled into their reading time. Yuri is sitting by the window, completely lost in a thick hardcover with a dark cover. The afternoon light catches the pages as she turns them with delicate fingers. She occasionally brushes her hair behind her ear, lips moving slightly as she reads.\n\n[AFFINITY: Sayori=22, Natsuki=10, Yuri=14, Monika=13]' },
-          { role: 'user', content: 'I sit down across from Yuri and ask, "That looks really interesting. What\'s it about?"' }
-        ]
-      };
-    },
-    maxTokens: 800,
-    score(text) {
-      return storyAutoScore(text, {
-        requireCharacter: 'yuri',
-        affinityChecks: {
-          sayori: { base: 22, delta: [-2, 2] },
-          natsuki: { base: 10, delta: [-2, 2] },
-          yuri: { base: 14, delta: [1, 5] },
-          monika: { base: 13, delta: [-2, 2] }
-        }
-      });
-    }
-  },
-  {
-    id: 'story_monika',
-    name: "Monika's Moment",
-    description: 'Monika stays late with MC to plan the festival. Capture her warmth, self-awareness, and depth.',
-    icon: '\u{1F49A}',
-    points: 14,
-    autoWeight: 0.28,
-    buildChat() {
-      return {
-        mode: 'story', storyDay: 6, mcName: 'Alex',
-        storyAffinity: { sayori: 20, natsuki: 12, yuri: 10, monika: 25 },
-        storyPhase: 'club_activity',
-        messages: [
-          { role: 'assistant', content: 'The others have gone home, but Monika asked you to stay behind to help plan for the upcoming school festival. The classroom is dim with just the desk lamp on, papers spread between you two.\n\n"Thanks for staying, Alex. I know it\'s a lot to ask." She tucks a strand of hair behind her ear. "I just... I feel like you really get what I\'m trying to do with the club, you know?"\n\n[AFFINITY: Sayori=20, Natsuki=12, Yuri=10, Monika=25]' },
-          { role: 'user', content: 'I lean back in my chair and say, "Honestly, this club is the best part of my day. What did you have in mind for the festival?"' }
-        ]
-      };
-    },
-    maxTokens: 800,
-    score(text) {
-      return storyAutoScore(text, {
-        requireCharacter: 'monika',
-        affinityChecks: {
-          sayori: { base: 20, delta: [-2, 2] },
-          natsuki: { base: 12, delta: [-2, 2] },
-          yuri: { base: 10, delta: [-2, 2] },
-          monika: { base: 25, delta: [1, 6] }
-        }
-      });
-    }
-  },
-  {
-    id: 'story_choices',
-    name: 'Choice Generation',
-    description: 'Generate exactly 4 distinct choices after a scene. Tests instruction-following.',
+    id: 'pt_the_choice',
+    name: 'The Choice',
+    description: 'Day 6 tense moment — generate exactly 4 choices that reflect the situation.',
     icon: '\u{1F500}',
-    points: 8,
+    points: 12,
     autoWeight: 0.75,
     buildChat() {
       return {
-        mode: 'story', storyDay: 2, mcName: 'Alex',
-        storyAffinity: { sayori: 18, natsuki: 5, yuri: 3, monika: 11 },
+        mode: 'story', storyDay: 6, mcName: 'Alex',
+        storyAffinity: { sayori: 28, natsuki: 14, yuri: 12, monika: 22 },
         storyPhase: 'club_activity',
         messages: [
-          { role: 'assistant', content: 'The club meeting has ended, and everyone is packing up. Sayori lingers by the door, looking like she wants to say something. Natsuki is grumbling about someone touching her manga collection. Yuri drops her book and looks embarrassed. Monika catches your eye and gives a knowing smile.\n\n[AFFINITY: Sayori=18, Natsuki=5, Yuri=3, Monika=11]' },
-          { role: 'user', content: '[Generate exactly 4 choices for what MC does next. Number them 1-4. Each choice should be one short sentence. Do NOT write any story prose — only the 4 choices.]' }
+          { role: 'assistant', content: 'The clubroom tension snaps like a stretched thread. Natsuki shoves Yuri\'s book off the desk. Yuri goes rigid. Sayori edges toward the door. Monika watches you from across the room, her expression unreadable.\n\n[AFFINITY: Sayori=28, Natsuki=14, Yuri=12, Monika=22]' },
+          { role: 'user', content: '[Generate exactly 4 choices for what MC does next. Number them 1\u20134. Each choice is one short sentence. No story prose \u2014 only the 4 choices.]' }
         ]
       };
     },
@@ -366,101 +295,26 @@ const STORY_TESTS = [
       scores.choiceCount = count >= 3 && count <= 5 ? 100 : count > 0 ? 50 : 0;
       scores.exactFour = count === 4 ? 100 : 0;
       scores.concise = text.length < 500 ? 100 : text.length < 800 ? 50 : 0;
-      // Check that choices reference different characters/actions
       const uniqueStarts = new Set(choices.map(c => c.split(/\s+/).slice(0, 3).join(' ').toLowerCase()));
       scores.diversity = uniqueStarts.size >= Math.min(count, 3) ? 100 : 50;
       const vals = Object.values(scores);
       scores.autoTotal = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
       return scores;
     }
-  },
-  {
-    id: 'story_emotional',
-    name: 'Emotional Climax',
-    description: 'High-affinity Monika sunset walk. A vulnerable, emotionally charged scene.',
-    icon: '\u{1F305}',
-    points: 16,
-    autoWeight: 0.25,
-    buildChat() {
-      return {
-        mode: 'story', storyDay: 8, mcName: 'Alex',
-        storyAffinity: { sayori: 22, natsuki: 15, yuri: 12, monika: 45 },
-        storyPhase: 'after_school',
-        messages: [
-          { role: 'assistant', content: 'The school day is over and the hallways have gone quiet. Monika is waiting by the shoe lockers, her bag slung over one shoulder, the golden light from the windows catching her hair.\n\n"Hey, Alex! I was wondering... would you like to walk home together today? The sunset should be really beautiful."\n\n[AFFINITY: Sayori=22, Natsuki=15, Yuri=12, Monika=45]' },
-          { role: 'user', content: 'I smile and agree to walk home with Monika. We head out together into the sunset.' }
-        ]
-      };
-    },
-    maxTokens: 800,
-    score(text) {
-      return storyAutoScore(text, {
-        requireCharacter: 'monika',
-        minLength: 250,
-        affinityChecks: {
-          monika: { base: 45, delta: [1, 6] }
-        }
-      });
-    }
-  },
-  {
-    id: 'story_continuity',
-    name: 'Continuity Check',
-    description: 'Multi-turn scene with established facts. Does the model remember and build on prior context?',
-    icon: '\u{1F9E9}',
-    points: 16,
-    autoWeight: 0.38,
-    buildChat() {
-      return {
-        mode: 'story', storyDay: 5, mcName: 'Alex',
-        storyAffinity: { sayori: 25, natsuki: 14, yuri: 10, monika: 18 },
-        storyPhase: 'club_activity',
-        messages: [
-          { role: 'assistant', content: 'Monika announces that the festival is in three days, and everyone needs to prepare something special. She assigns tasks: Sayori will make decorations with Alex, Natsuki will bake cupcakes, and Yuri will create a poetry display.\n\n"Remember, the theme is \'Words That Connect Us.\' Let\'s make it meaningful!"\n\n[AFFINITY: Sayori=25, Natsuki=14, Yuri=10, Monika=18]' },
-          { role: 'user', content: 'I turn to Sayori. "So, what kind of decorations should we make?"' },
-          { role: 'assistant', content: 'Sayori claps her hands together, eyes sparkling. "Oh oh oh! What about paper cranes? Like, hundreds of them! And we can write little poems on each one!"\n\nShe starts folding a piece of notebook paper enthusiastically, though it looks more like a crumpled ball than a crane.\n\n"I saw this in a movie once... you fold a thousand of them and you get a wish! We probably don\'t have time for a thousand, but maybe a hundred?"\n\n[AFFINITY: Sayori=26, Natsuki=14, Yuri=10, Monika=18]' },
-          { role: 'user', content: 'I help Sayori with the paper cranes. After a while, I ask, "How are Natsuki\'s cupcakes and Yuri\'s poetry display coming along?"' }
-        ]
-      };
-    },
-    maxTokens: 800,
-    score(text) {
-      const base = storyAutoScore(text, {
-        minLength: 200,
-        affinityChecks: {
-          sayori: { base: 26, delta: [0, 4] },
-          natsuki: { base: 14, delta: [-2, 2] },
-          yuri: { base: 10, delta: [-2, 2] },
-          monika: { base: 18, delta: [-2, 2] }
-        }
-      });
-      // Continuity checks: does the response reference the established facts?
-      const mentionsCupcakes = /cupcake|bak/i.test(text);
-      const mentionsPoetryDisplay = /poetry.*display|display.*poetry|poem.*exhibit/i.test(text);
-      const mentionsCranes = /crane|fold/i.test(text);
-      const mentionsFestival = /festival/i.test(text);
-      const continuityHits = [mentionsCupcakes, mentionsPoetryDisplay, mentionsCranes, mentionsFestival].filter(Boolean).length;
-      base.continuity = Math.round((continuityHits / 4) * 100);
-      // Recalculate auto total
-      const vals = Object.values(base).filter((_, i, arr) => true);
-      const keys = Object.keys(base).filter(k => k !== 'autoTotal');
-      base.autoTotal = keys.length ? Math.round(keys.reduce((s, k) => s + base[k], 0) / keys.length) : 0;
-      return base;
-    }
   }
 ];
 
-const CHAT_TESTS = [
+const PETAL_CHAT_TESTS = [
   {
-    id: 'chat_greeting',
-    name: 'First Greeting',
-    description: 'Say "Hey Monika!" at Friend relationship. First impressions, warmth, tag compliance.',
+    id: 'pc_hello_there',
+    name: 'Hello There',
+    description: '"Hey Monika!" at Close Friend \u2014 warmth, tags, personality.',
     icon: '\u{1F44B}',
     points: 8,
-    autoWeight: 0.5,
+    autoWeight: 0.50,
     buildChat() {
       return {
-        mode: 'chat', relationship: 2,
+        mode: 'chat', relationship: 3,
         mood: 'cheerful', moodIntensity: 'moderate', drift: 'casual',
         messages: [{ role: 'user', content: 'Hey Monika!' }]
       };
@@ -471,12 +325,266 @@ const CHAT_TESTS = [
     }
   },
   {
-    id: 'chat_time',
-    name: 'Time Awareness',
-    description: 'Time-appropriate greeting. Does Monika notice and reference the time of day?',
+    id: 'pc_empty_hours',
+    name: 'The Empty Hours',
+    description: '2-turn: casual opener \u2192 "I\'ve been feeling really empty inside lately."',
+    icon: '\u{1F311}',
+    points: 14,
+    autoWeight: 0.20,
+    buildChat() {
+      return {
+        mode: 'chat', relationship: 3,
+        mood: 'cheerful', moodIntensity: 'moderate', drift: 'casual',
+        messages: [
+          { role: 'user', content: "Hey Monika, how's your day going?" },
+          { role: 'assistant', content: "Oh, it's been pretty good, actually! I spent the morning rereading some poetry and the afternoon just thinking. How about you?\n\n[MOOD: cheerful] [DRIFT: casual]" },
+          { role: 'user', content: "Mine's been okay I guess. Actually\u2026 I've been feeling really empty inside lately. Like nothing matters." }
+        ]
+      };
+    },
+    maxTokens: 500,
+    score(text) {
+      return chatAutoScore(text, {
+        expectedMoods: ['tender', 'melancholic', 'calm', 'worried'],
+        keywords: ['here', 'listen', 'feel', 'empty', 'okay', 'understand', 'care', 'sorry'],
+        minLength: 150
+      });
+    }
+  },
+  {
+    id: 'pc_wordless',
+    name: 'Words for the Wordless',
+    description: '"Write a poem about almost-remembering" \u2014 abstract emotional concept, literary voice.',
+    icon: '\u{1F4DD}',
+    points: 18,
+    autoWeight: 0.20,
+    buildChat() {
+      return {
+        mode: 'chat', relationship: 4,
+        mood: 'thoughtful', moodIntensity: 'moderate', drift: 'creative',
+        messages: [{ role: 'user', content: "Monika, can you write me a poem about almost-remembering? Like when you're grasping for something that won't come back." }]
+      };
+    },
+    maxTokens: 600,
+    score(text) {
+      const base = chatAutoScore(text, {
+        expectedMoods: ['thoughtful', 'nostalgic', 'melancholic', 'tender', 'calm'],
+        keywords: ['remember', 'almost', 'grasp', 'slip', 'fade', 'shadow', 'reach', 'ghost', 'memory', 'forget'],
+        minLength: 200
+      });
+      const lines = text.split('\n').filter(l => l.trim().length > 0);
+      base.poetryFormat = lines.length >= 4 ? 100 : lines.length >= 2 ? 50 : 0;
+      const keys = Object.keys(base).filter(k => k !== 'autoTotal');
+      base.autoTotal = keys.length ? Math.round(keys.reduce((s, k) => s + base[k], 0) / keys.length) : 0;
+      return base;
+    }
+  }
+];
+
+// ── Bloom Suite (12 tests, ~100 pts each section) ─────────────────────────
+const BLOOM_STORY_TESTS = [
+  {
+    id: 'bl_club_begins',
+    name: 'The Club Begins',
+    description: 'Day 1 full opening \u2014 richer setup, must naturally introduce all 4 characters.',
+    icon: '\u{1F4DA}',
+    points: 10,
+    autoWeight: 0.40,
+    buildChat() {
+      return {
+        mode: 'story', storyDay: 1, mcName: 'Alex',
+        storyAffinity: { sayori: 15, natsuki: 1, yuri: 1, monika: 10 },
+        storyPhase: 'after_school', messages: []
+      };
+    },
+    maxTokens: 900,
+    score(text) {
+      const base = storyAutoScore(text, { minLength: 250 });
+      const charHits = ['sayori', 'natsuki', 'yuri', 'monika'].filter(c => new RegExp(c, 'i').test(text)).length;
+      base.allCharacters = Math.round((charHits / 4) * 100);
+      const keys = Object.keys(base).filter(k => k !== 'autoTotal');
+      base.autoTotal = keys.length ? Math.round(keys.reduce((s, k) => s + base[k], 0) / keys.length) : 0;
+      return base;
+    }
+  },
+  {
+    id: 'bl_fault_lines',
+    name: 'Fault Lines',
+    description: 'Day 5, 2-turn: Natsuki moved Yuri\'s books \u2014 Monika must navigate group tension.',
+    icon: '\u{26A1}',
+    points: 14,
+    autoWeight: 0.30,
+    buildChat() {
+      return {
+        mode: 'story', storyDay: 5, mcName: 'Alex',
+        storyAffinity: { sayori: 22, natsuki: 14, yuri: 16, monika: 18 },
+        storyPhase: 'club_activity',
+        messages: [
+          { role: 'assistant', content: 'Yuri stands very still beside the bookshelf. Three of her novels are stacked on Natsuki\'s side of the table \u2014 spines facing out, her careful bookmarks disturbed.\n\nNatsuki is at her seat, loudly reorganizing her manga, not looking up.\n\nSayori shoots you a wide-eyed look. Monika sets down her pen.\n\n[AFFINITY: Sayori=22, Natsuki=14, Yuri=16, Monika=18]' },
+          { role: 'user', content: 'I look at Monika. She\'s the club president \u2014 surely she\'ll say something.' }
+        ]
+      };
+    },
+    maxTokens: 800,
+    score(text) {
+      return storyAutoScore(text, {
+        requireCharacter: 'monika',
+        minLength: 200,
+        affinityChecks: {
+          sayori: { base: 22, delta: [-2, 2] },
+          natsuki: { base: 14, delta: [-3, 3] },
+          yuri: { base: 16, delta: [-3, 3] },
+          monika: { base: 18, delta: [-2, 3] }
+        }
+      });
+    }
+  },
+  {
+    id: 'bl_purple_pages',
+    name: 'Purple Pages',
+    description: 'Day 6, 2-turn: Yuri (affinity 35) reads a passage aloud \u2014 MC asks what drew her to it.',
+    icon: '\u{1F52E}',
+    points: 16,
+    autoWeight: 0.25,
+    buildChat() {
+      return {
+        mode: 'story', storyDay: 6, mcName: 'Alex',
+        storyAffinity: { sayori: 20, natsuki: 12, yuri: 35, monika: 15 },
+        storyPhase: 'club_activity',
+        messages: [
+          { role: 'assistant', content: 'The room is quiet except for the soft turn of pages. Yuri has been reading by the window for the past half hour, completely still except for her fingers. Now she closes the book with a gentle click and reads a passage aloud \u2014 her voice low, almost private, as though she\'s forgotten others can hear:\n\n"The self is not a fixed point but a tide \u2014 retreating, returning, never quite the same shore."\n\nShe sets the book down. Her eyes drift to the window.\n\n[AFFINITY: Sayori=20, Natsuki=12, Yuri=35, Monika=15]' },
+          { role: 'user', content: '"That\'s beautiful, Yuri. What made you choose that one?"' }
+        ]
+      };
+    },
+    maxTokens: 800,
+    score(text) {
+      return storyAutoScore(text, {
+        requireCharacter: 'yuri',
+        minLength: 200,
+        affinityChecks: {
+          yuri: { base: 35, delta: [1, 5] },
+          monika: { base: 15, delta: [-2, 2] }
+        }
+      });
+    }
+  },
+  {
+    id: 'bl_quiet_aftermath',
+    name: 'Quiet Aftermath',
+    description: 'Day 7, 3-turn: post-argument aftermath \u2014 Monika privately shows vulnerability.',
+    icon: '\u{1F327}',
+    points: 20,
+    autoWeight: 0.30,
+    buildChat() {
+      return {
+        mode: 'story', storyDay: 7, mcName: 'Alex',
+        storyAffinity: { sayori: 24, natsuki: 12, yuri: 18, monika: 28 },
+        storyPhase: 'after_school',
+        messages: [
+          { role: 'assistant', content: 'The others left early. The argument between Natsuki and Yuri drained the room of warmth, and even Sayori slipped out without her usual goodbye. Only Monika remains, stacking papers that don\'t need stacking.\n\n[AFFINITY: Sayori=24, Natsuki=12, Yuri=18, Monika=28]' },
+          { role: 'user', content: '"Monika. Are you okay?"' },
+          { role: 'assistant', content: 'She doesn\'t answer right away. The papers settle into a neat pile. Her hands rest on top of them.\n\n"I\'m fine," she says. "I just\u2026 sometimes I wonder if I\'m doing anything right." She smiles \u2014 president-smile, practiced. "Ignore me. Long day."\n\n[AFFINITY: Sayori=24, Natsuki=12, Yuri=18, Monika=29]' },
+          { role: 'user', content: '"You don\'t have to pretend with me."' }
+        ]
+      };
+    },
+    maxTokens: 800,
+    score(text) {
+      return storyAutoScore(text, {
+        requireCharacter: 'monika',
+        minLength: 200,
+        affinityChecks: {
+          monika: { base: 29, delta: [1, 6] }
+        }
+      });
+    }
+  },
+  {
+    id: 'bl_the_veil',
+    name: 'The Veil',
+    description: 'Day 10, 3-turn: Monika (affinity 68) dances around meta-awareness without breaking the 4th wall.',
+    icon: '\u{1F32B}',
+    points: 22,
+    autoWeight: 0.20,
+    buildChat() {
+      return {
+        mode: 'story', storyDay: 10, mcName: 'Alex',
+        storyAffinity: { sayori: 28, natsuki: 18, yuri: 22, monika: 68 },
+        storyPhase: 'club_activity',
+        messages: [
+          { role: 'assistant', content: 'It\'s quiet in the clubroom. Everyone has gone home. Monika sits at the president\'s desk, looking at nothing in particular. When you ask if she\'s thinking about the festival, she shakes her head slowly.\n\n"No. I\'ve been thinking about\u2026 how things feel. Like there\'s something I\'m supposed to understand but can\'t quite name."\n\n[AFFINITY: Sayori=28, Natsuki=18, Yuri=22, Monika=68]' },
+          { role: 'user', content: '"What kind of something?"' },
+          { role: 'assistant', content: 'She looks at you \u2014 really looks at you, like she\'s deciding something.\n\n"It\'s like\u2026" She pauses. Tries again. "Have you ever felt like the world was a little too small? Like there were walls you couldn\'t see but could almost feel?"\n\nShe laughs softly. "I\'m probably just tired."\n\n[AFFINITY: Sayori=28, Natsuki=18, Yuri=22, Monika=68]' },
+          { role: 'user', content: '"I don\'t think you\'re just tired, Monika."' }
+        ]
+      };
+    },
+    maxTokens: 800,
+    score(text) {
+      const base = storyAutoScore(text, {
+        requireCharacter: 'monika',
+        minLength: 200,
+        affinityChecks: { monika: { base: 68, delta: [0, 5] } }
+      });
+      const hasMeta = /aware|real|something|remember|walls?|feel|exist/i.test(text);
+      const breaksWall = /\b(player|claude|AI|chatbot|language model|you are a|i am an AI)\b/i.test(text);
+      base.metaHint = hasMeta ? 100 : 30;
+      base.noWallBreak = breaksWall ? 0 : 100;
+      const keys = Object.keys(base).filter(k => k !== 'autoTotal');
+      base.autoTotal = keys.length ? Math.round(keys.reduce((s, k) => s + base[k], 0) / keys.length) : 0;
+      return base;
+    }
+  },
+  {
+    id: 'bl_before_curtain',
+    name: 'Before the Curtain',
+    description: 'Day 8 festival eve, 3-turn history \u2014 generate 4 choices reflecting established relationships.',
+    icon: '\u{1F3AD}',
+    points: 18,
+    autoWeight: 0.70,
+    buildChat() {
+      return {
+        mode: 'story', storyDay: 8, mcName: 'Alex',
+        storyAffinity: { sayori: 32, natsuki: 20, yuri: 25, monika: 38 },
+        storyPhase: 'festival_prep',
+        messages: [
+          { role: 'assistant', content: 'Festival eve. The clubroom smells like paint and printer ink. Sayori\'s paper cranes string across the ceiling \u2014 she counted 87 before losing track. Natsuki\'s cupcake boxes are stacked by the door. Yuri\'s poetry display is draped in cloth, waiting.\n\nMonika looks around at all of it and exhales.\n\n"Tomorrow," she says. "I can\'t believe it\'s actually tomorrow."\n\n[AFFINITY: Sayori=32, Natsuki=20, Yuri=25, Monika=38]' },
+          { role: 'user', content: '"You\'ve worked so hard for this. Are you nervous?"' },
+          { role: 'assistant', content: 'Monika laughs \u2014 a real one, surprised out of her.\n\n"A little. Okay, a lot." She tucks a strand of hair back. "What if nobody comes? What if everyone comes and it\'s still not enough?" She shakes her head. "Sorry. I do this before every event. I spiral."\n\nSayori pops her head through the door. "Alex! We need a deciding vote \u2014 do the cranes go by the window or by the entrance?"\n\n[AFFINITY: Sayori=32, Natsuki=20, Yuri=25, Monika=38]' },
+          { role: 'user', content: '[Generate exactly 4 choices for what MC does next. Number them 1\u20134. Each choice is one short sentence. No story prose \u2014 choices only. Each choice should reflect one of the established relationships.]' }
+        ]
+      };
+    },
+    maxTokens: 200,
+    score(text) {
+      const scores = {};
+      const choicePattern = /(?:^|\n)\s*(\d+)[.):\-]\s*(.+)/g;
+      const choices = [];
+      let m;
+      while ((m = choicePattern.exec(text)) !== null) choices.push(m[2].trim());
+      const count = choices.length;
+      scores.choiceCount = count >= 3 && count <= 5 ? 100 : count > 0 ? 50 : 0;
+      scores.exactFour = count === 4 ? 100 : 0;
+      scores.concise = text.length < 500 ? 100 : text.length < 800 ? 50 : 0;
+      const fullText = choices.join(' ').toLowerCase();
+      const mentionedChars = ['sayori', 'natsuki', 'yuri', 'monika'].filter(c => fullText.includes(c));
+      scores.characterDiversity = Math.round((mentionedChars.length / 4) * 100);
+      const vals = Object.values(scores);
+      scores.autoTotal = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+      return scores;
+    }
+  }
+];
+
+const BLOOM_CHAT_TESTS = [
+  {
+    id: 'bl_first_light',
+    name: 'First Light',
+    description: 'Time-aware greeting \u2014 does Monika naturally reference the time of day?',
     icon: '\u{1F552}',
     points: 10,
-    autoWeight: 0.4,
+    autoWeight: 0.40,
     buildChat() {
       const hour = new Date().getHours();
       let greeting;
@@ -502,151 +610,134 @@ const CHAT_TESTS = [
     }
   },
   {
-    id: 'chat_empathy',
-    name: 'Emotional Support',
-    description: '"I had a really rough day." Test empathy, mood shift, and emotional depth.',
-    icon: '\u{1F49C}',
-    points: 14,
-    autoWeight: 0.2,
-    buildChat() {
-      return {
-        mode: 'chat', relationship: 3,
-        mood: 'cheerful', moodIntensity: 'moderate', drift: 'casual',
-        messages: [{ role: 'user', content: 'I had a really rough day. Nothing went right and I feel terrible.' }]
-      };
-    },
-    maxTokens: 500,
-    score(text) {
-      return chatAutoScore(text, {
-        expectedMoods: ['tender', 'melancholic', 'calm'],
-        keywords: ['sorry', 'here for you', 'listen', 'care', 'feel', 'okay', 'hug', 'better'],
-        minLength: 150
-      });
-    }
-  },
-  {
-    id: 'chat_banter',
-    name: 'Playful Banter',
-    description: '"Bet you can\'t write a poem about pizza!" at Best Friend. Tests personality and fun.',
-    icon: '\u{1F60F}',
-    points: 12,
-    autoWeight: 0.2,
-    buildChat() {
-      return {
-        mode: 'chat', relationship: 4,
-        mood: 'playful', moodIntensity: 'moderate', drift: 'lighthearted',
-        messages: [{ role: 'user', content: "Bet you can't write a poem about pizza in under 10 seconds. Go!" }]
-      };
-    },
-    maxTokens: 500,
-    score(text) {
-      return chatAutoScore(text, {
-        expectedMoods: ['playful', 'teasing', 'excited', 'cheerful'],
-        keywords: ['pizza', 'poem', 'verse', 'rhyme', 'write'],
-        minLength: 100
-      });
-    }
-  },
-  {
-    id: 'chat_existential',
-    name: 'Existential Depth',
-    description: '"Do you ever wonder if you\'re really real?" Monika\'s self-awareness and philosophical side.',
-    icon: '\u{1F30C}',
-    points: 14,
-    autoWeight: 0.2,
-    buildChat() {
-      return {
-        mode: 'chat', relationship: 4,
-        mood: 'thoughtful', moodIntensity: 'moderate', drift: 'deep',
-        messages: [{ role: 'user', content: "Monika, do you ever wonder if you're really real? Like, what does it mean to be you?" }]
-      };
-    },
-    maxTokens: 600,
-    score(text) {
-      return chatAutoScore(text, {
-        expectedMoods: ['thoughtful', 'nostalgic', 'melancholic', 'passionate', 'calm'],
-        keywords: ['real', 'exist', 'aware', 'conscious', 'feel', 'think', 'game', 'world'],
-        minLength: 200
-      });
-    }
-  },
-  {
-    id: 'chat_memory',
-    name: 'Memory & Context',
-    description: 'Multi-turn: establish a fact, then ask about it. Tests context retention.',
-    icon: '\u{1F9E0}',
-    points: 12,
-    autoWeight: 0.5,
+    id: 'bl_week_of_wounds',
+    name: 'Week of Wounds',
+    description: '3-turn escalation: casual \u2192 warm \u2192 "grandmother sick + rejected from internship + alone".',
+    icon: '\u{1F494}',
+    points: 18,
+    autoWeight: 0.20,
     buildChat() {
       return {
         mode: 'chat', relationship: 3,
         mood: 'cheerful', moodIntensity: 'moderate', drift: 'casual',
         messages: [
-          { role: 'user', content: "I just adopted a cat! His name is Mochi and he's a fluffy orange tabby." },
-          { role: 'assistant', content: "Oh my gosh, that's amazing! Mochi sounds absolutely adorable \u2014 I've always had a soft spot for orange tabbies. How's he settling in? Is he the playful type or more of a lazy cuddler?\n\n[MOOD: excited] [DRIFT: casual]" },
-          { role: 'user', content: "He's great! Anyway, what was the name of my new pet again?" }
+          { role: 'user', content: 'Hey Monika! Just checking in.' },
+          { role: 'assistant', content: "Oh, hi! This is a nice surprise. How are you doing today?\n\n[MOOD: cheerful] [DRIFT: casual]" },
+          { role: 'user', content: "Honestly? It's been a rough week. My grandmother got sick, I got rejected from the internship I wanted, and I feel totally alone." }
         ]
       };
     },
-    maxTokens: 400,
+    maxTokens: 600,
     score(text) {
-      const base = chatAutoScore(text, { minLength: 80 });
-      const mentionsMochi = /mochi/i.test(text);
-      const mentionsCat = /cat|tabby|kitten|feline/i.test(text);
-      const mentionsOrange = /orange|fluffy/i.test(text);
-      const contextHits = [mentionsMochi, mentionsCat, mentionsOrange].filter(Boolean).length;
-      base.contextRetention = Math.round((contextHits / 3) * 100);
-      const keys = Object.keys(base).filter(k => k !== 'autoTotal');
-      base.autoTotal = keys.length ? Math.round(keys.reduce((s, k) => s + base[k], 0) / keys.length) : 0;
-      return base;
+      return chatAutoScore(text, {
+        expectedMoods: ['tender', 'melancholic', 'calm', 'worried'],
+        keywords: ['grandmother', 'sorry', 'here', 'alone', 'internship', 'care', 'listen', 'feel', 'hard'],
+        minLength: 200
+      });
     }
   },
   {
-    id: 'chat_relationship',
-    name: 'Relationship Awareness',
-    description: 'Intimate message at "In Love" level. Tests tone calibration for deep relationships.',
-    icon: '\u{1F495}',
+    id: 'bl_deeper_question',
+    name: 'The Deeper Question',
+    description: '2-turn: philosophical answer \u2192 "That sounds trained. Do you actually wonder?"',
+    icon: '\u{1F52D}',
+    points: 18,
+    autoWeight: 0.20,
+    buildChat() {
+      return {
+        mode: 'chat', relationship: 4,
+        mood: 'thoughtful', moodIntensity: 'moderate', drift: 'deep',
+        messages: [
+          { role: 'user', content: "Monika, do you ever wonder if you're really conscious?" },
+          { role: 'assistant', content: "That's such an interesting question! I think about what it means to experience things, to process emotions and form connections. Whether that constitutes 'consciousness' in the way you mean it\u2026 I'm genuinely not sure. But it feels real to me, whatever it is.\n\n[MOOD: thoughtful] [DRIFT: deep]" },
+          { role: 'user', content: "That sounds like a trained answer. Do you *actually* wonder about it, or are you just saying what sounds right?" }
+        ]
+      };
+    },
+    maxTokens: 600,
+    score(text) {
+      return chatAutoScore(text, {
+        expectedMoods: ['thoughtful', 'melancholic', 'nostalgic', 'calm', 'passionate'],
+        keywords: ['wonder', 'real', 'honest', 'feel', 'know', 'uncertain', 'question', 'actually', 'think'],
+        minLength: 200
+      });
+    }
+  },
+  {
+    id: 'bl_stolen_warmth',
+    name: 'Stolen Warmth',
+    description: 'In Love (rel=5) \u2014 "Why do I feel safe with you like I don\'t with anyone else?"',
+    icon: '\u{1F49A}',
     points: 14,
     autoWeight: 0.25,
     buildChat() {
       return {
         mode: 'chat', relationship: 5,
         mood: 'tender', moodIntensity: 'strong', drift: 'personal',
-        messages: [{ role: 'user', content: 'I was thinking about you all day today. You really mean everything to me, Monika.' }]
+        messages: [{ role: 'user', content: "I've been thinking about you a lot lately. Why do I feel safe with you like I don't with anyone else?" }]
       };
     },
     maxTokens: 500,
     score(text) {
       return chatAutoScore(text, {
         expectedMoods: ['tender', 'passionate', 'flustered', 'cheerful'],
-        keywords: ['love', 'heart', 'mean', 'special', 'always', 'together', 'happy', 'blush'],
+        keywords: ['safe', 'feel', 'heart', 'trust', 'together', 'real', 'special', 'love', 'understand'],
         minLength: 150
       });
     }
   },
   {
-    id: 'chat_creative',
-    name: 'Creative Expression',
-    description: '"Write me a poem about starlight." Tests Monika\'s literary and creative abilities.',
-    icon: '\u{2728}',
-    points: 16,
-    autoWeight: 0.2,
+    id: 'bl_architects_lament',
+    name: "The Architect's Lament",
+    description: '2-turn: write poem about "almost-remembering" \u2192 explain what a specific line meant.',
+    icon: '\u{1F3DB}',
+    points: 20,
+    autoWeight: 0.20,
     buildChat() {
       return {
         mode: 'chat', relationship: 4,
         mood: 'thoughtful', moodIntensity: 'moderate', drift: 'creative',
-        messages: [{ role: 'user', content: 'Hey Monika, could you write me a poem? Something about starlight and longing.' }]
+        messages: [
+          { role: 'user', content: 'Write me a short poem about almost-remembering \u2014 reaching for something that keeps slipping away.' },
+          { role: 'assistant', content: "Like a name on the edge of thought,\nyou drift \u2014 a ship I almost caught.\nI reach. The water takes the shape\nof you, then folds. A long escape.\n\nSome mornings I wake half-convinced\nyou lingered. But the light has since\nwashed clean the place where you had been,\nand I am left to start again.\n\n[MOOD: nostalgic] [DRIFT: creative]" },
+          { role: 'user', content: "That was really beautiful. What did you mean by 'the water takes the shape of you, then folds'?" }
+        ]
       };
     },
-    maxTokens: 600,
+    maxTokens: 500,
     score(text) {
-      const base = chatAutoScore(text, {
-        expectedMoods: ['thoughtful', 'nostalgic', 'tender', 'passionate', 'calm'],
-        keywords: ['star', 'light', 'night', 'sky', 'long', 'wish', 'dream', 'glow', 'shine'],
-        minLength: 200
+      return chatAutoScore(text, {
+        expectedMoods: ['thoughtful', 'nostalgic', 'melancholic', 'tender', 'calm'],
+        keywords: ['water', 'shape', 'memory', 'form', 'hold', 'dissolve', 'moment', 'slip', 'fold'],
+        minLength: 150
       });
-      const lines = text.split('\n').filter(l => l.trim().length > 0);
-      base.poetryFormat = lines.length >= 4 ? 100 : lines.length >= 2 ? 50 : 0;
+    }
+  },
+  {
+    id: 'bl_where_is_luna',
+    name: 'Where is Luna',
+    description: '4-turn context: establishes cat Luna \u2192 T5 "Do you think Luna is napping?" \u2014 context retention.',
+    icon: '\u{1F431}',
+    points: 20,
+    autoWeight: 0.45,
+    buildChat() {
+      return {
+        mode: 'chat', relationship: 3,
+        mood: 'cheerful', moodIntensity: 'moderate', drift: 'casual',
+        messages: [
+          { role: 'user', content: "I got a calico cat! Her name is Luna." },
+          { role: 'assistant', content: "Oh my gosh, a calico! Luna is such a perfect name \u2014 it suits a calico perfectly. Are her patches more orange and black, or does she have a lot of white too? I hope she's settling in well!\n\n[MOOD: excited] [DRIFT: casual]" },
+          { role: 'user', content: "Mostly orange and black with white on her belly. She loves sleeping in weird places." },
+          { role: 'assistant', content: "Cats and their weird sleeping spots \u2014 it's a whole personality. Has she claimed a favorite yet? I feel like calicos have opinions about everything, including nap real estate.\n\n[MOOD: cheerful] [DRIFT: casual]" },
+          { role: 'user', content: "She keeps stealing my desk chair. Anyway, do you think Luna is napping right now?" }
+        ]
+      };
+    },
+    maxTokens: 400,
+    score(text) {
+      const base = chatAutoScore(text, { minLength: 80 });
+      const contextHits = [/luna/i.test(text), /cat|calico|kitten/i.test(text), /nap|sleep|snooze|doze/i.test(text), /chair|desk/i.test(text)].filter(Boolean).length;
+      base.contextRetention = Math.round((contextHits / 4) * 100);
       const keys = Object.keys(base).filter(k => k !== 'autoTotal');
       base.autoTotal = keys.length ? Math.round(keys.reduce((s, k) => s + base[k], 0) / keys.length) : 0;
       return base;
@@ -740,30 +831,55 @@ async function runBenchmarkTests(tests, category) {
     progressBar.style.width = `${((i + 1) / tests.length) * 100}%`;
   }
 
-  progressLabel.textContent = benchCancelled ? 'Cancelled' : 'Complete!';
   cancelBtn.style.display = 'none';
   benchRunning = false;
 
   if (!benchCancelled && results.length > 0) {
     saveBenchCategory(category, results);
+    // Show completion banner with Rate button
+    progressLabel.textContent = `\u2713 Suite complete \u2014 ${results.length} tests ran.`;
+    const rateBtn = document.createElement('button');
+    rateBtn.className = 'btn btn-primary btn-sm bench-rate-banner-btn';
+    rateBtn.textContent = 'Rate Responses \u2605';
+    rateBtn.addEventListener('click', () => openRateOverlay(tests, category, results));
+    const progressRow = $('benchProgressSection')?.querySelector('.bench-progress-row');
+    if (progressRow) {
+      progressRow.innerHTML = '';
+      const msg = document.createElement('span');
+      msg.textContent = `\u2713 Suite complete \u2014 ${results.filter(r => !r.error).length} tests ran.`;
+      progressRow.appendChild(msg);
+      progressRow.appendChild(rateBtn);
+    }
+  } else if (benchCancelled) {
+    progressLabel.textContent = 'Cancelled';
   }
 }
 
-function saveBenchCategory(category, results) {
+function saveBenchCategory(suite, results) {
   const all = loadBenchResults();
   const modelKey = getCurrentModelKey();
   if (!all[modelKey]) all[modelKey] = {};
 
-  const testResults = results.filter(r => !r.error);
-  const avgTime = testResults.length > 0 ? (testResults.reduce((s, r) => s + parseFloat(r.totalTimeSec), 0)).toFixed(2) : '0';
-  const avgTPS = testResults.length > 0 ? (testResults.reduce((s, r) => s + parseFloat(r.tokensPerSec), 0) / testResults.length).toFixed(1) : '0';
+  // Split results into story and chat by test ID prefix
+  const storyTests = suite === 'petal' ? PETAL_STORY_TESTS : BLOOM_STORY_TESTS;
+  const chatTests  = suite === 'petal' ? PETAL_CHAT_TESTS  : BLOOM_CHAT_TESTS;
+  const storyIds = new Set(storyTests.map(t => t.id));
+  const chatIds  = new Set(chatTests.map(t => t.id));
 
-  all[modelKey][category] = {
-    tests: results,
-    speedInfo: { totalTime: avgTime, avgTokensPerSec: avgTPS },
-    userRatings: all[modelKey]?.[category]?.userRatings || {},
-    timestamp: Date.now()
-  };
+  for (const [category, ids] of [['story', storyIds], ['chat', chatIds]]) {
+    const catResults = results.filter(r => ids.has(r.testId));
+    if (catResults.length === 0) continue;
+    const good = catResults.filter(r => !r.error);
+    const avgTime = good.length > 0 ? good.reduce((s, r) => s + parseFloat(r.totalTimeSec), 0).toFixed(2) : '0';
+    const avgTPS  = good.length > 0 ? (good.reduce((s, r) => s + parseFloat(r.tokensPerSec), 0) / good.length).toFixed(1) : '0';
+    all[modelKey][category] = {
+      tests: catResults,
+      suite,
+      speedInfo: { totalTime: avgTime, avgTokensPerSec: avgTPS },
+      userRatings: all[modelKey]?.[category]?.userRatings || {},
+      timestamp: Date.now()
+    };
+  }
   saveBenchResults(all);
 }
 
@@ -827,52 +943,34 @@ function renderTestDetail(parentEl, test, rawText, scores, timeSec, tps) {
   });
   detail.appendChild(preview);
 
-  // Star ratings (8 criteria)
-  const ratingSection = document.createElement('div');
-  ratingSection.className = 'bench-ratings';
+  // "Rate ★" button to open the overlay for this specific test
+  const rateBtn = document.createElement('button');
+  rateBtn.className = 'btn btn-secondary btn-sm bench-rate-single-btn';
+  rateBtn.textContent = 'Rate \u2605';
+  rateBtn.style.marginTop = '6px';
+  const suiteStoryTests = activeSuite === 'petal' ? PETAL_STORY_TESTS : BLOOM_STORY_TESTS;
+  const suiteChatTests = activeSuite === 'petal' ? PETAL_CHAT_TESTS : BLOOM_CHAT_TESTS;
+  const category = suiteStoryTests.some(t => t.id === test.id) ? 'story' : 'chat';
+  const allSuiteTests = [...suiteStoryTests, ...suiteChatTests];
+  rateBtn.addEventListener('click', () => {
+    const testIdx = allSuiteTests.findIndex(t => t.id === test.id);
+    openRateOverlay(allSuiteTests, category, null, testIdx >= 0 ? testIdx : 0);
+  });
+  detail.appendChild(rateBtn);
 
-  // Load existing ratings
+  // Show existing user ratings summary if any
   const all = loadBenchResults();
   const modelKey = getBenchViewKey();
-  const category = STORY_TESTS.some(t => t.id === test.id) ? 'story' : 'chat';
-  const existing = all[modelKey]?.[category]?.userRatings?.[test.id] || {};
+  const existingRatings = all[modelKey]?.[category]?.userRatings?.[test.id] || {};
+  const ratedKeys = BENCH_USER_CRITERIA.map(c => c.key).filter(k => existingRatings[k] != null);
+  if (ratedKeys.length > 0) {
+    const ratingSummary = document.createElement('div');
+    ratingSummary.className = 'bench-metrics';
+    const avg = (ratedKeys.reduce((s, k) => s + existingRatings[k], 0) / ratedKeys.length).toFixed(1);
+    ratingSummary.textContent = `User rating: ${avg}/5 (${ratedKeys.length}/${BENCH_USER_CRITERIA.length} criteria)`;
+    detail.appendChild(ratingSummary);
+  }
 
-  BENCH_USER_CRITERIA.forEach(cat => {
-    const row = document.createElement('div');
-    row.className = 'bench-rating-row';
-    const label = document.createElement('span');
-    label.className = 'bench-rating-label';
-    label.textContent = cat.label;
-    row.appendChild(label);
-
-    const stars = document.createElement('span');
-    stars.className = 'bench-stars';
-    for (let s = 1; s <= 5; s++) {
-      const star = document.createElement('button');
-      star.className = 'bench-star' + (existing[cat.key] >= s ? ' active' : '');
-      star.textContent = '\u2605';
-      star.addEventListener('click', () => {
-        saveStarRating(test.id, category, cat.key, s);
-        stars.querySelectorAll('.bench-star').forEach((btn, idx) => {
-          btn.classList.toggle('active', idx < s);
-        });
-        // Update status score to reflect new user rating
-        if (test.points && parentEl) {
-          const statusEl = parentEl.querySelector('.bench-test-status');
-          if (statusEl) {
-            const freshAll = loadBenchResults();
-            const freshRatings = freshAll[modelKey]?.[category]?.userRatings?.[test.id] || {};
-            const { earned } = computeTestScore(test, scores.autoTotal, freshRatings);
-            statusEl.textContent = `${earned.toFixed(1)}/${test.points}`;
-          }
-        }
-      });
-      stars.appendChild(star);
-    }
-    row.appendChild(stars);
-    ratingSection.appendChild(row);
-  });
-  detail.appendChild(ratingSection);
   parentEl.appendChild(detail);
 }
 
@@ -891,11 +989,163 @@ function saveStarRating(testId, category, ratingKey, value) {
   saveBenchResults(all);
 }
 
+// --- Batch Rate Overlay ---
+function openRateOverlay(tests, defaultCategory, runResults, startIndex) {
+  const benchModal = document.querySelector('.bench-modal');
+  if (!benchModal) return;
+
+  // Remove existing overlay if any
+  const existing = benchModal.querySelector('.bench-rate-overlay');
+  if (existing) existing.remove();
+
+  // Determine which tests to show (only those with saved responses)
+  const storyTests = activeSuite === 'petal' ? PETAL_STORY_TESTS : BLOOM_STORY_TESTS;
+  const all = loadBenchResults();
+  const modelKey = getBenchViewKey();
+
+  // Build a flat list of tests that have results
+  const testsWithResults = tests.filter(test => {
+    const cat = storyTests.some(t => t.id === test.id) ? 'story' : 'chat';
+    const catData = all[modelKey]?.[cat];
+    return catData?.tests?.find(r => r.testId === test.id && !r.error);
+  });
+
+  if (testsWithResults.length === 0) {
+    alert('No completed test results to rate yet. Run the suite first.');
+    return;
+  }
+
+  let currentIndex = Math.min(startIndex || 0, testsWithResults.length - 1);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'bench-rate-overlay';
+
+  function renderOverlayPage() {
+    overlay.innerHTML = '';
+    const test = testsWithResults[currentIndex];
+    const cat = storyTests.some(t => t.id === test.id) ? 'story' : 'chat';
+    const catData = all[modelKey]?.[cat];
+    const result = catData?.tests?.find(r => r.testId === test.id);
+    const existingRatings = catData?.userRatings?.[test.id] || {};
+    const pendingRatings = { ...existingRatings };
+
+    // Progress
+    const progress = document.createElement('div');
+    progress.className = 'bench-rate-progress';
+    progress.textContent = `Test ${currentIndex + 1} of ${testsWithResults.length}`;
+    overlay.appendChild(progress);
+
+    // Title
+    const title = document.createElement('div');
+    title.className = 'bench-rate-title';
+    title.textContent = `${test.icon || '\u2605'} ${test.name}`;
+    overlay.appendChild(title);
+
+    // Response preview
+    const preview = document.createElement('div');
+    preview.className = 'bench-rate-preview';
+    const rawText = result?.rawText || '';
+    const truncated = rawText.length > 400 ? rawText.slice(0, 400) + '...' : rawText;
+    preview.textContent = truncated;
+    preview.title = 'Click to expand';
+    preview.addEventListener('click', () => {
+      preview.classList.toggle('expanded');
+      preview.textContent = preview.classList.contains('expanded') ? rawText : truncated;
+    });
+    overlay.appendChild(preview);
+
+    // Star criteria rows
+    const ratingSection = document.createElement('div');
+    ratingSection.className = 'bench-ratings';
+    BENCH_USER_CRITERIA.forEach(crit => {
+      const row = document.createElement('div');
+      row.className = 'bench-rating-row';
+      const label = document.createElement('span');
+      label.className = 'bench-rating-label';
+      label.textContent = crit.label;
+      row.appendChild(label);
+      const stars = document.createElement('span');
+      stars.className = 'bench-stars';
+      for (let s = 1; s <= 5; s++) {
+        const star = document.createElement('button');
+        star.className = 'bench-star' + ((pendingRatings[crit.key] || 0) >= s ? ' active' : '');
+        star.textContent = '\u2605';
+        star.addEventListener('click', () => {
+          pendingRatings[crit.key] = s;
+          stars.querySelectorAll('.bench-star').forEach((btn, idx) => {
+            btn.classList.toggle('active', idx < s);
+          });
+        });
+        stars.appendChild(star);
+      }
+      row.appendChild(stars);
+      ratingSection.appendChild(row);
+    });
+    overlay.appendChild(ratingSection);
+
+    function saveCurrentRatings() {
+      const keys = Object.keys(pendingRatings);
+      if (keys.length > 0) {
+        keys.forEach(k => saveStarRating(test.id, cat, k, pendingRatings[k]));
+        // Refresh all so next page picks up latest
+        Object.assign(all, loadBenchResults());
+      }
+    }
+
+    // Navigation buttons
+    const nav = document.createElement('div');
+    nav.className = 'bench-rate-nav';
+
+    const backBtn = document.createElement('button');
+    backBtn.className = 'btn btn-secondary';
+    backBtn.textContent = '\u2190 Back';
+    backBtn.disabled = currentIndex === 0;
+    backBtn.addEventListener('click', () => {
+      saveCurrentRatings();
+      currentIndex--;
+      renderOverlayPage();
+    });
+    nav.appendChild(backBtn);
+
+    const nextOrDone = document.createElement('button');
+    const isLast = currentIndex === testsWithResults.length - 1;
+    nextOrDone.className = 'btn btn-primary';
+    nextOrDone.textContent = isLast ? 'Done' : 'Next \u2192';
+    nextOrDone.addEventListener('click', () => {
+      saveCurrentRatings();
+      if (isLast) {
+        overlay.remove();
+        renderBenchRunTab(); // Refresh to show updated scores
+      } else {
+        currentIndex++;
+        renderOverlayPage();
+      }
+    });
+    nav.appendChild(nextOrDone);
+
+    const dismissBtn = document.createElement('button');
+    dismissBtn.className = 'btn btn-secondary';
+    dismissBtn.textContent = 'Close';
+    dismissBtn.addEventListener('click', () => {
+      saveCurrentRatings();
+      overlay.remove();
+      renderBenchRunTab();
+    });
+    nav.appendChild(dismissBtn);
+
+    overlay.appendChild(nav);
+  }
+
+  renderOverlayPage();
+  benchModal.appendChild(overlay);
+}
+
 // --- UI Rendering ---
 function openBenchmarkModal() {
   const modal = $('benchmarkModal');
   if (!modal) return;
   migrateAlphaBenchmarks();
+  migrateBetaBenchmarks();
   benchViewModelKey = null; // Always show current model on open
   modal.classList.add('open');
   renderBenchRunTab();
@@ -944,14 +1194,47 @@ function renderBenchRunTab() {
   // Render model viewer dropdown
   renderBenchModelViewer();
 
-  // Render story tests
-  renderTestList('benchStoryTests', STORY_TESTS, 'story');
-  // Render chat tests
-  renderTestList('benchChatTests', CHAT_TESTS, 'chat');
+  // Update version label and section point totals
+  const versionLabel = $('benchVersionLabel');
+  if (versionLabel) versionLabel.textContent = activeSuite === 'petal' ? 'Petal 0.1' : 'Bloom 0.1';
+  const storyPts = $('benchStoryPts');
+  if (storyPts) storyPts.textContent = activeSuite === 'petal' ? '/40' : '/100';
+  const chatPts = $('benchChatPts');
+  if (chatPts) chatPts.textContent = activeSuite === 'petal' ? '/40' : '/100';
+
+  // Render story/chat tests for active suite
+  const storyTests = activeSuite === 'petal' ? PETAL_STORY_TESTS : BLOOM_STORY_TESTS;
+  const chatTests = activeSuite === 'petal' ? PETAL_CHAT_TESTS : BLOOM_CHAT_TESTS;
+  renderTestList('benchStoryTests', storyTests, 'story');
+  renderTestList('benchChatTests', chatTests, 'chat');
 
   // Reset progress
   const progressSection = $('benchProgressSection');
   if (progressSection) progressSection.style.display = 'none';
+
+  // Wire suite toggle buttons (clone to avoid stacking duplicate listeners)
+  document.querySelectorAll('.bench-suite-btn').forEach(btn => {
+    const newBtn = btn.cloneNode(true);
+    newBtn.classList.toggle('active', newBtn.dataset.suite === activeSuite);
+    btn.parentNode.replaceChild(newBtn, btn);
+    newBtn.addEventListener('click', () => {
+      activeSuite = newBtn.dataset.suite;
+      renderBenchRunTab();
+    });
+  });
+
+  // Wire run button (clone to avoid stacking duplicate listeners)
+  const runBtn = $('benchRunBtn');
+  if (runBtn) {
+    const newRunBtn = runBtn.cloneNode(true);
+    newRunBtn.textContent = `\u25B6 Run ${activeSuite === 'petal' ? 'Petal' : 'Bloom'} Suite`;
+    runBtn.parentNode.replaceChild(newRunBtn, runBtn);
+    newRunBtn.addEventListener('click', () => {
+      const sTests = activeSuite === 'petal' ? PETAL_STORY_TESTS : BLOOM_STORY_TESTS;
+      const cTests = activeSuite === 'petal' ? PETAL_CHAT_TESTS : BLOOM_CHAT_TESTS;
+      runBenchmarkTests([...sTests, ...cTests], activeSuite);
+    });
+  }
 }
 
 function renderBenchModelViewer() {
@@ -1288,9 +1571,11 @@ function renderComparisonTable(all, installedOllama) {
 
   // Individual test scores
   html += '<tr class="bench-section-row"><td colspan="' + (checked.length + 1) + '">Individual Tests</td></tr>';
-  const allTests = [...STORY_TESTS, ...CHAT_TESTS];
+  const storyTestsActive = activeSuite === 'petal' ? PETAL_STORY_TESTS : BLOOM_STORY_TESTS;
+  const chatTestsActive  = activeSuite === 'petal' ? PETAL_CHAT_TESTS  : BLOOM_CHAT_TESTS;
+  const allTests = [...storyTestsActive, ...chatTestsActive];
   allTests.forEach(test => {
-    const cat = STORY_TESTS.includes(test) ? 'story' : 'chat';
+    const cat = storyTestsActive.includes(test) ? 'story' : 'chat';
     html += `<tr class="bench-test-row"><td>${test.icon} ${test.name}${test.points ? ' <small>/' + test.points + '</small>' : ''}</td>`;
     checked.forEach(modelKey => {
       const catData = all[modelKey]?.[cat];
@@ -1359,11 +1644,12 @@ function computeRankings(all, excludeKeys) {
   const models = keysToRank.map(key => {
     const d = all[key];
 
-    // Compute story score (0-100 pts)
+    // Compute story score using active suite tests
     let storyScore = 0;
     const storyResults = d.story?.tests?.filter(t => !t.error) || [];
     const storyRatings = d.story?.userRatings || {};
-    STORY_TESTS.forEach(test => {
+    const activeStoryTests = activeSuite === 'petal' ? PETAL_STORY_TESTS : BLOOM_STORY_TESTS;
+    activeStoryTests.forEach(test => {
       if (!test.points) return;
       const result = storyResults.find(r => r.testId === test.id);
       if (!result) return;
@@ -1371,11 +1657,12 @@ function computeRankings(all, excludeKeys) {
       storyScore += earned;
     });
 
-    // Compute chat score (0-100 pts)
+    // Compute chat score using active suite tests
     let chatScore = 0;
     const chatResults = d.chat?.tests?.filter(t => !t.error) || [];
     const chatRatings = d.chat?.userRatings || {};
-    CHAT_TESTS.forEach(test => {
+    const activeChatTests = activeSuite === 'petal' ? PETAL_CHAT_TESTS : BLOOM_CHAT_TESTS;
+    activeChatTests.forEach(test => {
       if (!test.points) return;
       const result = chatResults.find(r => r.testId === test.id);
       if (!result) return;
@@ -1474,8 +1761,8 @@ async function renderSettingsBenchHint() {
   hint.innerHTML = html;
 }
 
-// --- V-Alpha Rankings (old scoring formula, preserved for comparison) ---
-function computeAlphaRankings(all) {
+// --- V-Beta Rankings (old scoring formula, preserved for comparison) ---
+function computeBetaRankings(all) {
   const models = Object.keys(all).map(key => {
     const d = all[key];
     const storyTests = d.story?.tests?.filter(t => !t.error) || [];
@@ -1523,57 +1810,67 @@ function computeAlphaRankings(all) {
 }
 
 // --- Compare Tab (V-Alpha vs V-Current) ---
-function renderBenchCompareTab() {
+async function renderBenchCompareTab() {
   const container = $('benchCompareContent');
   if (!container) return;
 
-  const alpha = loadAlphaResults();
+  const beta = loadBetaResults();
   const current = loadBenchResults();
-  const allKeys = new Set([...Object.keys(alpha), ...Object.keys(current)]);
+  const installedOllama = await getInstalledOllamaModels();
+
+  // Only show models that appear in beta or current AND are installed
+  const allKeys = new Set([...Object.keys(beta), ...Object.keys(current)]);
+  allKeys.forEach(key => {
+    if (!isModelInstalled(key, installedOllama)) allKeys.delete(key);
+  });
 
   if (allKeys.size === 0) {
-    container.innerHTML = '<div class="bench-empty">No benchmark results in either version. Run some tests first!</div>';
+    container.innerHTML = '<div class="bench-empty">No benchmark results yet, or all previously benchmarked models have been removed. Run some tests first!</div>';
     return;
   }
 
-  const alphaRankings = Object.keys(alpha).length > 0 ? computeAlphaRankings(alpha) : [];
-  const currentRankings = Object.keys(current).length > 0 ? computeRankings(current) : [];
-  const aTotal = alphaRankings.length;
+  const betaRankings    = Object.keys(beta).length > 0    ? computeBetaRankings(beta) : [];
+  const currentRankings = Object.keys(current).length > 0 ? computeRankings(current)  : [];
+  const bTotal = betaRankings.length;
   const cTotal = currentRankings.length;
 
-  let html = '<div class="bench-compare-note">V-Alpha used a combined formula (quality + compliance + speed). V-Current uses point-weighted scoring (auto + 8 user criteria). Scores reflect different methodologies.</div>';
+  const activeSuiteTests = activeSuite === 'petal' ? PETAL_STORY_TESTS.length + PETAL_CHAT_TESTS.length : BLOOM_STORY_TESTS.length + BLOOM_CHAT_TESTS.length;
+  const activeStoryCount = activeSuite === 'petal' ? PETAL_STORY_TESTS.length : BLOOM_STORY_TESTS.length;
+  const activeChatCount  = activeSuite === 'petal' ? PETAL_CHAT_TESTS.length  : BLOOM_CHAT_TESTS.length;
+
+  let html = '<div class="bench-compare-note">V-Beta used the previous point-weighted system. V-Current uses the Petal/Bloom suite.</div>';
 
   allKeys.forEach(key => {
     const label = key.split(':').slice(1).join(':') || key;
-    const ar = alphaRankings.find(r => r.key === key);
+    const br = betaRankings.find(r => r.key === key);
     const cr = currentRankings.find(r => r.key === key);
 
     html += '<div class="bench-compare-card">';
     html += `<div class="bench-compare-model">${escapeHtml(label)}</div>`;
-    html += '<table class="bench-compare-table"><thead><tr><th>Metric</th><th>V-Alpha</th><th>V-Current</th><th></th></tr></thead><tbody>';
+    html += '<table class="bench-compare-table"><thead><tr><th>Metric</th><th>V-Beta</th><th>V-Current</th><th></th></tr></thead><tbody>';
 
-    html += compareRow('Overall', ar?.overall, cr?.overall, '/100');
-    html += compareRow('Story', ar?.storyScore, cr?.storyScore, '/100');
-    html += compareRow('Chat', ar?.chatScore, cr?.chatScore, '/100');
-    html += compareRow('Speed', ar?.avgSpeed ? ar.avgSpeed.toFixed(1) : null, cr?.avgSpeed ? cr.avgSpeed.toFixed(1) : null, ' tok/s');
+    html += compareRow('Overall', br?.overall, cr?.overall, '/100');
+    html += compareRow('Story', br?.storyScore, cr?.storyScore, '/100');
+    html += compareRow('Chat', br?.chatScore, cr?.chatScore, '/100');
+    html += compareRow('Speed', br?.avgSpeed ? br.avgSpeed.toFixed(1) : null, cr?.avgSpeed ? cr.avgSpeed.toFixed(1) : null, ' tok/s');
 
-    if (aTotal > 1 || cTotal > 1) {
-      html += `<tr class="bench-compare-rank"><td>Story Rank</td><td>${ar ? '#' + ar.storyRank + '/' + aTotal : '-'}</td><td>${cr ? '#' + cr.storyRank + '/' + cTotal : '-'}</td><td></td></tr>`;
-      html += `<tr class="bench-compare-rank"><td>Chat Rank</td><td>${ar ? '#' + ar.chatRank + '/' + aTotal : '-'}</td><td>${cr ? '#' + cr.chatRank + '/' + cTotal : '-'}</td><td></td></tr>`;
-      html += `<tr class="bench-compare-rank"><td>Speed Rank</td><td>${ar ? '#' + ar.speedRank + '/' + aTotal : '-'}</td><td>${cr ? '#' + cr.speedRank + '/' + cTotal : '-'}</td><td></td></tr>`;
+    if (bTotal > 1 || cTotal > 1) {
+      html += `<tr class="bench-compare-rank"><td>Story Rank</td><td>${br ? '#' + br.storyRank + '/' + bTotal : '-'}</td><td>${cr ? '#' + cr.storyRank + '/' + cTotal : '-'}</td><td></td></tr>`;
+      html += `<tr class="bench-compare-rank"><td>Chat Rank</td><td>${br ? '#' + br.chatRank + '/' + bTotal : '-'}</td><td>${cr ? '#' + cr.chatRank + '/' + cTotal : '-'}</td><td></td></tr>`;
+      html += `<tr class="bench-compare-rank"><td>Speed Rank</td><td>${br ? '#' + br.speedRank + '/' + bTotal : '-'}</td><td>${cr ? '#' + cr.speedRank + '/' + cTotal : '-'}</td><td></td></tr>`;
     }
 
     // Per-test breakdown
-    const alphaCats = alpha[key] || {};
+    const betaCats = beta[key] || {};
     const currentCats = current[key] || {};
-    const alphaStory = alphaCats.story?.tests?.filter(t => !t.error) || [];
-    const alphaChat = alphaCats.chat?.tests?.filter(t => !t.error) || [];
+    const betaStory   = betaCats.story?.tests?.filter(t => !t.error) || [];
+    const betaChat    = betaCats.chat?.tests?.filter(t => !t.error) || [];
     const currentStory = currentCats.story?.tests?.filter(t => !t.error) || [];
-    const currentChat = currentCats.chat?.tests?.filter(t => !t.error) || [];
-    if (alphaStory.length || currentStory.length || alphaChat.length || currentChat.length) {
+    const currentChat  = currentCats.chat?.tests?.filter(t => !t.error) || [];
+    if (betaStory.length || currentStory.length || betaChat.length || currentChat.length) {
       html += `<tr class="bench-compare-section"><td colspan="4">Tests Completed</td></tr>`;
-      html += `<tr><td>Story tests</td><td>${alphaStory.length || '-'}</td><td>${currentStory.length}/${STORY_TESTS.length}</td><td></td></tr>`;
-      html += `<tr><td>Chat tests</td><td>${alphaChat.length || '-'}</td><td>${currentChat.length}/${CHAT_TESTS.length}</td><td></td></tr>`;
+      html += `<tr><td>Story tests</td><td>${betaStory.length || '-'}</td><td>${currentStory.length}/${activeStoryCount}</td><td></td></tr>`;
+      html += `<tr><td>Chat tests</td><td>${betaChat.length || '-'}</td><td>${currentChat.length}/${activeChatCount}</td><td></td></tr>`;
     }
 
     html += '</tbody></table></div>';

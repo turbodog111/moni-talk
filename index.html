@@ -391,32 +391,30 @@
     </div>
     <div class="bench-body" id="benchRunContent">
       <div id="benchModelViewer"></div>
+      <div class="bench-suite-toggle" id="benchSuiteToggle">
+        <button class="bench-suite-btn active" data-suite="petal">&#127800; Petal</button>
+        <button class="bench-suite-btn" data-suite="bloom">&#127801; Bloom</button>
+      </div>
       <details class="bench-criteria-info">
         <summary>Grading Criteria Guide</summary>
         <div class="bench-criteria-grid">
           <div><strong>Character Voice</strong><br>Does this sound like the character? Mannerisms, speech patterns, personality.</div>
           <div><strong>Writing Quality</strong><br>Prose quality, word choice, sentence variety. Vivid and varied vs flat and repetitive.</div>
           <div><strong>Emotional Impact</strong><br>Did the scene make you feel something? Genuinely touching vs hollow.</div>
-          <div><strong>Immersion</strong><br>Can you visualize it? Rich setting details and atmosphere vs bare-bones description.</div>
-          <div><strong>Dialogue</strong><br>Do spoken lines feel natural and age-appropriate? Real high schoolers vs stiff robots.</div>
-          <div><strong>Pacing</strong><br>Well-paced? Natural beat progression vs info-dump, filler, or rushing.</div>
-          <div><strong>Creativity</strong><br>Fresh and surprising vs generic and predictable. Unexpected moments that feel earned.</div>
           <div><strong>Faithfulness</strong><br>Does it feel like DDLC? Captures the VN's unique blend of cute, heartfelt, and unsettling.</div>
         </div>
       </details>
-      <div class="bench-version-label">V-Current</div>
+      <div class="bench-version-label" id="benchVersionLabel">Petal 0.1</div>
       <div class="bench-section">
-        <h3>Story Mode <span class="bench-section-pts">/100</span></h3>
+        <h3>Story Mode <span class="bench-section-pts" id="benchStoryPts">/40</span></h3>
         <div id="benchStoryTests"></div>
       </div>
       <div class="bench-section">
-        <h3>Casual Chat <span class="bench-section-pts">/100</span></h3>
+        <h3>Casual Chat <span class="bench-section-pts" id="benchChatPts">/40</span></h3>
         <div id="benchChatTests"></div>
       </div>
       <div class="bench-actions">
-        <button class="btn btn-primary" id="benchRunAllBtn">Run All Tests</button>
-        <button class="btn btn-secondary" id="benchRunStoryBtn">Story Only</button>
-        <button class="btn btn-secondary" id="benchRunChatBtn">Chat Only</button>
+        <button class="btn btn-primary" id="benchRunBtn">&#9654; Run Petal Suite</button>
       </div>
       <div class="bench-progress" id="benchProgressSection" style="display:none;">
         <div class="bench-progress-row">
