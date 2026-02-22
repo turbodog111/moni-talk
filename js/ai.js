@@ -533,7 +533,7 @@ async function streamLlamaCpp(chat, onChunk, signal) {
   return await streamSSE(
     `${llamacppEndpoint}/v1/chat/completions`,
     { 'Content-Type': 'application/json' },
-    { ...(llamacppModel ? { model: llamacppModel } : {}), messages: buildMessages(chat), max_tokens: isStory ? 2048 : 1000, temperature: isStory ? 0.8 : 0.75, top_p: 0.92, repeat_penalty: 1.18 },
+    { ...(llamacppModel ? { model: llamacppModel } : {}), messages: buildMessages(chat), max_tokens: isStory ? 2048 : 1000, temperature: isStory ? 0.8 : 0.75, top_p: 0.92, repeat_penalty: 1.18, chat_template_kwargs: { enable_thinking: false } },
     onChunk, signal
   );
 }
