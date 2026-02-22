@@ -1,4 +1,30 @@
 // ====== SETTINGS ======
+function switchSettingsTab(tab) {
+  document.querySelectorAll('.settings-nav-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  document.querySelectorAll('.settings-tab').forEach(t => {
+    t.style.display = t.dataset.tab === tab ? '' : 'none';
+  });
+}
+
+function updateLlamaCppModelCard(modelId) {
+  const card = $('llamacppModelCard');
+  if (!card) return;
+  const info = KNOWN_MODELS[modelId];
+  if (!info) { card.style.display = 'none'; return; }
+  $('llamacppCardName').textContent = info.name;
+  $('llamacppCardBadge').textContent = info.badge;
+  $('llamacppCardDesc').textContent = info.desc;
+  const chips = [];
+  chips.push(`<span>${info.base}</span>`);
+  chips.push(`<span>${info.loraParams}</span>`);
+  if (info.trainingPairs) chips.push(`<span>${info.trainingPairs} training pairs</span>`);
+  if (info.released) chips.push(`<span>${info.released}</span>`);
+  $('llamacppCardMeta').innerHTML = chips.join('');
+  card.style.display = '';
+}
+
 function toggleProviderFields(p) {
   puterFields.style.display = p === 'puter' ? '' : 'none';
   ollamaFields.style.display = p === 'ollama' ? '' : 'none';
@@ -39,6 +65,7 @@ function populateTTSVoices(providerKey) {
 }
 
 function openSettings() {
+  switchSettingsTab('model');
   providerSelect.value = provider; puterModelSelect.value = puterModel;
   ollamaEndpointInput.value = ollamaEndpoint;
   llamacppEndpointInput.value = llamacppEndpoint;
@@ -221,6 +248,7 @@ async function refreshLlamaCppModels() {
     el.innerHTML = `${models.length} model${models.length > 1 ? 's' : ''} available`;
     el.classList.add('visible');
   }
+  updateLlamaCppModelCard(llamacppModelSelect.value);
 }
 
 function updateTTSVoiceDesc(key) {

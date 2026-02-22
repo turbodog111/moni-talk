@@ -191,11 +191,17 @@ function init() {
   $('saveKeyBtn').addEventListener('click', saveSettings);
   $('cancelSettingsBtn').addEventListener('click', closeSettings);
   $('clearKeyBtn').addEventListener('click', clearKey);
+  // Settings sidebar tab navigation
+  document.querySelectorAll('.settings-nav-item').forEach(btn => {
+    btn.addEventListener('click', () => switchSettingsTab(btn.dataset.tab));
+  });
   providerSelect.addEventListener('change', () => { toggleProviderFields(providerSelect.value); setTimeout(renderSettingsBenchHint, 100); });
   // Update bench hint when model selects change
   [puterModelSelect, ollamaModelSelect, llamacppModelSelect].forEach(sel => {
     sel.addEventListener('change', () => setTimeout(renderSettingsBenchHint, 50));
   });
+  // Update model card when llama.cpp model changes
+  llamacppModelSelect.addEventListener('change', () => updateLlamaCppModelCard(llamacppModelSelect.value));
   // Re-fetch llama.cpp models when endpoint is changed and user tabs/clicks away
   llamacppEndpointInput.addEventListener('change', () => {
     llamacppEndpoint = llamacppEndpointInput.value.trim().replace(/\/+$/, '') || 'http://localhost:8080';

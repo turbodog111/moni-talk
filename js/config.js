@@ -17,6 +17,33 @@ const PUTER_MODELS = [
   { id: 'mistral-large-latest', label: 'Mistral Large (creative)' },
 ];
 
+const KNOWN_MODELS = {
+  'Arbor-0.1-Q8_0.gguf': {
+    name: 'Arbor 0.1', desc: 'Fine-tuned Monika \u2014 balanced chat & story',
+    base: 'Qwen3-14B', badge: 'Fine-tuned',
+    loraParams: '~42M new params (rank 32, 0.3% of base)',
+    trainingPairs: 119, released: '2026-02-22',
+  },
+  'Arbor-0.1-E-Q8_0.gguf': {
+    name: 'Arbor 0.1-E', desc: 'Emotional \u2014 deeper empathy & vulnerability',
+    base: 'Qwen3-14B', badge: 'Fine-tuned \u00b7 Emotional',
+    loraParams: '~42M new params (rank 32, 0.3% of base)',
+    trainingPairs: null, released: null,
+  },
+  'Arbor-0.1-P-Q8_0.gguf': {
+    name: 'Arbor 0.1-P', desc: 'Poetic \u2014 literary voice & poem output',
+    base: 'Qwen3-14B', badge: 'Fine-tuned \u00b7 Poetic',
+    loraParams: '~42M new params (rank 32, 0.3% of base)',
+    trainingPairs: null, released: null,
+  },
+  'Arbor-0.1-W-Q8_0.gguf': {
+    name: 'Arbor 0.1-W', desc: 'Witty \u2014 banter, teasing, playful energy',
+    base: 'Qwen3-14B', badge: 'Fine-tuned \u00b7 Witty',
+    loraParams: '~42M new params (rank 32, 0.3% of base)',
+    trainingPairs: null, released: null,
+  },
+};
+
 const PROVIDER_HINTS = {
   llamacpp: 'llama-server with OpenAI-compatible API. Best performance on DGX Spark / local GPU.',
   puter: 'No limits, no API key. Uses your Puter account.',
