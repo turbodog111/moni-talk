@@ -94,6 +94,15 @@ function getChatModeKey(chat) {
   return chat.mode === 'story' ? 'story' : chat.mode === 'adventure' ? 'adventure' : 'chat';
 }
 
+function getChatSortTime(chat) {
+  const msgs = chat.messages;
+  if (msgs.length > 0) {
+    const last = msgs[msgs.length - 1];
+    if (last.timestamp) return last.timestamp;
+  }
+  return chat.lastActiveTime || chat.created;
+}
+
 function renderChatList() {
   chatListBody.innerHTML = '';
   if (chats.length === 0) {
@@ -108,8 +117,8 @@ function renderChatList() {
   ];
 
   const sorted = [...chats].sort((a, b) => {
-    const aTime = a.lastModified || a.created;
-    const bTime = b.lastModified || b.created;
+    const aTime = getChatSortTime(a);
+    const bTime = getChatSortTime(b);
     const aG = getDateGroup(aTime), bG = getDateGroup(bTime);
     if (aG !== bG) return bTime - aTime; // different date groups: chronological
     // same date group: starred first, then chronological
@@ -151,7 +160,7 @@ function renderChatList() {
     let lastDateGroup = null;
     items.forEach(chat => {
       // Date sub-divider
-      const ts = chat.lastModified || chat.created;
+      const ts = getChatSortTime(chat);
       const dateGroup = getDateGroup(ts);
       if (dateGroup !== lastDateGroup) {
         lastDateGroup = dateGroup;
@@ -215,6 +224,7 @@ function renderChatList() {
       item.querySelector('.chat-item-star').addEventListener('click', (e) => {
         e.stopPropagation();
         chat.starred = !chat.starred;
+        chat.starredAt = Date.now();
         saveChats(); renderChatList();
       });
       item.querySelector('.chat-item-delete').addEventListener('click', async (e) => {
@@ -239,7 +249,7 @@ function renderChatList() {
 // ====== CHAT CRUD ======
 function createChat() {
   const now = Date.now();
-  const chat = { id: crypto.randomUUID(), relationship: parseInt(relSlider.value), created: now, lastModified: now, messages: [], mood: 'cheerful', moodIntensity: 'moderate', drift: 'casual', lastActiveTime: now, starred: false };
+  const chat = { id: crypto.randomUUID(), relationship: parseInt(relSlider.value), created: now, lastModified: now, messages: [], mood: 'cheerful', moodIntensity: 'moderate', drift: 'casual', lastActiveTime: now, starred: false, starredAt: 0 };
   if (newChatMode === 'story') {
     chat.mode = 'story';
     chat.mcName = $('mcNameInput').value.trim() || 'MC';
@@ -281,6 +291,8 @@ function openChat(id) {
   activeChatId = id;
   const chat = getChat();
   if (!chat) return;
+  // Dismiss any stale memory approval banner from previous chat
+  if (typeof dismissMemoryApproval === 'function') dismissMemoryApproval();
 
   // Track daily conversation count for context awareness
   const now = new Date();
@@ -949,8 +961,8 @@ async function sendMessage() {
       speakText(reply, mood, moodIntensity);
     }
 
-    // Memory extraction — rate limited: every 5th user+assistant pair, skip short messages
-    if (chat.mode !== 'story' && chat.messages.length % 10 === 0 && text.length >= 15) {
+    // Memory extraction — rate limited: every 3rd exchange, skip short messages
+    if (chat.mode !== 'story' && chat.messages.length % 6 === 0 && text.length >= 15) {
       extractMemories(text, reply).catch(() => {});
     }
   } catch (err) {

@@ -32,18 +32,35 @@ async function syncToCloud() {
   if (!hasPuter() || !puter.auth.isSignedIn()) return;
   setSyncStatus('syncing');
   try {
-    const index = chats.map(c => ({ id: c.id, relationship: c.relationship, created: c.created, lastModified: c.lastModified || c.created }));
-    const promises = [
+    // Upload individual chats first — use allSettled so one failure doesn't block the rest
+    const chatResults = await Promise.allSettled(
+      chats.map(chat => puter.kv.set('moni_chat_' + chat.id, JSON.stringify(chat)))
+    );
+    // Build index only from successfully uploaded chats
+    const uploadedChats = [];
+    const failedIds = [];
+    chatResults.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        uploadedChats.push(chats[i]);
+      } else {
+        failedIds.push(chats[i].id);
+        console.warn('Failed to upload chat:', chats[i].id, result.reason);
+      }
+    });
+    const index = uploadedChats.map(c => ({ id: c.id, relationship: c.relationship, created: c.created, lastModified: c.lastModified || c.created }));
+    // Upload index + metadata
+    await Promise.all([
       puter.kv.set('moni_chat_index', JSON.stringify(index)),
       puter.kv.set('moni_profile', JSON.stringify(profile)),
       puter.kv.set('moni_deleted_ids', JSON.stringify([...deletedChatIds])),
       puter.kv.set('moni_talk_memories', JSON.stringify(memories))
-    ];
-    for (const chat of chats) {
-      promises.push(puter.kv.set('moni_chat_' + chat.id, JSON.stringify(chat)));
+    ]);
+    if (failedIds.length > 0) {
+      console.warn('Partial sync: failed to upload', failedIds.length, 'chat(s):', failedIds);
+      setSyncStatus('synced'); // still mark synced — partial is better than error
+    } else {
+      setSyncStatus('synced');
     }
-    await Promise.all(promises);
-    setSyncStatus('synced');
   } catch (err) {
     console.error('Sync to cloud failed:', err);
     setSyncStatus('error');
@@ -63,6 +80,9 @@ async function syncFromCloud() {
       puter.kv.get('moni_chat_' + entry.id).then(raw => parseKV(raw)).catch(() => null)
     );
     const cloudChats = (await Promise.all(chatPromises)).filter(Boolean);
+    if (cloudChats.length < cloudIndex.length) {
+      console.warn('Sync: cloud index references', cloudIndex.length, 'chats but only', cloudChats.length, 'were retrieved');
+    }
 
     // Pull and merge deleted IDs from cloud
     const cloudDeletedRaw = await puter.kv.get('moni_deleted_ids');
@@ -85,8 +105,13 @@ async function syncFromCloud() {
         const cm = cc.lastModified || cc.created || 0;
         const winner = cm > lm ? cc : local;
         const loser = cm > lm ? local : cc;
-        // Union-merge starred: if either has true, keep true
-        if (loser.starred && !winner.starred) winner.starred = true;
+        // Starred: most recent star/unstar action wins
+        const winStarTime = winner.starredAt || 0;
+        const loseStarTime = loser.starredAt || 0;
+        if (loseStarTime > winStarTime) {
+          winner.starred = loser.starred;
+          winner.starredAt = loser.starredAt;
+        }
         // Preserve custom title from either copy if winner's is null
         if (!winner.title && loser.title) winner.title = loser.title;
         merged.set(cc.id, winner);
