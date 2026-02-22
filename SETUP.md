@@ -196,7 +196,7 @@ After starting Terminals 1 and 2, set up Tailscale serve routes. You can run thi
 ssh xturbo@spark-0af9
 
 tailscale serve --bg http://localhost:8080
-tailscale serve --bg /qwen-tts http://localhost:8880
+tailscale serve --bg --set-path /qwen-tts http://localhost:8880
 ```
 
 Verify all routes are active:
@@ -214,7 +214,8 @@ https://spark-0af9.tail3b3470.ts.net (tailnet only)
 
 **Important:** After every Spark restart, the Tailscale serve config is lost. Re-run both `tailscale serve` commands.
 
-> **Note:** The Orpheus `/tts` route is intentionally omitted — Qwen3-TTS is the primary TTS. If you ever re-enable Orpheus, add: `tailscale serve --bg /tts http://localhost:5005`
+> **Note:** The Orpheus `/tts` route is intentionally omitted — Qwen3-TTS is the primary TTS. If you ever re-enable Orpheus, add: `tailscale serve --bg --set-path /tts http://localhost:5005`
+> To remove a route: `tailscale serve --set-path /tts off`
 
 ### Verify everything works
 
