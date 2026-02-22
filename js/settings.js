@@ -196,6 +196,10 @@ async function refreshLlamaCppModels() {
     if (el) { el.innerHTML = 'Could not connect \u2014 check endpoint and server status.'; el.classList.add('visible'); }
     return;
   }
+  // Blank option first — lets llama-server use whatever is loaded (correct for single-model Arbor mode)
+  const blank = document.createElement('option');
+  blank.value = ''; blank.textContent = '(server default)';
+  llamacppModelSelect.appendChild(blank);
   models.forEach(id => {
     const o = document.createElement('option');
     o.value = id;
@@ -203,11 +207,15 @@ async function refreshLlamaCppModels() {
     o.textContent = id.replace(/-\d+-of-\d+(\.gguf)?$/i, '');
     llamacppModelSelect.appendChild(o);
   });
-  // Restore saved selection if available
+  // Restore saved selection only if it's still valid for the current server.
+  // If the saved model isn't in the list (e.g. switched from router → Arbor mode),
+  // fall back to blank so we don't send a stale model name that causes "model not found".
   if (llamacppModel && models.includes(llamacppModel)) {
     llamacppModelSelect.value = llamacppModel;
   } else {
-    llamacppModelSelect.value = models[0];
+    llamacppModelSelect.value = '';
+    llamacppModel = '';
+    localStorage.setItem(STORAGE.LLAMACPP_MODEL, '');
   }
   if (el) {
     el.innerHTML = `${models.length} model${models.length > 1 ? 's' : ''} available`;
