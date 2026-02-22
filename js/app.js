@@ -276,6 +276,11 @@ function init() {
   if (typeof initSTT === 'function') initSTT();
   $('micBtn').addEventListener('click', toggleSTT);
 
+  // Changelog
+  $('changelogBtn').addEventListener('click', openChangelogModal);
+  $('changelogCloseBtn').addEventListener('click', closeChangelogModal);
+  $('changelogModal').addEventListener('click', (e) => { if (e.target === $('changelogModal')) closeChangelogModal(); });
+
   // Benchmark
   $('openBenchmarkBtn').addEventListener('click', () => { closeSettings(); openBenchmarkModal(); });
   $('benchCloseBtn').addEventListener('click', closeBenchmarkModal);

@@ -33,6 +33,7 @@
       <button class="icon-btn" id="themeToggleBtn" title="Toggle Theme" aria-label="Toggle Theme"><span class="theme-toggle-icon">&#9790;</span></button>
       <button class="icon-btn sync-btn" id="syncBtn" title="Cloud Sync" aria-label="Cloud Sync">&#9729;<span class="sync-dot offline" id="syncDot"></span></button>
       <button class="icon-btn" id="profileBtn" title="Your Profile" aria-label="Profile">&#128100;</button>
+      <button class="icon-btn" id="changelogBtn" title="What's New" aria-label="What's New">&#10022;</button>
       <button class="icon-btn" id="globalSettingsBtn" title="Settings" aria-label="Settings">&#9881;</button>
     </div>
   </div>
@@ -373,6 +374,17 @@
         <button class="btn btn-primary" id="syncNowBtn">Sync Now</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Changelog Modal -->
+<div class="modal-overlay" id="changelogModal">
+  <div class="modal changelog-modal">
+    <div class="settings-header">
+      <h2>&#10022; What's New</h2>
+      <button class="settings-close" id="changelogCloseBtn">&times;</button>
+    </div>
+    <div class="changelog-body" id="changelogBody"></div>
   </div>
 </div>
 

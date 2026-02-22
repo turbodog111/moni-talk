@@ -3,6 +3,21 @@ const BENCH_STORAGE       = 'moni_talk_benchmarks';       // V-Current (new suit
 const BENCH_STORAGE_BETA  = 'moni_talk_benchmarks_beta';  // V-Beta (old V-Current data)
 const BENCH_STORAGE_ALPHA = 'moni_talk_benchmarks_alpha'; // V-Alpha (legacy, hidden)
 let benchViewModelKey = null; // null = use current model
+
+const SUITE_VERSIONS = { petal: '0.1', bloom: '0.1' };
+
+const CHANGELOG_ENTRIES = [
+  {
+    label: 'Benchmark — Petal 0.1 & Bloom 0.1',
+    date: '2026-02-21',
+    items: [
+      'New 6-test Petal suite and 12-test Bloom suite replace the old 16-test benchmark',
+      'Grading reduced to 4 criteria: Voice, Writing, Emotion, Faithfulness',
+      'Post-run batch rating panel — rate all responses at once after the suite completes',
+      'Old benchmark data preserved as V-Beta',
+    ]
+  },
+];
 let activeSuite = 'petal'; // 'petal' | 'bloom'
 
 // --- Alpha Migration (one-time) ---
@@ -875,6 +890,7 @@ function saveBenchCategory(suite, results) {
     all[modelKey][category] = {
       tests: catResults,
       suite,
+      suiteVersion: SUITE_VERSIONS[suite],
       speedInfo: { totalTime: avgTime, avgTokensPerSec: avgTPS },
       userRatings: all[modelKey]?.[category]?.userRatings || {},
       timestamp: Date.now()
@@ -1196,7 +1212,7 @@ function renderBenchRunTab() {
 
   // Update version label and section point totals
   const versionLabel = $('benchVersionLabel');
-  if (versionLabel) versionLabel.textContent = activeSuite === 'petal' ? 'Petal 0.1' : 'Bloom 0.1';
+  if (versionLabel) versionLabel.textContent = `${activeSuite === 'petal' ? 'Petal' : 'Bloom'} ${SUITE_VERSIONS[activeSuite]}`;
   const storyPts = $('benchStoryPts');
   if (storyPts) storyPts.textContent = activeSuite === 'petal' ? '/40' : '/100';
   const chatPts = $('benchChatPts');
@@ -1358,14 +1374,23 @@ function renderTestList(containerId, tests, category) {
     const status = document.createElement('div');
     // Check for existing results
     const existingResult = catData?.tests?.find(r => r.testId === test.id);
+    const storedVersion = catData?.suiteVersion;
+    const currentVersion = SUITE_VERSIONS[activeSuite];
+    const versionMismatch = storedVersion && storedVersion !== currentVersion;
     if (existingResult && !existingResult.error) {
-      status.className = 'bench-test-status done';
-      if (test.points) {
-        const userRatings = catData?.userRatings?.[test.id] || {};
-        const { earned } = computeTestScore(test, existingResult.scores.autoTotal, userRatings);
-        status.textContent = `${earned.toFixed(1)}/${test.points}`;
+      if (versionMismatch) {
+        status.className = 'bench-test-status outdated';
+        status.textContent = `v${storedVersion}`;
+        status.title = `Result is from suite v${storedVersion} (current: v${currentVersion}) — re-run to update`;
       } else {
-        status.textContent = `${existingResult.scores.overall}/100`;
+        status.className = 'bench-test-status done';
+        if (test.points) {
+          const userRatings = catData?.userRatings?.[test.id] || {};
+          const { earned } = computeTestScore(test, existingResult.scores.autoTotal, userRatings);
+          status.textContent = `${earned.toFixed(1)}/${test.points}`;
+        } else {
+          status.textContent = `${existingResult.scores.overall}/100`;
+        }
       }
     } else if (existingResult?.error) {
       status.className = 'bench-test-status failed';
@@ -1644,9 +1669,10 @@ function computeRankings(all, excludeKeys) {
   const models = keysToRank.map(key => {
     const d = all[key];
 
-    // Compute story score using active suite tests
+    // Compute story score using active suite tests (skip outdated suite versions)
     let storyScore = 0;
-    const storyResults = d.story?.tests?.filter(t => !t.error) || [];
+    const storyVersionMatch = !d.story?.suiteVersion || d.story.suiteVersion === SUITE_VERSIONS[activeSuite];
+    const storyResults = storyVersionMatch ? (d.story?.tests?.filter(t => !t.error) || []) : [];
     const storyRatings = d.story?.userRatings || {};
     const activeStoryTests = activeSuite === 'petal' ? PETAL_STORY_TESTS : BLOOM_STORY_TESTS;
     activeStoryTests.forEach(test => {
@@ -1657,9 +1683,10 @@ function computeRankings(all, excludeKeys) {
       storyScore += earned;
     });
 
-    // Compute chat score using active suite tests
+    // Compute chat score using active suite tests (skip outdated suite versions)
     let chatScore = 0;
-    const chatResults = d.chat?.tests?.filter(t => !t.error) || [];
+    const chatVersionMatch = !d.chat?.suiteVersion || d.chat.suiteVersion === SUITE_VERSIONS[activeSuite];
+    const chatResults = chatVersionMatch ? (d.chat?.tests?.filter(t => !t.error) || []) : [];
     const chatRatings = d.chat?.userRatings || {};
     const activeChatTests = activeSuite === 'petal' ? PETAL_CHAT_TESTS : BLOOM_CHAT_TESTS;
     activeChatTests.forEach(test => {
@@ -1897,4 +1924,26 @@ function compareRow(label, alphaVal, currentVal, suffix) {
     }
   }
   return `<tr><td>${label}</td><td>${aStr}</td><td>${cStr}</td><td>${changeHtml}</td></tr>`;
+}
+
+// --- Changelog Modal ---
+function openChangelogModal() {
+  const body = $('changelogBody');
+  if (!body) return;
+  body.innerHTML = CHANGELOG_ENTRIES.map(entry => `
+    <div class="changelog-entry">
+      <div class="changelog-entry-header">
+        <span class="changelog-entry-label">${escapeHtml(entry.label)}</span>
+        <span class="changelog-entry-date">${escapeHtml(entry.date)}</span>
+      </div>
+      <ul class="changelog-entry-items">
+        ${entry.items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}
+      </ul>
+    </div>
+  `).join('');
+  $('changelogModal').classList.add('open');
+}
+
+function closeChangelogModal() {
+  $('changelogModal').classList.remove('open');
 }

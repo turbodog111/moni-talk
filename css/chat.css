@@ -361,8 +361,8 @@
 .toggle-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--green-dark); cursor: pointer; }
 
 /* === Benchmark Modal === */
-.bench-modal { max-width: 640px; width: 95vw; max-height: 85vh; display: flex; flex-direction: column; transition: max-width 0.3s ease, width 0.3s ease; position: relative; }
-.bench-modal.results-active { max-width: 95vw; width: 95vw; }
+.bench-modal { width: min(70vw, 960px); max-width: min(70vw, 960px); max-height: 85vh; display: flex; flex-direction: column; position: relative; }
+.bench-modal.results-active { width: min(70vw, 960px); max-width: min(70vw, 960px); }
 .bench-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .bench-header h2 { margin: 0; }
 .bench-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--gray-text); padding: 4px 8px; border-radius: 4px; transition: background 0.2s; }
@@ -414,6 +414,7 @@
 .bench-test-status.running { color: #e6a700; }
 .bench-test-status.done { color: #27ae60; background: rgba(39,174,96,0.1); }
 .bench-test-status.failed { color: #c0392b; background: rgba(192,57,43,0.1); }
+.bench-test-status.outdated { color: #b7791f; background: rgba(183,121,31,0.12); }
 
 /* Prompt Preview Panel */
 .bench-prompt-panel { padding: 10px 12px; border-top: 1px solid var(--gray-mid); background: var(--bg); font-size: 12px; line-height: 1.5; max-height: 300px; overflow-y: auto; }
@@ -555,6 +556,17 @@
 [data-theme="dark"] .bench-compare-table th { color: var(--green-mid); border-bottom-color: #333; }
 [data-theme="dark"] .bench-compare-table td { border-bottom-color: rgba(255,255,255,0.04); }
 [data-theme="dark"] .bench-compare-section td { color: var(--green-mid); }
+
+/* === Changelog Modal === */
+.changelog-modal { max-width: 480px; padding: 0; display: flex; flex-direction: column; }
+.changelog-body { padding: 0 24px 20px; overflow-y: auto; max-height: 70vh; }
+.changelog-entry { margin-bottom: 18px; }
+.changelog-entry-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.changelog-entry-label { font-size: 14px; font-weight: 700; color: var(--green-dark); }
+.changelog-entry-date { font-size: 11px; color: var(--gray-text); }
+.changelog-entry-items { margin: 0; padding-left: 18px; }
+.changelog-entry-items li { font-size: 13px; color: var(--text); line-height: 1.6; margin-bottom: 2px; }
+[data-theme="dark"] .changelog-entry-label { color: var(--green-mid); }
 
 /* === Benchmark mobile === */
 @media (max-width: 600px) {
