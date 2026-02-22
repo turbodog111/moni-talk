@@ -272,6 +272,9 @@
           <label for="llamacppEndpointInput">Endpoint</label>
           <input type="text" id="llamacppEndpointInput" placeholder="http://spark-0af9:8080" autocomplete="off">
           <div class="hint">URL where llama-server is running.</div>
+          <div class="field-gap"></div>
+          <button class="btn btn-secondary" id="llamaFreeMemBtn" style="width:100%;">&#128190; Free GPU Memory</button>
+          <div class="hint">Copies the kill command to your clipboard — paste it in a Spark terminal to stop llama-server and release GPU memory.</div>
         </div>
         <div id="ollamaFields" style="display:none;">
           <label for="ollamaModelSelect">Model</label>

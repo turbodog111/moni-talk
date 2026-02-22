@@ -1526,13 +1526,13 @@ function renderComparisonTable(all, installedOllama) {
   html += '<tr><td>Story Score</td>';
   checked.forEach(modelKey => {
     const r = rankings.find(x => x.key === modelKey);
-    html += `<td class="${r ? scoreColorClass(r.storyScore, 100) : ''}">${r ? r.storyScore + '/100' : '-'}</td>`;
+    html += `<td class="${r ? scoreColorClass(r.storyScore, r.storyMax) : ''}">${r ? r.storyScore + '/' + r.storyMax : '-'}</td>`;
   });
   html += '</tr>';
   html += '<tr><td>Chat Score</td>';
   checked.forEach(modelKey => {
     const r = rankings.find(x => x.key === modelKey);
-    html += `<td class="${r ? scoreColorClass(r.chatScore, 100) : ''}">${r ? r.chatScore + '/100' : '-'}</td>`;
+    html += `<td class="${r ? scoreColorClass(r.chatScore, r.chatMax) : ''}">${r ? r.chatScore + '/' + r.chatMax : '-'}</td>`;
   });
   html += '</tr>';
 
@@ -1663,6 +1663,15 @@ function exportBenchResults() {
   URL.revokeObjectURL(url);
 }
 
+// --- Suite max score helpers ---
+function getSuiteMaxScores(suite) {
+  const storyTests = suite === 'petal' ? PETAL_STORY_TESTS : BLOOM_STORY_TESTS;
+  const chatTests  = suite === 'petal' ? PETAL_CHAT_TESTS  : BLOOM_CHAT_TESTS;
+  const storyMax = storyTests.reduce((s, t) => s + (t.points || 0), 0);
+  const chatMax  = chatTests.reduce((s, t) => s + (t.points || 0), 0);
+  return { storyMax, chatMax };
+}
+
 // --- Rankings & Settings Hint ---
 function computeRankings(all, excludeKeys) {
   const keysToRank = excludeKeys ? Object.keys(all).filter(k => !excludeKeys.has(k)) : Object.keys(all);
@@ -1712,10 +1721,13 @@ function computeRankings(all, excludeKeys) {
       });
     });
 
-    // Overall = average of story and chat
-    const overall = Math.round((storyScore + chatScore) / 2);
+    // Overall = normalized percentage so Petal (max 40+40) and Bloom (max 100+100) are comparable
+    const suiteMax = getSuiteMaxScores(activeSuite);
+    const storyPct = suiteMax.storyMax > 0 ? storyScore / suiteMax.storyMax : 0;
+    const chatPct  = suiteMax.chatMax  > 0 ? chatScore  / suiteMax.chatMax  : 0;
+    const overall  = Math.round((storyPct + chatPct) * 50);
 
-    return { key, storyScore: Math.round(storyScore), chatScore: Math.round(chatScore), overall, avgSpeed, hasUserRatings };
+    return { key, storyScore: Math.round(storyScore), chatScore: Math.round(chatScore), overall, storyMax: suiteMax.storyMax, chatMax: suiteMax.chatMax, avgSpeed, hasUserRatings };
   });
 
   // Sort for per-category rankings
@@ -1740,7 +1752,7 @@ function computeRankings(all, excludeKeys) {
     if (chatRank === total && total > 1 && m.chatScore < 50) weaknesses.push('Weakest chat');
     if (speedRank === total && total > 1) weaknesses.push('Slowest');
 
-    return { key: m.key, storyRank, chatRank, speedRank, overall: m.overall, strengths, weaknesses, storyScore: m.storyScore, chatScore: m.chatScore, avgSpeed: m.avgSpeed, hasUserRatings: m.hasUserRatings };
+    return { key: m.key, storyRank, chatRank, speedRank, overall: m.overall, strengths, weaknesses, storyScore: m.storyScore, chatScore: m.chatScore, storyMax: m.storyMax, chatMax: m.chatMax, avgSpeed: m.avgSpeed, hasUserRatings: m.hasUserRatings };
   }).sort((a, b) => b.overall - a.overall);
 }
 

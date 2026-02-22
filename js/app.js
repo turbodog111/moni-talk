@@ -276,6 +276,15 @@ function init() {
   if (typeof initSTT === 'function') initSTT();
   $('micBtn').addEventListener('click', toggleSTT);
 
+  // Free GPU memory (llama.cpp)
+  $('llamaFreeMemBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText('pkill -f llama-server').then(() => {
+      showToast('Copied! Paste in your Spark terminal to stop llama-server.', 'success');
+    }).catch(() => {
+      showToast('pkill -f llama-server — run this in your Spark terminal.', '');
+    });
+  });
+
   // Changelog
   $('changelogBtn').addEventListener('click', openChangelogModal);
   $('changelogCloseBtn').addEventListener('click', closeChangelogModal);
