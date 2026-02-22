@@ -632,7 +632,7 @@ async function callAI(messages, maxTokens = 1000, options = {}) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
-        body: JSON.stringify({ ...(llamacppModel ? { model: llamacppModel } : {}), messages, max_tokens: maxTokens, temperature: 0.85 })
+        body: JSON.stringify({ ...(llamacppModel ? { model: llamacppModel } : {}), messages, max_tokens: maxTokens, temperature: 0.85, chat_template_kwargs: { enable_thinking: false } })
       });
       if (!res.ok) throw new Error('llama.cpp error');
       const data = await res.json();
