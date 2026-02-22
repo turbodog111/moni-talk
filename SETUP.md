@@ -6,15 +6,45 @@ You need **3 SSH terminals** to the Spark (4 if using Qwen3-TTS), plus Ollama in
 
 | Terminal | Name | Port | What it does |
 |----------|------|------|-------------|
-| **1** | Main llama-server | 8080 | Chat/story AI — serves all your GGUF models |
+| **1** | llama-server (Arbor or router) | 8080 | Chat AI: Arbor single-model (default) or multi-model router |
 | **2** | Orpheus llama-server | 5006 | TTS token generation — runs the Orpheus speech model |
 | **3** | Orpheus-FastAPI | 5005 | TTS API wrapper — converts tokens to audio, serves `/v1/audio/speech` |
 | **4** | Qwen3-TTS (optional) | 8880 | Alternative TTS with voice cloning — serves `/v1/audio/speech` |
 | **5** | Ollama (WSL2) | 11434 | Alternative AI provider (runs in WSL2, not on Spark) |
 
-### Terminal 1: Main llama-server (port 8080)
+### Terminal 1: llama-server (port 8080)
 
-Open a terminal and SSH into the Spark. This serves all your chat/story models in router mode:
+**Endpoint (local):** `http://spark-0af9:8080`
+**Endpoint (Tailscale):** `https://spark-0af9.tail3b3470.ts.net`
+**Build location:** `~/llama.cpp/build/bin/llama-server`
+
+Two modes — pick based on what you're doing:
+
+---
+
+#### Mode A — Arbor (default for chat mode)
+
+Runs Arbor 0.1, the fine-tuned Monika model. Use tmux so the server survives SSH disconnects:
+
+```bash
+ssh xturbo@spark-0af9
+
+tmux new-session -d -s arbor '~/llama.cpp/build/bin/llama-server -m ~/models/Arbor-0.1-Q8_0.gguf --no-mmap -ngl 999 -fa on --jinja -c 8192 --host 0.0.0.0 --port 8080'
+```
+
+Check it started: `tmux attach -t arbor`
+Wait for: `server is listening on http://0.0.0.0:8080`
+Detach without killing: **Ctrl+B then D**
+
+In moni-talk, leave the model field **blank** (Arbor is the only model loaded, no `/v1/models` selection needed). The server automatically disables Qwen3 thinking via `chat_template_kwargs: {enable_thinking: false}` sent by the app.
+
+To kill later: `tmux kill-session -t arbor`
+
+---
+
+#### Mode B — Router (multi-model, for large models)
+
+Serves all GGUF files in `~/models/` with dynamic model switching. Use this when you want Gemma, Qwen3-32B, GPT-OSS, etc.:
 
 ```bash
 ssh xturbo@spark-0af9
@@ -33,10 +63,9 @@ ssh xturbo@spark-0af9
 
 Wait for: `router server is listening on http://0.0.0.0:8080`
 
-**Endpoint (local):** `http://spark-0af9:8080`
-**Endpoint (Tailscale):** `https://spark-0af9.tail3b3470.ts.net`
-**Models directory:** `~/models/` (GGUF format)
-**Build location:** `~/llama.cpp/`
+**Split GGUFs:** Models larger than ~50 GB come as split files (e.g. `-00001-of-00002.gguf`). Place both parts in `~/models/`. The router handles them automatically.
+
+---
 
 #### Key flags
 
@@ -45,21 +74,20 @@ Wait for: `router server is listening on http://0.0.0.0:8080`
 | `--no-mmap` | Faster model loading on Spark |
 | `-ngl 999` | Offload all layers to GPU |
 | `-fa on` | Flash Attention — reduces memory, improves speed |
-| `--jinja` | Chat template support |
-| `--ctx-size 32768` | Context window size |
-| `--models-dir PATH` | Auto-discover all GGUF files in directory (router mode) |
+| `--jinja` | Chat template support (required for Qwen3/Arbor) |
+| `-c 8192` / `--ctx-size N` | Context window size |
+| `--models-dir PATH` | Auto-discover all GGUFs (router mode only) |
 | `--models-max N` | Max models loaded simultaneously (use 1 for large models) |
-
-**Split GGUFs:** Models larger than ~50 GB often come as split files (e.g. `-00001-of-00002.gguf`, `-00002-of-00002.gguf`). Place both parts in `~/models/`. The app's model selector automatically hides continuation parts and shows one clean entry. When loaded, llama-server reads all parts automatically.
 
 #### Available models
 
-| Model | Quant | Size | Speed (est.) |
-|-------|-------|------|-------------|
-| GPT-OSS 120B | Q4_K_M | ~63 GB (split) | ~3 t/s |
-| Qwen3-32B | Q8_0 | ~34 GB | ~7 t/s |
-| Gemma 3 27B | Q8_0 | ~27 GB | ~8 t/s |
-| Mistral Small 3.1 24B | Q8_0 | ~25 GB | ~10 t/s |
+| Model | File | Quant | Size | Notes |
+|-------|------|-------|------|-------|
+| **Arbor 0.1** | `Arbor-0.1-Q8_0.gguf` | Q8_0 | ~14.6 GB | Fine-tuned Qwen3-14B (Monika chat mode) |
+| GPT-OSS 120B | `openai_gpt-oss-120b-Q4_K_M-*.gguf` | Q4_K_M | ~63 GB (split) | ~3 t/s |
+| Qwen3-32B | `Qwen3-32B-Q8_0.gguf` | Q8_0 | ~34 GB | ~7 t/s |
+| Gemma 3 27B | `gemma-3-27b-it-Q8_0.gguf` | Q8_0 | ~27 GB | ~8 t/s |
+| Mistral Small 3.1 24B | `Mistral-Small-3.1-24B-Instruct-Q8_0.gguf` | Q8_0 | ~25 GB | ~10 t/s |
 
 #### Downloading new models
 
@@ -342,6 +370,104 @@ In the app settings:
 - **TTS provider:** Orpheus TTS (default) or Qwen3-TTS (voice cloning)
 - **Orpheus endpoint:** `https://spark-0af9.tail3b3470.ts.net/tts` (Tailscale) or `http://spark-0af9:5005` (local)
 - **Qwen3-TTS endpoint:** `https://spark-0af9.tail3b3470.ts.net/qwen-tts` (Tailscale) or `http://spark-0af9:8880` (local)
+
+---
+
+## LLaMA-Factory (Arbor Fine-tuning)
+
+Used to train Arbor — Qwen3-14B fine-tuned as Monika for moni-talk chat mode.
+
+**Location (Spark):** `~/LLaMA-Factory/`
+**Virtual env:** `~/arbor-env/` (separate from LLaMA-Factory's internal venv)
+**Base model:** `~/models/Qwen3-14B/` (Qwen3-14B non-instruct, thinking+non-thinking unified)
+
+### Starting the WebUI
+
+```bash
+ssh -L 7860:localhost:7860 xturbo@spark-0af9   # forward UI port to your machine
+
+cd ~/LLaMA-Factory
+source ~/arbor-env/bin/activate
+llamafactory-cli webui
+```
+
+Then open: `http://localhost:7860`
+
+> **Note:** Use `ssh -L 7860:localhost:7860` (port forward) so the browser UI is accessible on your Windows machine. The webui only binds to localhost on the Spark.
+
+### Key training settings for Arbor
+
+| Setting | Value |
+|---------|-------|
+| Model Name | Qwen3-14B-Thinking |
+| Finetuning method | LoRA |
+| Dataset | `arbor_combined` (or `arbor_tier1` for tier 1 only) |
+| Stage | Supervised Fine-Tuning |
+| LoRA rank | 32 |
+| LoRA alpha | 64 |
+| Epochs | 3–5 |
+| Learning rate | 1e-4 |
+| Warmup ratio | 0.15 |
+| Enable thinking | **OFF** (uncheck — Qwen3 template defaults to on) |
+| Cutoff length | 2048 |
+| Batch size | 2 |
+| Gradient accumulation | 4 |
+
+**IMPORTANT:** The "Enable thinking" checkbox defaults to ON for Qwen3 templates. Always uncheck it before training. Verify in the generated `training_args.yaml` that `enable_thinking: false` appears.
+
+### Dataset info
+
+Datasets are registered in `~/LLaMA-Factory/data/dataset_info.json`. Current entries:
+
+```json
+"arbor_tier1": {
+  "file_name": "/home/xturbo/arbor-training/tier1_sft.jsonl",
+  "formatting": "sharegpt",
+  "columns": {"messages": "conversations"}
+},
+"arbor_combined": {
+  "file_name": "/home/xturbo/arbor-training/combined_sft.jsonl",
+  "formatting": "sharegpt",
+  "columns": {"messages": "conversations"}
+}
+```
+
+Training data lives at `~/arbor-training/` on the Spark:
+- `tier1_sft.jsonl` — 38 pairs from DDLC ch30 script (long-form, no mood tags)
+- `tier2_sft.jsonl` — 81 pairs from Qwen3-32B synthetic generation (short chat, mood tags)
+- `combined_sft.jsonl` — 119 pairs total (tier1 + tier2)
+
+Windows-side generation scripts: `C:\Users\joshu\arbor-training\`
+
+### Arbor version history
+
+| Version | Run name | Dataset | Pairs | Notes |
+|---------|----------|---------|-------|-------|
+| 0.1 | `arbor-t1t2-run1` | `arbor_combined` | 119 | Qwen3-14B, rank 32, 5 epochs |
+
+LoRA adapters saved at: `~/LLaMA-Factory/saves/Qwen3-14B-Thinking/lora/<run-name>/`
+
+### Export → GGUF workflow (after training)
+
+Run these on the Spark each time you build a new Arbor version:
+
+```bash
+# 1. Export merged model via LLaMA-Factory WebUI (Export tab)
+#    Output dir: ~/models/Arbor-X.Y/
+
+# 2. Activate arbor-env
+source ~/arbor-env/bin/activate
+cd ~/llama.cpp
+
+# 3. Convert to F16 GGUF
+python convert_hf_to_gguf.py ~/models/Arbor-X.Y/ --outfile ~/models/Arbor-X.Y-F16.gguf --outtype f16
+
+# 4. Quantize to Q8_0 (run in a new terminal — takes ~20 min)
+~/llama.cpp/build/bin/llama-quantize ~/models/Arbor-X.Y-F16.gguf ~/models/Arbor-X.Y-Q8_0.gguf Q8_0
+
+# 5. Start new Arbor server
+tmux new-session -d -s arbor '~/llama.cpp/build/bin/llama-server -m ~/models/Arbor-X.Y-Q8_0.gguf --no-mmap -ngl 999 -fa on --jinja -c 8192 --host 0.0.0.0 --port 8080'
+```
 
 ---
 
