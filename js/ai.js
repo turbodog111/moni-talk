@@ -84,8 +84,9 @@ function buildTimeContext(chat) {
   lines.push(`It's ${days[now.getDay()]}.`);
 
   // Descriptive time of day with actual time
+  // Force en-US + hour12:true so the model always receives "3:02 PM" not "15:02" or ambiguous "3:02"
   const hour = now.getHours();
-  const timeStr = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   if (hour >= 5 && hour < 12) lines.push(`It's morning, ${timeStr}.`);
   else if (hour >= 12 && hour < 14) lines.push(`It's early afternoon, ${timeStr}.`);
   else if (hour >= 14 && hour < 17) lines.push(`It's afternoon, ${timeStr}.`);
