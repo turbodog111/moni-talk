@@ -212,7 +212,7 @@ https://spark-0af9.tail3b3470.ts.net (tailnet only)
 |-- /qwen-tts proxy http://localhost:8880
 ```
 
-**Important:** After every Spark restart, the Tailscale serve config is lost. Re-run both `tailscale serve` commands.
+**Important:** Tailscale serve config **persists across Spark reboots** (unlike WSL2). You only need to re-run these commands when setting up a new route or after `tailscale serve --https=443 off`.
 
 > **Note:** The Orpheus `/tts` route is intentionally omitted — Qwen3-TTS is the primary TTS. If you ever re-enable Orpheus, add: `tailscale serve --bg --set-path /tts http://localhost:5005`
 > To remove a route: `tailscale serve --set-path /tts off`
@@ -480,7 +480,7 @@ tmux new-session -d -s arbor '~/llama.cpp/build/bin/llama-server -m ~/models/Arb
 | "Could not connect" in settings | Is llama-server running? Check `curl http://localhost:8080/v1/models` on the Spark |
 | CORS error in browser console | Usually means a server isn't running. Check all 3 terminals are up. The 502 Bad Gateway from Tailscale lacks CORS headers, which the browser reports as a CORS error |
 | Mixed content error from GitHub Pages | Use the Tailscale HTTPS URLs, not plain HTTP |
-| Tailscale serve not working | Re-run both `tailscale serve` commands after Spark restart (see Tailscale section above) |
+| Tailscale serve not working | Run `tailscale serve status` to check routes. Config persists across reboots — only re-run serve commands if a route is missing |
 | ERR_CERTIFICATE_TRANSPARENCY_REQUIRED | New Tailscale certs need time for CT log propagation (~hours to a day). Try incognito mode or Firefox |
 | Model switching is slow | First request to a new model takes time to load into VRAM. Subsequent requests are fast |
 | TTS: no audio / empty WAV | Check Terminal 2 (Orpheus llama-server on 5006) is running. Orpheus-FastAPI needs it for token generation |
