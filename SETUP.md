@@ -2,14 +2,14 @@
 
 ## Quick Start (After Restart)
 
-You need **3 SSH terminals** to the Spark (4 if using Qwen3-TTS), plus Ollama in WSL2. Here's exactly what runs in each:
+You need **2 SSH terminals** to the Spark, plus Ollama in WSL2 if needed. Here's exactly what runs in each:
 
 | Terminal | Name | Port | What it does |
 |----------|------|------|-------------|
 | **1** | llama-server (Arbor or router) | 8080 | Chat AI: Arbor single-model (default) or multi-model router |
-| **2** | Orpheus llama-server | 5006 | TTS token generation — runs the Orpheus speech model |
-| **3** | Orpheus-FastAPI | 5005 | TTS API wrapper — converts tokens to audio, serves `/v1/audio/speech` |
-| **4** | Qwen3-TTS (optional) | 8880 | Alternative TTS with voice cloning — serves `/v1/audio/speech` |
+| **2** | Qwen3-TTS | 8880 | Primary TTS — voice cloning with Monika reference audio |
+| **3** | Orpheus llama-server *(optional)* | 5006 | Legacy TTS token generation |
+| **4** | Orpheus-FastAPI *(optional)* | 5005 | Legacy TTS API wrapper |
 | **5** | Ollama (WSL2) | 11434 | Alternative AI provider (runs in WSL2, not on Spark) |
 
 ### Terminal 1: llama-server (port 8080)
@@ -134,43 +134,9 @@ cmake -B build \
 cmake --build build --config Release -j 20
 ```
 
-### Terminal 2: Orpheus llama-server (port 5006)
+### Terminal 2: Qwen3-TTS (port 8880) — primary TTS
 
-Open a **second** terminal and SSH into the Spark. This runs the TTS speech model:
-
-```bash
-ssh xturbo@spark-0af9
-
-~/llama.cpp/build/bin/llama-server \
-    -m ~/models/Orpheus-3b-FT-Q8_0.gguf \
-    --port 5006 \
-    --host 0.0.0.0 \
-    -ngl 999 \
-    --no-mmap \
-    -fa on \
-    --ctx-size 8192 \
-    --n-predict 8192
-```
-
-Wait for: `server is listening on http://0.0.0.0:5006`
-
-### Terminal 3: Orpheus-FastAPI (port 5005)
-
-Open a **third** terminal and SSH into the Spark. This wraps the llama-server output into audio:
-
-```bash
-ssh xturbo@spark-0af9
-
-cd ~/Orpheus-FastAPI
-source venv/bin/activate
-python app.py
-```
-
-Wait for: `Application startup complete.`
-
-### Terminal 4: Qwen3-TTS (port 8880) — optional
-
-Open a **fourth** terminal and SSH into the Spark. This runs Qwen3-TTS with voice cloning support:
+Open a **second** terminal and SSH into the Spark. This is the primary TTS provider with Monika voice cloning:
 
 ```bash
 ssh xturbo@spark-0af9
@@ -188,16 +154,49 @@ Wait for the model to load and the server to start.
 
 **Custom voices:** Place reference audio + transcript in `custom_voices/<name>/` (e.g. `custom_voices/monika/reference.wav` + `reference.txt`). The voice name becomes selectable in the app.
 
-### Tailscale (HTTPS access for GitHub Pages)
+### Terminals 3 & 4: Orpheus TTS (ports 5006 + 5005) — optional/legacy
 
-After starting Terminals 1-3 (and optionally 4), set up Tailscale serve routes. You can run this from **any** Spark terminal:
+Only needed if you want the Orpheus voice as a fallback. Qwen3-TTS (port 8880) is the primary TTS.
+
+**Terminal 3 — Orpheus llama-server (port 5006):**
 
 ```bash
 ssh xturbo@spark-0af9
 
-tailscale serve --bg /tts http://localhost:5005
-tailscale serve --bg /qwen-tts http://localhost:8880
+~/llama.cpp/build/bin/llama-server \
+    -m ~/models/Orpheus-3b-FT-Q8_0.gguf \
+    --port 5006 \
+    --host 0.0.0.0 \
+    -ngl 999 \
+    --no-mmap \
+    -fa on \
+    --ctx-size 8192 \
+    --n-predict 8192
+```
+
+Wait for: `server is listening on http://0.0.0.0:5006`
+
+**Terminal 4 — Orpheus-FastAPI (port 5005):**
+
+```bash
+ssh xturbo@spark-0af9
+
+cd ~/Orpheus-FastAPI
+source venv/bin/activate
+python app.py
+```
+
+Wait for: `Application startup complete.`
+
+### Tailscale (HTTPS access for GitHub Pages)
+
+After starting Terminals 1 and 2, set up Tailscale serve routes. You can run this from **any** Spark terminal:
+
+```bash
+ssh xturbo@spark-0af9
+
 tailscale serve --bg http://localhost:8080
+tailscale serve --bg /qwen-tts http://localhost:8880
 ```
 
 Verify all routes are active:
@@ -210,11 +209,12 @@ You should see:
 ```
 https://spark-0af9.tail3b3470.ts.net (tailnet only)
 |-- /         proxy http://localhost:8080
-|-- /tts      proxy http://localhost:5005
 |-- /qwen-tts proxy http://localhost:8880
 ```
 
-**Important:** After every Spark restart, the Tailscale serve config is lost. Re-run all `tailscale serve` commands.
+**Important:** After every Spark restart, the Tailscale serve config is lost. Re-run both `tailscale serve` commands.
+
+> **Note:** The Orpheus `/tts` route is intentionally omitted — Qwen3-TTS is the primary TTS. If you ever re-enable Orpheus, add: `tailscale serve --bg /tts http://localhost:5005`
 
 ### Verify everything works
 
@@ -224,10 +224,10 @@ From any terminal on the Spark:
 # Test main llama-server
 curl http://localhost:8080/v1/models
 
-# Test TTS (generates a WAV file)
-curl -X POST http://localhost:5005/v1/audio/speech \
+# Test Qwen3-TTS (generates a WAV file)
+curl -X POST http://localhost:8880/v1/audio/speech \
   -H "Content-Type: application/json" \
-  -d '{"model":"orpheus","input":"Hey, it is me, Monika!","voice":"tara","response_format":"wav"}' \
+  -d '{"model":"qwen3-tts","input":"Hey, it is me, Monika!","voice":"monika","response_format":"wav"}' \
   --output test.wav
 ```
 
@@ -366,10 +366,10 @@ C:\Users\joshu\moni-talk\index.html
 In the app settings:
 - **Provider:** llama.cpp
 - **llama.cpp endpoint:** `https://spark-0af9.tail3b3470.ts.net` (Tailscale, for GitHub Pages) or `http://spark-0af9:8080` (local network)
-- **Model:** dropdown shows all GGUF files — select which to use (switching unloads current and loads new)
-- **TTS provider:** Orpheus TTS (default) or Qwen3-TTS (voice cloning)
-- **Orpheus endpoint:** `https://spark-0af9.tail3b3470.ts.net/tts` (Tailscale) or `http://spark-0af9:5005` (local)
+- **Model:** leave blank when running Arbor (single model); dropdown shows all GGUFs in router mode
+- **TTS provider:** Qwen3-TTS (primary — voice cloning with Monika voice) or Orpheus (optional/legacy)
 - **Qwen3-TTS endpoint:** `https://spark-0af9.tail3b3470.ts.net/qwen-tts` (Tailscale) or `http://spark-0af9:8880` (local)
+- **Orpheus endpoint:** `https://spark-0af9.tail3b3470.ts.net/tts` (Tailscale) or `http://spark-0af9:5005` (local) — only if Orpheus terminals are running
 
 ---
 
