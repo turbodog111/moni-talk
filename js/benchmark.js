@@ -8,13 +8,50 @@ const SUITE_VERSIONS = { petal: '0.1', bloom: '0.1' };
 
 const CHANGELOG_ENTRIES = [
   {
-    label: 'Benchmark — Petal 0.1 & Bloom 0.1',
+    label: 'v0.7 — Arbor 0.1',
+    date: '2026-02-22',
+    items: [
+      'Arbor 0.1: fine-tuned Qwen3-14B for Monika chat mode (Q8_0, 14.6 GB)',
+      'Qwen3-TTS promoted to primary TTS with Monika voice cloning',
+      'Fix: stale model ID no longer causes "model not found" after server mode switch',
+      'Add "(server default)" blank option to model dropdown for single-model mode',
+    ]
+  },
+  {
+    label: 'v0.6 — Benchmark Overhaul',
     date: '2026-02-21',
     items: [
-      'New 6-test Petal suite and 12-test Bloom suite replace the old 16-test benchmark',
+      'New Petal 0.1 (6 tests) and Bloom 0.1 (12 tests) suites replace old 16-test benchmark',
       'Grading reduced to 4 criteria: Voice, Writing, Emotion, Faithfulness',
       'Post-run batch rating panel — rate all responses at once after the suite completes',
       'Old benchmark data preserved as V-Beta',
+      'Suite version stored with results — outdated results flagged in rankings',
+    ]
+  },
+  {
+    label: 'v0.5 — Memory & Chat Polish',
+    date: '2026-02-21',
+    items: [
+      'Memory approval UI — review extracted memories before they are saved',
+      'Fix chat list sorting, FAB overlap on mobile, and sync starred status',
+    ]
+  },
+  {
+    label: 'v0.4 — TTS & Voice Input',
+    date: '2026-02-21',
+    items: [
+      'Orpheus TTS on DGX Spark — 8 voices with inline emotion tags',
+      'Qwen3-TTS — voice cloning with custom Monika reference audio',
+      'Speech-to-text voice input for chat mode',
+    ]
+  },
+  {
+    label: 'v0.3 — DGX Spark & Adventure Mode',
+    date: '2026-02-20',
+    items: [
+      'llama.cpp provider for DGX Spark / local GPU inference',
+      'Multi-model router mode with auto-discovered GGUF selector',
+      'Adventure Mode: The Poem Labyrinth — 4 domains, HP, inventory, checkpoints',
     ]
   },
 ];
