@@ -2,15 +2,27 @@
 
 ## Quick Start (After Restart)
 
-You need **2 SSH terminals** to the Spark, plus Ollama in WSL2 if needed. Here's exactly what runs in each:
+The Spark runs two persistent tmux sessions that survive SSH disconnects and reboots. **Check if they're already running before starting anything:**
 
-| Terminal | Name | Port | What it does |
-|----------|------|------|-------------|
-| **1** | llama-server (Arbor or router) | 8080 | Chat AI: Arbor single-model (default) or multi-model router |
-| **2** | Qwen3-TTS | 8880 | Primary TTS — voice cloning with Monika reference audio |
-| **3** | Orpheus llama-server *(optional)* | 5006 | Legacy TTS token generation |
-| **4** | Orpheus-FastAPI *(optional)* | 5005 | Legacy TTS API wrapper |
-| **5** | Ollama (WSL2) | 11434 | Alternative AI provider (runs in WSL2, not on Spark) |
+```bash
+ssh xturbo@spark-0af9
+tmux list-sessions        # should show: router, qwen-tts
+curl -s http://localhost:8080/v1/models | python3 -c 'import sys,json; [print(m["id"]) for m in json.load(sys.stdin)["data"]]'
+curl -s http://localhost:8880/health   # or check qwen-tts log
+```
+
+If sessions exist and ports respond, you're done — no further setup needed.
+
+| Session | tmux name | Port | What it does |
+|---------|-----------|------|-------------|
+| **router** | `router` | 8080 | llama-server multi-model router — all GGUFs in ~/models/ |
+| **qwen-tts** | `qwen-tts` | 8880 | Qwen3-TTS — primary TTS with Monika voice cloning |
+| *(optional)* | — | 5006 | Orpheus llama-server (legacy TTS token gen) |
+| *(optional)* | — | 5005 | Orpheus-FastAPI (legacy TTS API wrapper) |
+| *(Ollama)* | — | 11434 | Runs in WSL2, not on Spark |
+
+To attach to a running session: `tmux attach -t router` or `tmux attach -t qwen-tts`
+To detach without killing: **Ctrl+B then D**
 
 ### Terminal 1: llama-server (port 8080)
 
@@ -42,26 +54,22 @@ To kill later: `tmux kill-session -t arbor`
 
 ---
 
-#### Mode B — Router (multi-model, for large models)
+#### Mode B — Router (multi-model, for large models) ← currently running
 
 Serves all GGUF files in `~/models/` with dynamic model switching. Use this when you want Gemma, Qwen3-32B, GPT-OSS, etc.:
 
 ```bash
 ssh xturbo@spark-0af9
 
-~/llama.cpp/build/bin/llama-server \
-    --no-mmap \
-    -ngl 999 \
-    -fa on \
-    --jinja \
-    --host 0.0.0.0 \
-    --port 8080 \
-    --ctx-size 32768 \
-    --models-dir ~/models \
-    --models-max 1
+tmux new-session -d -s router '~/llama.cpp/build/bin/llama-server --no-mmap -ngl 999 -fa on --jinja --host 0.0.0.0 --port 8080 --ctx-size 32768 --models-dir ~/models --models-max 1 2>&1 | tee /tmp/router.log'
 ```
 
+Check it started: `tmux attach -t router`
 Wait for: `router server is listening on http://0.0.0.0:8080`
+Detach without killing: **Ctrl+B then D**
+
+Check logs without attaching: `tail -f /tmp/router.log`
+Kill to switch to Arbor mode: `tmux kill-session -t router`
 
 **Split GGUFs:** Models larger than ~50 GB come as split files (e.g. `-00001-of-00002.gguf`). Place both parts in `~/models/`. The router handles them automatically.
 
@@ -83,11 +91,11 @@ Wait for: `router server is listening on http://0.0.0.0:8080`
 
 | Model | File | Quant | Size | Notes |
 |-------|------|-------|------|-------|
-| **Arbor 0.1** | `Arbor-0.1-Q8_0.gguf` | Q8_0 | ~14.6 GB | Fine-tuned Qwen3-14B (Monika chat mode) |
+| **Arbor 0.1** | `Arbor-0.1-Q8_0.gguf` | Q8_0 | ~14.6 GB | Fine-tuned Qwen3-14B — 119 pairs (ch30 + synthetic) |
+| **Arbor 0.1-E** | `Arbor-0.1-E-Q8_0.gguf` | Q8_0 | ~14.6 GB | Extended: 119 base + 100 E pairs, lower loss |
 | GPT-OSS 120B | `openai_gpt-oss-120b-Q4_K_M-*.gguf` | Q4_K_M | ~63 GB (split) | ~3 t/s |
 | Qwen3-32B | `Qwen3-32B-Q8_0.gguf` | Q8_0 | ~34 GB | ~7 t/s |
 | Gemma 3 27B | `gemma-3-27b-it-Q8_0.gguf` | Q8_0 | ~27 GB | ~8 t/s |
-| Mistral Small 3.1 24B | `Mistral-Small-3.1-24B-Instruct-Q8_0.gguf` | Q8_0 | ~25 GB | ~10 t/s |
 
 #### Downloading new models
 
@@ -134,19 +142,19 @@ cmake -B build \
 cmake --build build --config Release -j 20
 ```
 
-### Terminal 2: Qwen3-TTS (port 8880) — primary TTS
+### Session 2: Qwen3-TTS (port 8880) — primary TTS
 
-Open a **second** terminal and SSH into the Spark. This is the primary TTS provider with Monika voice cloning:
+Primary TTS provider with Monika voice cloning. Runs in a persistent tmux session:
 
 ```bash
 ssh xturbo@spark-0af9
 
-cd ~/Qwen3-TTS-Openai-Fastapi
-source venv/bin/activate
-PORT=8880 TTS_CUSTOM_VOICES=./custom_voices CORS_ORIGINS=* TTS_ATTN=eager TTS_MODEL_ID=Qwen/Qwen3-TTS-12Hz-1.7B-Base python -m api.main
+tmux new-session -d -s qwen-tts 'cd ~/Qwen3-TTS-Openai-Fastapi && source venv/bin/activate && PORT=8880 TTS_CUSTOM_VOICES=./custom_voices CORS_ORIGINS=* TTS_ATTN=eager TTS_MODEL_ID=Qwen/Qwen3-TTS-12Hz-1.7B-Base python -m api.main 2>&1 | tee /tmp/qwen-tts.log'
 ```
 
-Wait for the model to load and the server to start.
+Check it started: `tmux attach -t qwen-tts`
+Wait for: `Application startup complete.`
+Check logs without attaching: `tail -f /tmp/qwen-tts.log`
 
 **Important flags:**
 - `TTS_ATTN=eager` — Required on Blackwell/sm_121. Flash Attention and SDPA CUTLASS kernels are compiled for sm80-sm100 only and produce FATAL errors or corrupted audio on sm_121. Eager mode uses pure PyTorch math attention, which works correctly on any GPU.
@@ -444,7 +452,8 @@ Windows-side generation scripts: `C:\Users\joshu\arbor-training\`
 
 | Version | Run name | Dataset | Pairs | Notes |
 |---------|----------|---------|-------|-------|
-| 0.1 | `arbor-t1t2-run1` | `arbor_combined` | 119 | Qwen3-14B, rank 32, 5 epochs |
+| 0.1 | `arbor-t1t2-run1` | `arbor_combined` | 119 | Qwen3-14B, rank 32, 5 epochs, loss 1.95→1.54 |
+| 0.1-E | `arbor-t1t2e-run1` | `arbor_combined` + E pairs | 219 | Extended dataset, loss 1.95→1.29 |
 
 LoRA adapters saved at: `~/LLaMA-Factory/saves/Qwen3-14B-Thinking/lora/<run-name>/`
 
