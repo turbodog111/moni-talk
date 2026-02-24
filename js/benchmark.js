@@ -2011,6 +2011,46 @@ function compareRow(label, alphaVal, currentVal, suffix) {
 }
 
 // --- Changelog Modal ---
+// ====== MODELS MODAL ======
+const STATUS_LABELS = {
+  released:  { text: 'Released',       cls: 'model-status-released'  },
+  upcoming:  { text: 'In Development', cls: 'model-status-upcoming'  },
+  skipped:   { text: 'Skipped',        cls: 'model-status-skipped'   },
+};
+
+function openModelsModal() {
+  const body = $('modelsBody');
+  if (!body) return;
+  const order = { released: 0, upcoming: 1, skipped: 2 };
+  const entries = Object.entries(KNOWN_MODELS)
+    .sort((a, b) => (order[a[1].status] ?? 9) - (order[b[1].status] ?? 9));
+
+  body.innerHTML = entries.map(([gguf, m]) => {
+    const s = STATUS_LABELS[m.status] || { text: m.status || '—', cls: '' };
+    const meta = [];
+    if (m.base) meta.push(`<span>${escapeHtml(m.base)}</span>`);
+    if (m.loraParams) meta.push(`<span>${escapeHtml(m.loraParams)}</span>`);
+    if (m.trainingPairs) meta.push(`<span>${m.trainingPairs} training pairs</span>`);
+    if (m.released) meta.push(`<span>Released ${escapeHtml(m.released)}</span>`);
+    return `
+      <div class="model-catalog-card ${s.cls}">
+        <div class="model-catalog-top">
+          <span class="model-catalog-name">${escapeHtml(m.name)}</span>
+          <span class="model-catalog-badge">${escapeHtml(m.badge)}</span>
+          <span class="model-catalog-status ${s.cls}">${s.text}</span>
+        </div>
+        <div class="model-catalog-desc">${escapeHtml(m.desc)}</div>
+        ${meta.length ? `<div class="model-card-meta">${meta.join('')}</div>` : ''}
+        <div class="model-catalog-gguf">${escapeHtml(gguf)}</div>
+      </div>`;
+  }).join('');
+  $('modelsModal').classList.add('open');
+}
+
+function closeModelsModal() {
+  $('modelsModal').classList.remove('open');
+}
+
 function openChangelogModal() {
   const body = $('changelogBody');
   if (!body) return;

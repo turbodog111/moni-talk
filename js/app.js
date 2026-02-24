@@ -7,8 +7,6 @@ function applyTheme() {
     effective = currentTheme;
   }
   document.documentElement.dataset.theme = effective;
-  const icon = $('themeToggleBtn');
-  if (icon) icon.innerHTML = effective === 'dark' ? '&#9788;' : '&#9790;';
 }
 
 function toggleTheme() {
@@ -213,8 +211,7 @@ function init() {
   });
   settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) closeSettings(); });
 
-  // Theme
-  $('themeToggleBtn').addEventListener('click', toggleTheme);
+  // Theme (toggle button removed — use Settings → Appearance)
   const themeSelect = $('themeSelect');
   if (themeSelect) {
     themeSelect.value = currentTheme;
@@ -290,6 +287,11 @@ function init() {
       showToast('pkill -f llama-server — run this in your Spark terminal.', '');
     });
   });
+
+  // Models
+  $('modelsBtn').addEventListener('click', openModelsModal);
+  $('modelsCloseBtn').addEventListener('click', closeModelsModal);
+  $('modelsModal').addEventListener('click', (e) => { if (e.target === $('modelsModal')) closeModelsModal(); });
 
   // Changelog
   $('changelogBtn').addEventListener('click', openChangelogModal);

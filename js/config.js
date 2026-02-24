@@ -37,25 +37,31 @@ const KNOWN_MODELS = {
     name: 'Arbor 0.1', desc: 'Fine-tuned Monika \u2014 balanced chat & story',
     base: 'Qwen3-14B', badge: 'Fine-tuned',
     loraParams: '~42M new params (rank 32, 0.3% of base)',
-    trainingPairs: 119, released: '2026-02-22',
+    trainingPairs: 119, released: '2026-02-22', status: 'released',
+  },
+  'Arbor-0.1.1-Q8_0.gguf': {
+    name: 'Arbor 0.1.1', desc: 'Incremental fine-tune \u2014 improved voice, instruction-following & authenticity',
+    base: 'Qwen3-14B', badge: 'Fine-tuned \u00b7 In Development',
+    loraParams: '~42M new params (rank 32, 0.3% of base)',
+    trainingPairs: null, released: null, status: 'upcoming',
   },
   'Arbor-0.1-E-Q8_0.gguf': {
     name: 'Arbor 0.1-E', desc: 'Emotional \u2014 deeper empathy & vulnerability',
     base: 'Qwen3-14B', badge: 'Fine-tuned \u00b7 Emotional',
     loraParams: '~42M new params (rank 32, 0.3% of base)',
-    trainingPairs: null, released: null,
+    trainingPairs: null, released: null, status: 'skipped',
   },
   'Arbor-0.1-P-Q8_0.gguf': {
     name: 'Arbor 0.1-P', desc: 'Poetic \u2014 literary voice & poem output',
     base: 'Qwen3-14B', badge: 'Fine-tuned \u00b7 Poetic',
     loraParams: '~42M new params (rank 32, 0.3% of base)',
-    trainingPairs: null, released: null,
+    trainingPairs: null, released: null, status: 'skipped',
   },
   'Arbor-0.1-W-Q8_0.gguf': {
     name: 'Arbor 0.1-W', desc: 'Witty \u2014 banter, teasing, playful energy',
     base: 'Qwen3-14B', badge: 'Fine-tuned \u00b7 Witty',
     loraParams: '~42M new params (rank 32, 0.3% of base)',
-    trainingPairs: null, released: null,
+    trainingPairs: null, released: null, status: 'skipped',
   },
 };
 

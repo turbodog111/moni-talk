@@ -246,6 +246,26 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
 .toast { position: fixed; bottom: calc(90px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: #c0392b; color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90vw; text-align: center; }
 .toast.visible { opacity: 1; } .toast.success { background: var(--green-dark); }
 
+/* === Model Catalog Cards === */
+.model-catalog-card {
+  padding: 12px 14px; border-radius: 10px; margin-bottom: 10px;
+  border: 1.5px solid var(--gray-mid); background: var(--bg);
+}
+.model-catalog-card.model-status-released { border-color: var(--green-mid); background: var(--green-pale); }
+.model-catalog-card.model-status-upcoming { border-color: #f6ad55; background: rgba(246,173,85,0.08); }
+.model-catalog-card.model-status-skipped  { opacity: 0.45; }
+.model-catalog-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.model-catalog-name { font-weight: 700; font-size: 15px; color: var(--text); }
+.model-catalog-badge { font-size: 10px; background: var(--gray-mid); color: var(--gray-text);
+  border-radius: 4px; padding: 2px 6px; }
+.model-catalog-status { font-size: 10px; font-weight: 700; border-radius: 4px; padding: 2px 7px; margin-left: auto; }
+.model-status-released .model-catalog-status { background: var(--green-mid); color: #fff; }
+.model-status-upcoming .model-catalog-status { background: #f6ad55; color: #1a1a1a; }
+.model-status-skipped  .model-catalog-status { background: var(--gray-mid); color: var(--gray-text); }
+.model-catalog-desc { font-size: 13px; color: var(--gray-text); margin-bottom: 6px; }
+.model-catalog-gguf { font-size: 10px; color: var(--gray-text); font-family: monospace;
+  margin-top: 6px; opacity: 0.6; }
+
 /* === Achievement Toast === */
 #achievementToast {
   position: fixed; bottom: 80px; left: 50%;
