@@ -7,6 +7,7 @@ function switchSettingsTab(tab) {
     t.style.display = t.dataset.tab === tab ? '' : 'none';
   });
   if (tab === 'archive') renderArchivedChats();
+  if (tab === 'progress' && typeof renderProgressTab === 'function') renderProgressTab();
 }
 
 function renderArchivedChats() {
@@ -130,6 +131,7 @@ function saveSettings() {
   if (ttsCheck) {
     ttsEnabled = ttsCheck.checked;
     localStorage.setItem('moni_talk_tts_enabled', ttsEnabled);
+    if (ttsEnabled && typeof checkAchievement === 'function') checkAchievement('voice_on');
   }
   const ttsProv = $('ttsProviderSelect');
   if (ttsProv) {

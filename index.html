@@ -281,6 +281,10 @@
           <span class="nav-icon">&#128295;</span>
           Tools
         </button>
+        <button class="settings-nav-item" data-tab="progress">
+          <span class="nav-icon">&#11088;</span>
+          Progress
+        </button>
       </nav>
 
       <!-- Tab content panels -->
@@ -415,6 +419,12 @@
             <button class="btn btn-primary" id="openBenchmarkBtn" style="width:100%;margin-top:8px;">Open Benchmark Suite</button>
             <div id="benchSettingsHint"></div>
           </div>
+        </div>
+
+        <!-- PROGRESS TAB -->
+        <div class="settings-tab" data-tab="progress" style="display:none;">
+          <div class="settings-tab-title">Progress</div>
+          <div id="progressTabContent"></div>
         </div>
 
       </div>
@@ -662,6 +672,7 @@
   </div>
 </div>
 
+<div id="achievementToast"></div>
 <div class="toast" id="toast"></div>
 
 <!-- JS (order matters — dependencies flow top to bottom) -->
@@ -681,6 +692,7 @@
 <script src="js/vn.js"></script>
 <script src="js/room.js"></script>
 <script src="js/app.js"></script>
+<script src="js/achievements.js"></script>
 <script src="js/effects.js"></script>
 <div class="adv-vignette" id="advVignette"></div>
 </body>

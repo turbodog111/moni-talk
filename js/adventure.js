@@ -136,6 +136,16 @@ function processAdventureResponse(chat, replyText) {
       if (!chat.advState.sceneTransitions) chat.advState.sceneTransitions = [];
       chat.advState.sceneTransitions.push({ afterMsgIdx, domain, location: tags.scene });
       insertSceneCard(domain, tags.scene, true);
+      // XP & achievement hooks
+      if (typeof checkAchievement === 'function') {
+        if (domain !== 'clubroom') {
+          checkAchievement('domain_walker');
+          if (typeof grantXpOnce === 'function') grantXpOnce(`adv_domain_${domain}_${chat.id}`, 15);
+        }
+        const threeEntered = ['sayori', 'natsuki', 'yuri'].every(k => chat.advState.flags[`${k}_entered`]);
+        if (threeEntered) checkAchievement('three_realms');
+        if (domain === 'monika') checkAchievement('void_gazer');
+      }
     }
   }
 
@@ -154,6 +164,13 @@ function processAdventureResponse(chat, replyText) {
         const domain = chat.advState.currentDomain || detectDomain(chat.advState.location);
         chat.advState.flags[`${domain}_fragment`] = true;
         showToast(`Heart Fragment collected! (${chat.advState.fragments.length}/3)`, 'success');
+        // Achievement & XP hooks
+        if (typeof checkAchievement === 'function') {
+          const fragN = chat.advState.fragments.length;
+          checkAchievement('first_fragment');
+          if (typeof grantXpOnce === 'function') grantXpOnce(`adv_frag_${fragN}_${chat.id}`, 40);
+          if (fragN >= 3) checkAchievement('heartmender');
+        }
         // Unlock Monika's Void when all 3 collected
         if (chat.advState.fragments.length >= 3 && !chat.advState.flags.void_unlocked) {
           chat.advState.flags.void_unlocked = true;
@@ -170,6 +187,13 @@ function processAdventureResponse(chat, replyText) {
   }
 
   chat.advState.turns++;
+
+  // Turn milestone XP & achievement hooks
+  const _turns = chat.advState.turns;
+  if (typeof grantXpOnce === 'function' && (_turns === 10 || _turns === 25 || _turns === 50)) {
+    grantXpOnce(`adv_turn_${_turns}_${chat.id}`, 10);
+  }
+  if (typeof checkAchievement === 'function' && _turns >= 25) checkAchievement('survivor');
 
   const hpDelta = chat.advState.hp - prevHp;
 
@@ -582,4 +606,5 @@ function initAdventureMode(chat) {
   updateAdventureStatusBar(chat);
   updateAdventureActions(chat);
   updateDmBar(chat);
+  if (typeof checkAchievement === 'function') checkAchievement('first_adventure');
 }

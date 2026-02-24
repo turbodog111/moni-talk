@@ -5,8 +5,23 @@ const STORAGE = {
   MODEL_OLLAMA: 'moni_talk_ollama_model', OLLAMA_ENDPOINT: 'moni_talk_ollama_endpoint',
   LLAMACPP_ENDPOINT: 'moni_talk_llamacpp_endpoint', LLAMACPP_MODEL: 'moni_talk_llamacpp_model',
   CHATS: 'moni_talk_chats_v2', PROFILE: 'moni_talk_profile',
-  CHECKPOINTS: 'moni_talk_checkpoints', MEMORIES: 'moni_talk_memories'
+  CHECKPOINTS: 'moni_talk_checkpoints', MEMORIES: 'moni_talk_memories',
+  XP: 'moni_talk_xp', ACHIEVEMENTS: 'moni_talk_achievements',
+  LAST_XP_DATE: 'moni_talk_last_xp_date', TOTAL_MSGS: 'moni_talk_total_msgs',
+  XP_EVENTS: 'moni_talk_xp_events', VISIT_DATES: 'moni_talk_visit_dates',
 };
+
+// ====== LEVEL TIERS ======
+const LEVEL_TIERS = [
+  { name: 'Stranger',              xp: 0    },
+  { name: 'New Member',            xp: 100  },
+  { name: 'Club Regular',          xp: 300  },
+  { name: 'Literature Enthusiast', xp: 600  },
+  { name: 'Close Friend',          xp: 1000 },
+  { name: 'Trusted Confidant',     xp: 1750 },
+  { name: 'Beloved',               xp: 2750 },
+  { name: 'Soulmate',              xp: 4000 },
+];
 
 const PUTER_MODELS = [
   { id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5 (excellent roleplay)' },

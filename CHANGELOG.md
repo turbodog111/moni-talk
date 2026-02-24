@@ -7,6 +7,20 @@ Versions follow **X.Y.Z**:
 
 ---
 
+## v0.6.0 — Leveling & Achievement System (2026-02-23)
+
+Global XP/level layer and achievement system spanning chat, story, and adventure modes.
+
+- **XP & levels**: Earn XP by chatting (+2/msg, +5 daily bonus), completing story days (+30), affinity milestones (+20), adventure domain entries (+15), Heart Fragments (+40), turn milestones (+10), and unlocking achievements (+15)
+- **8 level tiers**: Stranger → New Member → Club Regular → Literature Enthusiast → Close Friend → Trusted Confidant → Beloved → Soulmate; level-up toast on advancement
+- **20 achievements** across 4 categories: Chat (5), Story (5), Adventure (7), Misc (3)
+- **Achievement toast**: independent slide-up toast (`#achievementToast`) distinct from status toast; queued for back-to-back unlocks
+- **Chat-list header**: subtitle updates to current level name in green
+- **Settings → Progress tab**: XP bar, level label, and 2×2 achievement grid with unlock/locked states
+- **Anti-farming**: one-time XP events for adventure domain entries, Heart Fragments, turn milestones, and story days via `grantXpOnce` with unique event IDs
+
+---
+
 ## v0.5.3 — Adventure Mode Visual Overhaul (2026-02-23)
 
 Seven visual improvements to adventure mode.

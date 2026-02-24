@@ -895,6 +895,24 @@ async function sendMessage() {
   userInput.value = ''; userInput.style.height = 'auto';
   scrollToBottom(); updateContextBar();
 
+  // XP & achievement hooks (chat and adventure modes only)
+  if (typeof grantXp === 'function' && chat.mode !== 'story') {
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem(STORAGE.LAST_XP_DATE) !== today) {
+      grantXp(5);
+      localStorage.setItem(STORAGE.LAST_XP_DATE, today);
+    }
+    grantXp(2);
+    const n = (parseInt(localStorage.getItem(STORAGE.TOTAL_MSGS) || '0')) + 1;
+    localStorage.setItem(STORAGE.TOTAL_MSGS, n);
+    if (typeof checkAchievement === 'function') {
+      checkAchievement('first_message');
+      if (n >= 25)  checkAchievement('familiar');
+      if (n >= 100) checkAchievement('regular');
+      if (n >= 500) checkAchievement('dedicated');
+    }
+  }
+
   isGenerating = true; sendBtn.disabled = true;
   activeAbortController = new AbortController();
   const cancelBtn = $('cancelBtn');

@@ -8,6 +8,18 @@ const SUITE_VERSIONS = { petal: '0.1', bloom: '0.1' };
 
 const CHANGELOG_ENTRIES = [
   {
+    label: 'v0.6.0 — Leveling & Achievement System',
+    date: '2026-02-23',
+    items: [
+      'XP & 8 level tiers: Stranger → Soulmate; earn XP from chatting, story days, affinity milestones, adventure events',
+      '20 achievements across Chat / Story / Adventure / Misc categories with unlock toasts',
+      'Achievement toast (⭐ slide-up) separate from status toast, queued for back-to-back unlocks',
+      'Chat-list header subtitle shows current level name in green',
+      'Settings → Progress tab: XP bar, level display, and achievement grid',
+      'Anti-farming: one-time XP grants for adventure domains, fragments, turn milestones, and story days',
+    ]
+  },
+  {
     label: 'v0.5.3 — Adventure Mode Visual Overhaul',
     date: '2026-02-23',
     items: [
@@ -1225,6 +1237,7 @@ function openBenchmarkModal() {
   modal.classList.add('open');
   renderBenchRunTab();
   switchBenchTab('run');
+  if (typeof checkAchievement === 'function') checkAchievement('benchmark_run');
 }
 
 function closeBenchmarkModal() {

@@ -775,6 +775,11 @@ async function selectStoryChoice(choice) {
 
   // "End of day — read diaries" — user is ready to see the journal overlay
   if (choice === 'End of day — read diaries') {
+    if (typeof grantXpOnce === 'function') {
+      const dayNum = chat.storyDay || 1;
+      grantXpOnce(`story_day_${dayNum}_${chat.id}`, 30);
+      if (typeof checkAchievement === 'function') checkAchievement('story_day1');
+    }
     await showEndOfDay(chat);
     return;
   }
@@ -1204,6 +1209,19 @@ function detectMilestones(chat, prevAffinity, newAffinity) {
           chat._cutsceneQueue.push({ girl, threshold: t, description: milestoneData });
           const capName = girl.charAt(0).toUpperCase() + girl.slice(1);
           showToast(`${capName} reached ${t} affinity!`, 'success');
+        }
+        // XP & achievement hooks
+        if (typeof grantXpOnce === 'function') {
+          grantXpOnce(`story_affinity_${girl}_${t}_${chat.id}`, 20);
+        }
+        if (typeof checkAchievement === 'function') {
+          if (t === 25) {
+            checkAchievement('affinity_25');
+            const allHit = AFFINITY_GIRL_NAMES.every(g => crossed[`${g}_25`]);
+            if (allHit) checkAchievement('all_milestones');
+          }
+          if (t === 50) checkAchievement('affinity_50');
+          if (t === 75) checkAchievement('affinity_75');
         }
       }
     }
