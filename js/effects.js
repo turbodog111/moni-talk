@@ -15,9 +15,10 @@
 
   // --- Trail ---
   const TRAIL_LEN = 22;
+  const TRAIL_MAX_AGE = 900; // ms — trail fully gone 0.9s after mouse stops
   const trail = [];
   document.addEventListener('mousemove', e => {
-    trail.push({ x: e.clientX, y: e.clientY });
+    trail.push({ x: e.clientX, y: e.clientY, t: Date.now() });
     if (trail.length > TRAIL_LEN) trail.shift();
   });
 
@@ -37,16 +38,20 @@
   function tick() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Trail: oldest → dimmest/smallest, newest → brightest/biggest
+    // Trail: evict stale points, then draw oldest→dimmest to newest→brightest
+    const now = Date.now();
+    while (trail.length > 0 && now - trail[0].t > TRAIL_MAX_AGE) trail.shift();
     const n = trail.length;
     for (let i = 0; i < n; i++) {
-      const t = n > 1 ? i / (n - 1) : 1;   // 0 = oldest, 1 = newest
-      const radius = 0.8 + t * 3.8;
-      const alpha  = 0.04 + t * 0.62;
+      const t        = n > 1 ? i / (n - 1) : 1;            // 0=oldest 1=newest
+      const ageFade  = 1 - (now - trail[i].t) / TRAIL_MAX_AGE; // 1=fresh 0=dying
+      const radius   = (0.8 + t * 3.8) * ageFade;
+      const alpha    = (0.04 + t * 0.62) * ageFade;
+      if (alpha < 0.005) continue;
       ctx.beginPath();
       ctx.arc(trail[i].x, trail[i].y, radius, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(72,187,120,${alpha.toFixed(2)})`;
-      if (t > 0.6) {
+      if (t > 0.6 && ageFade > 0.3) {
         ctx.shadowBlur = 10;
         ctx.shadowColor = 'rgba(72,187,120,0.55)';
       }
