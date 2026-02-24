@@ -1,5 +1,80 @@
 // ====== ADVENTURE MODE ======
 
+// --- Item Icons ---
+function getItemIcon(name) {
+  const n = name.toLowerCase();
+  if (n.includes('potion') || n.includes('elixir') || n.includes('vial') || n.includes('brew')) return '🧪';
+  if (n.includes('key')) return '🗝️';
+  if (n.includes('sword') || n.includes('blade') || n.includes('dagger') || n.includes('weapon') || n.includes('knife')) return '⚔️';
+  if (n.includes('shield') || n.includes('armor') || n.includes('armour') || n.includes('guard')) return '🛡️';
+  if (n.includes('book') || n.includes('tome') || n.includes('scroll') || n.includes('grimoire') || n.includes('journal')) return '📖';
+  if (n.includes('flower') || n.includes('petal') || n.includes('rose') || n.includes('blossom') || n.includes('bouquet')) return '🌸';
+  if (n.includes('gem') || n.includes('crystal') || n.includes('diamond') || n.includes('ruby') || n.includes('sapphire')) return '💎';
+  if (n.includes('heart') || n.includes('fragment')) return '💚';
+  if (n.includes('cupcake') || n.includes('cake') || n.includes('cookie') || n.includes('pastry') || n.includes('bun')) return '🧁';
+  if (n.includes('candle') || n.includes('lantern') || n.includes('torch') || n.includes('flame') || n.includes('light')) return '🕯️';
+  return '✨';
+}
+
+// --- Scene Entry Card ---
+function insertSceneCard(domain, location, animate = true) {
+  const domainInfo = ADVENTURE_DOMAINS[domain] || ADVENTURE_DOMAINS.clubroom;
+  const card = document.createElement('div');
+  card.className = 'adv-scene-card' + (animate ? ' adv-scene-card-enter' : '');
+  card.style.setProperty('--card-color', domainInfo.color);
+  card.innerHTML = `
+    <div class="adv-scene-card-icon">${domainInfo.icon}</div>
+    <div class="adv-scene-card-text">
+      <div class="adv-scene-card-domain">${escapeHtml(domainInfo.name)}</div>
+      <div class="adv-scene-card-location">${escapeHtml(location)}</div>
+    </div>
+    <div class="adv-scene-card-line"></div>
+  `;
+  const chatArea = $('chatArea');
+  const typingIndicator = $('typingIndicator');
+  if (chatArea && typingIndicator) chatArea.insertBefore(card, typingIndicator);
+}
+
+// --- HP Float ---
+function showHpFloat(delta) {
+  const bar = $('adventureStatusBar');
+  if (!bar) return;
+  const float = document.createElement('div');
+  float.className = 'adv-hp-float' + (delta < 0 ? ' damage' : ' heal');
+  float.textContent = (delta > 0 ? '+' : '') + delta;
+  bar.appendChild(float);
+  setTimeout(() => float.remove(), 1200);
+}
+
+// --- HP Vignette ---
+function triggerVignette(type) {
+  const v = $('advVignette');
+  if (!v) return;
+  v.className = 'adv-vignette ' + type;
+  setTimeout(() => { v.className = 'adv-vignette'; }, 800);
+}
+
+// --- DM Bar ---
+function updateDmBar(chat) {
+  const bar = $('advDmBar');
+  if (!bar) return;
+  if (!chat || chat.mode !== 'adventure' || !chat.advState) { bar.style.display = 'none'; return; }
+  const s = chat.advState;
+  const hpPct = s.hp / s.maxHp;
+  let mood = '🎲';
+  if (hpPct <= 0.25) mood = '😬';
+  else if (hpPct <= 0.5) mood = '😔';
+  else if (s.fragments.length >= 3) mood = '🥰';
+  else if (s.fragments.length >= 2) mood = '🤩';
+  else if (s.fragments.length >= 1) mood = '😊';
+  else if (hpPct >= 0.9) mood = '😏';
+  const locEl = $('advDmLocation');
+  const moodEl = $('advDmMood');
+  if (locEl) locEl.textContent = s.location;
+  if (moodEl) moodEl.textContent = mood;
+  bar.style.display = 'flex';
+}
+
 // --- Domain Definitions ---
 const ADVENTURE_DOMAINS = {
   clubroom: { name: 'The Clubroom', color: '#48bb78', icon: '\u{1F3E0}', keywords: ['clubroom', 'hub', 'literature club', 'club room', 'central hub'] },
@@ -43,6 +118,8 @@ function processAdventureResponse(chat, replyText) {
   if (!chat.advState) return replyText;
   const tags = parseAdventureTags(replyText);
   const prevHp = chat.advState.hp;
+  const prevDomain = chat.advState.currentDomain || detectDomain(chat.advState.location);
+  const afterMsgIdx = chat.messages.length; // index the assistant msg will be pushed at
 
   // Update location and track domain visits
   if (tags.scene) {
@@ -53,6 +130,13 @@ function processAdventureResponse(chat, replyText) {
       showToast(`Entered ${ADVENTURE_DOMAINS[domain].name}!`, 'success');
     }
     chat.advState.currentDomain = domain;
+
+    // Scene card on domain change — record for replay and insert live
+    if (domain !== prevDomain) {
+      if (!chat.advState.sceneTransitions) chat.advState.sceneTransitions = [];
+      chat.advState.sceneTransitions.push({ afterMsgIdx, domain, location: tags.scene });
+      insertSceneCard(domain, tags.scene, true);
+    }
   }
 
   // Update HP with clamping
@@ -87,9 +171,7 @@ function processAdventureResponse(chat, replyText) {
 
   chat.advState.turns++;
 
-  // HP change visual feedback
   const hpDelta = chat.advState.hp - prevHp;
-  if (hpDelta !== 0) flashHpBar(hpDelta);
 
   // Death handling
   if (chat.advState.hp <= 0) handleAdventureDeath(chat);
@@ -99,8 +181,18 @@ function processAdventureResponse(chat, replyText) {
     createAdventureCheckpoint(chat, true);
   }
 
+  // Update UI (status bar uses innerHTML, so floats must be appended after)
   updateAdventureStatusBar(chat);
   updateAdventureActions(chat);
+  updateDmBar(chat);
+
+  // HP change visual feedback — after status bar render so float isn't wiped
+  if (hpDelta !== 0) {
+    flashHpBar(hpDelta);
+    showHpFloat(hpDelta);
+    triggerVignette(hpDelta < 0 ? 'damage' : 'heal');
+  }
+
   return tags.text;
 }
 
@@ -131,6 +223,7 @@ function handleAdventureDeath(chat) {
     chat.advState.flags.deaths = (chat.advState.flags.deaths || 0) + 1;
     updateAdventureStatusBar(chat);
     updateAdventureActions(chat);
+    updateDmBar(chat);
     saveChats();
   }, 1200);
 }
@@ -147,8 +240,10 @@ function updateAdventureStatusBar(chat) {
   const domain = s.currentDomain || detectDomain(s.location);
   const domainInfo = ADVENTURE_DOMAINS[domain] || ADVENTURE_DOMAINS.clubroom;
 
-  // Domain-themed accent
+  // Domain-themed accent + CSS theming attribute
   bar.style.borderBottomColor = domainInfo.color;
+  const screenChat = $('screenChat');
+  if (screenChat) screenChat.dataset.domain = domain;
 
   // Breadcrumb trail
   const breadcrumb = domain === 'clubroom'
@@ -234,7 +329,7 @@ function showItemPicker(items) {
   picker.className = 'adv-item-picker';
   picker.innerHTML = `
     <div class="adv-item-picker-title">Use which item?</div>
-    ${items.map(item => `<button class="adv-item-pick-btn">${escapeHtml(item)}</button>`).join('')}
+    ${items.map(item => `<button class="adv-item-pick-btn">${getItemIcon(item)} ${escapeHtml(item)}</button>`).join('')}
     <button class="adv-item-pick-cancel">Cancel</button>
   `;
 
@@ -276,30 +371,29 @@ function updateAdventurePanel() {
   if (!chat || chat.mode !== 'adventure' || !chat.advState) return;
   const s = chat.advState;
 
-  // Domain Map
+  // Domain Map (2×2 grid with PFP images)
   const mapList = $('advDomainMap');
   if (mapList) {
     const domains = ['sayori', 'natsuki', 'yuri', 'monika'];
+    const pfpMap = { sayori: 'Sayori PFP.png', natsuki: 'Natsuki PFP.png', yuri: 'Yuri PFP.png', monika: 'Monika PFP.png' };
     const current = s.currentDomain || detectDomain(s.location);
-    mapList.innerHTML = domains.map(key => {
+    const cards = domains.map(key => {
       const d = ADVENTURE_DOMAINS[key];
       const entered = s.flags[`${key}_entered`];
       const fragment = s.flags[`${key}_fragment`];
       const isCurrent = current === key;
       const locked = key === 'monika' && !s.flags.void_unlocked;
-
-      let status = '';
-      if (locked) status = '\u{1F512}';
-      else if (fragment) status = '\u{1F48E}';
-      else if (entered) status = '\u2714\uFE0F';
-      else status = '\u2014';
-
-      return `<div class="adv-domain-item${isCurrent ? ' current' : ''}${locked ? ' locked' : ''}" style="--domain-color: ${d.color}">
-        <span class="adv-domain-icon">${d.icon}</span>
-        <span class="adv-domain-name">${d.name}</span>
-        <span class="adv-domain-status">${status}</span>
+      const lockOverlay = locked ? `<div class="adv-domain-card-lock">\u{1F512}</div>` : '';
+      const gemBadge = fragment ? `<div class="adv-domain-card-gem">\u{1F48E}</div>` : '';
+      return `<div class="adv-domain-card${isCurrent ? ' current' : ''}${locked ? ' locked' : ''}" style="--domain-color: ${d.color}">
+        <div class="adv-domain-card-img-wrap">
+          <img class="adv-domain-card-img" src="${pfpMap[key]}" alt="${escapeHtml(d.name)}"${entered || isCurrent ? '' : ' style="filter:grayscale(1) brightness(0.5)"'}>
+          ${lockOverlay}${gemBadge}
+        </div>
+        <div class="adv-domain-card-name">${escapeHtml(d.name)}</div>
       </div>`;
-    }).join('');
+    });
+    mapList.innerHTML = `<div class="adv-domain-grid">${cards.join('')}</div>`;
   }
 
   // Inventory
@@ -310,7 +404,7 @@ function updateAdventurePanel() {
     } else {
       invList.innerHTML = s.inventory.map(item => {
         const isFrag = item.toLowerCase().includes('heart fragment');
-        return `<div class="adv-inv-item${isFrag ? ' fragment' : ''}">${escapeHtml(item)}</div>`;
+        return `<div class="adv-inv-item${isFrag ? ' fragment' : ''}">${getItemIcon(item)} ${escapeHtml(item)}</div>`;
       }).join('');
     }
   }
@@ -455,6 +549,7 @@ function renderAdventureCheckpoints(chat) {
         updateChatHeader(chat);
         updateAdventureStatusBar(chat);
         updateAdventureActions(chat);
+        updateDmBar(chat);
         renderMessages();
         updateContextBar();
         showToast('Checkpoint loaded!', 'success');
@@ -480,6 +575,11 @@ function initAdventureMode(chat) {
   // Migration: add new fields if missing
   if (!chat.advState.currentDomain) chat.advState.currentDomain = detectDomain(chat.advState.location);
   if (!chat.advState.flags) chat.advState.flags = {};
+  if (!chat.advState.sceneTransitions) chat.advState.sceneTransitions = [];
+  // Set domain attribute for CSS theming
+  const screenChat = $('screenChat');
+  if (screenChat) screenChat.dataset.domain = chat.advState.currentDomain;
   updateAdventureStatusBar(chat);
   updateAdventureActions(chat);
+  updateDmBar(chat);
 }

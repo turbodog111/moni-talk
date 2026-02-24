@@ -196,7 +196,15 @@
   <div class="room-scene" id="roomScene" style="display:none;">
     <canvas id="masCanvas" width="1280" height="850"></canvas>
   </div>
-  <div class="adventure-status" id="adventureStatusBar" style="display:none;"></div>
+  <div class="adv-dm-bar" id="advDmBar" style="display:none;">
+    <img class="adv-dm-avatar" src="Monika PFP.png" alt="Monika">
+    <div class="adv-dm-info">
+      <div class="adv-dm-title">Game Master</div>
+      <div class="adv-dm-location" id="advDmLocation">The Clubroom</div>
+    </div>
+    <div class="adv-dm-mood" id="advDmMood">🎲</div>
+  </div>
+  <div class="adventure-status" id="adventureStatusBar" style="display:none; position:relative;"></div>
   <div class="chat-area" id="chatArea">
     <div class="typing-indicator" id="typingIndicator">
       <img class="msg-avatar" src="Monika PFP.png" alt="M">
@@ -673,5 +681,6 @@
 <script src="js/vn.js"></script>
 <script src="js/room.js"></script>
 <script src="js/app.js"></script>
+<div class="adv-vignette" id="advVignette"></div>
 </body>
 </html>

@@ -8,6 +8,18 @@ const SUITE_VERSIONS = { petal: '0.1', bloom: '0.1' };
 
 const CHANGELOG_ENTRIES = [
   {
+    label: 'v0.5.3 — Adventure Mode Visual Overhaul',
+    date: '2026-02-23',
+    items: [
+      'Domain theming: chat area accent color shifts per domain (green/gold/pink/purple)',
+      'DM bar: Monika portrait header showing current location and mood emoji',
+      'Scene entry cards: chapter-title dividers on domain change, persisted across reloads',
+      'HP float numbers + full-screen vignette flash on damage and healing',
+      'Domain grid: 2×2 PFP image grid in side panel replacing flat list',
+      'Item icons: emoji icons on inventory items and item picker (🧪🗝️⚔️🛡️📖🌸💎💚🧁🕯️✨)',
+    ]
+  },
+  {
     label: 'v0.5.2 — Settings Redesign + Archive Chats + Move Sync',
     date: '2026-02-23',
     items: [

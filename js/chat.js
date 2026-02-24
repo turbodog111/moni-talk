@@ -765,7 +765,7 @@ function renderMessages() {
     }
   } else {
     let lastDateStr = null;
-    chat.messages.forEach(msg => {
+    chat.messages.forEach((msg, idx) => {
       // Date separator between messages from different days
       if (msg.timestamp) {
         const d = new Date(msg.timestamp);
@@ -790,6 +790,12 @@ function renderMessages() {
       // Strip legacy expression tags from old room mode messages
       if (chat.mode === 'room' && msg.role === 'assistant') content = stripRoomTags(content);
       insertMessageEl(msg.role, content, false, imageUrl, msg.model || null, msg.timestamp || null);
+      // Adventure: replay scene cards at their original positions
+      if (chat.mode === 'adventure' && chat.advState?.sceneTransitions) {
+        chat.advState.sceneTransitions
+          .filter(t => t.afterMsgIdx === idx)
+          .forEach(t => insertSceneCard(t.domain, t.location, false));
+      }
     });
   }
   scrollToBottom();

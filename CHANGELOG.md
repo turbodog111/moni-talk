@@ -7,6 +7,20 @@ Versions follow **X.Y.Z**:
 
 ---
 
+## v0.5.3 — Adventure Mode Visual Overhaul (2026-02-23)
+
+Seven visual improvements to adventure mode.
+
+- **Domain theming**: chat area accent color shifts per domain (green/gold/pink/purple) via CSS custom properties on `data-domain` attribute
+- **DM bar**: Monika portrait header above status bar showing current location and mood emoji (reacts to HP and fragment count)
+- **Scene entry cards**: styled chapter-title dividers in chat on domain change, persist across session reloads
+- **HP float numbers**: animated +/- numbers float up from the status bar on HP changes
+- **HP vignette**: full-screen radial gradient flash on damage (red edges) and healing (green edges)
+- **Domain grid**: 2×2 PFP image grid in the side panel replacing flat list; grayscale for unvisited domains, color border + glow for current
+- **Item icons**: emoji icons on inventory items and item picker buttons (🧪🗝️⚔️🛡️📖🌸💎💚🧁🕯️✨)
+
+---
+
 ## v0.5.2 — Settings Redesign + Archive Chats + Move Sync (2026-02-23)
 
 VS Code-style settings sidebar, Arbor model info cards, per-chat archiving, and sync UI moved into Settings.

@@ -970,6 +970,161 @@
 /* Keyboard-open: hide action bar to save space */
 .keyboard-open .adventure-actions { display: none !important; }
 
+/* === Domain Theming === */
+#screenChat[data-domain="clubroom"] { --adv-accent: #48bb78; --adv-pale: rgba(72,187,120,0.07); }
+#screenChat[data-domain="sayori"]   { --adv-accent: #DAA520; --adv-pale: rgba(218,165,32,0.07); }
+#screenChat[data-domain="natsuki"]  { --adv-accent: #FF69B4; --adv-pale: rgba(255,105,180,0.07); }
+#screenChat[data-domain="yuri"]     { --adv-accent: #9370DB; --adv-pale: rgba(147,112,219,0.07); }
+#screenChat[data-domain="monika"]   { --adv-accent: #3CB371; --adv-pale: rgba(60,179,113,0.07); }
+#screenChat[data-domain] .adventure-status {
+  background: linear-gradient(90deg, var(--adv-pale) 0%, transparent 100%);
+  border-bottom-color: var(--adv-accent);
+}
+#screenChat[data-domain] .adv-stat-label { color: var(--adv-accent); }
+#screenChat[data-domain] .adv-action-btn:hover:not(:disabled) {
+  border-color: var(--adv-accent); color: var(--adv-accent); background: var(--adv-pale);
+}
+#screenChat[data-domain] .adv-hub-btn { border-color: var(--adv-accent); color: var(--adv-accent); }
+#screenChat[data-domain] .adv-hub-btn:hover:not(:disabled) { background: var(--adv-pale); }
+#screenChat[data-domain] .adv-item-pick-btn { border-color: var(--adv-accent); }
+#screenChat[data-domain] .adv-item-pick-btn:hover { background: var(--adv-pale); border-color: var(--adv-accent); }
+
+/* === DM Bar === */
+.adv-dm-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px;
+  background: linear-gradient(90deg, var(--adv-pale, rgba(72,187,120,0.07)) 0%, transparent 100%);
+  border-bottom: 1px solid var(--gray-mid); flex-shrink: 0;
+  transition: background 0.4s;
+}
+.adv-dm-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  object-fit: cover; object-position: top; flex-shrink: 0;
+  border: 2px solid var(--adv-accent, var(--green-mid));
+}
+.adv-dm-info { flex: 1; min-width: 0; }
+.adv-dm-title {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--adv-accent, var(--green-mid)); line-height: 1;
+}
+.adv-dm-location {
+  font-size: 12px; color: var(--text); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.adv-dm-mood { font-size: 20px; flex-shrink: 0; line-height: 1; }
+
+/* === Scene Entry Card === */
+.adv-scene-card {
+  display: flex; align-items: center; gap: 10px;
+  margin: 12px 16px 4px; padding: 10px 14px;
+  border-left: 3px solid var(--card-color, var(--green-mid));
+  border-radius: 0 8px 8px 0; position: relative; overflow: hidden;
+}
+.adv-scene-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, var(--card-color, var(--green-mid)) 0%, transparent 70%);
+  opacity: 0.1; pointer-events: none;
+}
+.adv-scene-card-enter { animation: sceneCardEnter 0.5s ease; }
+@keyframes sceneCardEnter {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.adv-scene-card-icon { font-size: 22px; flex-shrink: 0; }
+.adv-scene-card-text { flex: 1; min-width: 0; }
+.adv-scene-card-domain {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--card-color, var(--green-mid));
+}
+.adv-scene-card-location {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;
+}
+.adv-scene-card-line {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  width: 40px; height: 1px;
+  background: linear-gradient(90deg, var(--card-color, var(--green-mid)) 0%, transparent 100%);
+  opacity: 0.4;
+}
+
+/* === HP Float === */
+.adv-hp-float {
+  position: absolute; right: 12px; top: 4px;
+  font-size: 15px; font-weight: 800; pointer-events: none;
+  animation: hpFloat 1.2s ease forwards; z-index: 10;
+}
+.adv-hp-float.damage { color: #e74c3c; }
+.adv-hp-float.heal   { color: #27ae60; }
+@keyframes hpFloat {
+  0%   { opacity: 1; transform: translateY(0) scale(1.2); }
+  60%  { opacity: 1; transform: translateY(-18px) scale(1); }
+  100% { opacity: 0; transform: translateY(-28px) scale(0.85); }
+}
+
+/* === HP Vignette === */
+.adv-vignette {
+  position: fixed; inset: 0; pointer-events: none; z-index: 9998; opacity: 0;
+}
+.adv-vignette.damage {
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(192,57,43,0.5) 100%);
+  animation: vignetteDamage 0.8s ease forwards;
+}
+.adv-vignette.heal {
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(39,174,96,0.4) 100%);
+  animation: vignetteHeal 0.8s ease forwards;
+}
+@keyframes vignetteDamage {
+  0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; }
+}
+@keyframes vignetteHeal {
+  0% { opacity: 0; } 20% { opacity: 0.8; } 100% { opacity: 0; }
+}
+
+/* === Domain Grid (Side Panel) === */
+.adv-domain-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px;
+}
+.adv-domain-card {
+  border-radius: 10px; overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04); transition: all 0.2s; position: relative;
+}
+.adv-domain-card.current {
+  border-color: var(--domain-color, rgba(255,255,255,0.3));
+  box-shadow: 0 0 12px rgba(255,255,255,0.06), inset 0 0 0 1px var(--domain-color, transparent);
+}
+.adv-domain-card.locked { opacity: 0.4; }
+.adv-domain-card-img-wrap { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; }
+.adv-domain-card-img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; transition: filter 0.3s; }
+.adv-domain-card-lock {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.55); font-size: 22px;
+}
+.adv-domain-card-gem {
+  position: absolute; top: 4px; right: 4px; font-size: 12px;
+  background: rgba(0,0,0,0.5); border-radius: 50%; width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+}
+.adv-domain-card-name {
+  font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.7);
+  padding: 5px 6px 4px; text-align: center; line-height: 1.2;
+}
+
+/* Dark mode overrides for new adventure elements */
+[data-theme="dark"] .adv-dm-bar { border-bottom-color: var(--gray-mid); }
+[data-theme="dark"] .adv-scene-card-location { color: var(--text); }
+
+/* Mobile */
+@media (max-width: 600px) {
+  .adv-dm-bar { padding: 6px 12px; }
+  .adv-dm-avatar { width: 28px; height: 28px; }
+  .adv-dm-mood { font-size: 18px; }
+  .adv-scene-card { margin: 8px 12px 2px; padding: 8px 10px; }
+  .adv-scene-card-icon { font-size: 18px; }
+  .adv-scene-card-location { font-size: 12px; }
+}
+
 /* === Memory Approval Banner === */
 .memory-approval-banner {
   background: linear-gradient(135deg, var(--green-pale) 0%, rgba(76,175,80,0.08) 100%);
