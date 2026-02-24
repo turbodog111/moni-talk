@@ -131,7 +131,7 @@ function renderChatList() {
   let globalIndex = 0;
 
   MODE_GROUPS.forEach(group => {
-    const items = sorted.filter(c => getChatModeKey(c) === group.key);
+    const items = sorted.filter(c => getChatModeKey(c) === group.key && !c.archived);
     if (items.length === 0) return;
 
     const section = document.createElement('div');
@@ -211,8 +211,9 @@ function renderChatList() {
         </div>
         <button class="chat-item-rename" title="Rename">&#9998;</button>
         <button class="chat-item-star ${chat.starred ? 'starred' : ''}" title="Star">${starIcon}</button>
+        <button class="chat-item-archive" data-id="${chat.id}" title="Archive chat">&#128452;</button>
         <button class="chat-item-delete" title="Delete">&times;</button>`;
-      item.addEventListener('click', (e) => { if (!e.target.closest('.chat-item-delete') && !e.target.closest('.chat-item-star') && !e.target.closest('.chat-item-rename')) openChat(chat.id); });
+      item.addEventListener('click', (e) => { if (!e.target.closest('.chat-item-delete') && !e.target.closest('.chat-item-star') && !e.target.closest('.chat-item-rename') && !e.target.closest('.chat-item-archive')) openChat(chat.id); });
       item.querySelector('.chat-item-rename').addEventListener('click', (e) => {
         e.stopPropagation();
         const newTitle = prompt('Rename this conversation:', chat.title || displayTitle);
@@ -226,6 +227,10 @@ function renderChatList() {
         chat.starred = !chat.starred;
         chat.starredAt = Date.now();
         saveChats(); renderChatList();
+      });
+      item.querySelector('.chat-item-archive').addEventListener('click', (e) => {
+        e.stopPropagation();
+        archiveChat(e.currentTarget.dataset.id);
       });
       item.querySelector('.chat-item-delete').addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -1203,3 +1208,21 @@ function saveChats() {
   queueSync();
 }
 function saveChatsLocal() { localStorage.setItem(STORAGE.CHATS, JSON.stringify(chats)); }
+
+// ====== ARCHIVE ======
+function archiveChat(id) {
+  const chat = chats.find(c => c.id === id);
+  if (!chat) return;
+  chat.archived = true;
+  saveChats();
+  renderChatList();
+}
+
+function unarchiveChat(id) {
+  const chat = chats.find(c => c.id === id);
+  if (!chat) return;
+  chat.archived = false;
+  saveChats();
+  renderChatList();
+  if (typeof renderArchivedChats === 'function') renderArchivedChats();
+}

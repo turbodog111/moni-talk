@@ -6,6 +6,27 @@ function switchSettingsTab(tab) {
   document.querySelectorAll('.settings-tab').forEach(t => {
     t.style.display = t.dataset.tab === tab ? '' : 'none';
   });
+  if (tab === 'archive') renderArchivedChats();
+}
+
+function renderArchivedChats() {
+  const el = $('archivedChatsList');
+  if (!el) return;
+  const archived = chats.filter(c => c.archived);
+  if (!archived.length) {
+    el.innerHTML = '<div class="archived-empty">No archived chats.</div>';
+    return;
+  }
+  el.innerHTML = archived.map(c => `
+    <div class="archived-item">
+      <div class="archived-item-name">${escapeHtml(c.title || getChatTitle(c))}</div>
+      <span class="archived-item-mode">${c.mode || 'chat'}</span>
+      <button class="btn btn-secondary btn-sm archived-item-restore" data-id="${c.id}">Restore</button>
+    </div>
+  `).join('');
+  el.querySelectorAll('.archived-item-restore').forEach(btn => {
+    btn.addEventListener('click', () => unarchiveChat(btn.dataset.id));
+  });
 }
 
 function updateLlamaCppModelCard(modelId) {

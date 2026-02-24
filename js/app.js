@@ -307,13 +307,9 @@ function init() {
   $('benchCancelBtn').addEventListener('click', cancelBenchmark);
 
   // Sync
-  $('syncBtn').addEventListener('click', openSyncModal);
   $('signInBtn').addEventListener('click', handleSignIn);
   $('signOutBtn').addEventListener('click', handleSignOut);
   $('syncNowBtn').addEventListener('click', () => { fullSync(); });
-  $('cancelSyncBtn').addEventListener('click', closeSyncModal);
-  $('closeSyncBtn').addEventListener('click', closeSyncModal);
-  syncModal.addEventListener('click', (e) => { if (e.target === syncModal) closeSyncModal(); });
   initSync();
 }
 

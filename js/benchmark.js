@@ -8,7 +8,17 @@ const SUITE_VERSIONS = { petal: '0.1', bloom: '0.1' };
 
 const CHANGELOG_ENTRIES = [
   {
-    label: 'v0.7 — Arbor 0.1',
+    label: 'v0.5.2 — Settings Redesign + Archive Chats + Move Sync',
+    date: '2026-02-23',
+    items: [
+      'Settings modal redesigned: VS Code-style left-sidebar with Model / Voice / Appearance / Archive / Tools tabs',
+      'Arbor model card — shows name, badge, LoRA params, training pairs, and release date for known GGUFs',
+      'Archive Chats — hover a chat to archive it; restore from Settings → Archive tab',
+      'Cloud Sync UI moved inline to Settings → Tools tab; sync button removed from header',
+    ]
+  },
+  {
+    label: 'v0.5 — Arbor 0.1',
     date: '2026-02-22',
     items: [
       'Arbor 0.1: fine-tuned Qwen3-14B for Monika chat mode (Q8_0, 14.6 GB)',
@@ -18,7 +28,7 @@ const CHANGELOG_ENTRIES = [
     ]
   },
   {
-    label: 'v0.6 — Benchmark Overhaul',
+    label: 'v0.4.2 — Benchmark Overhaul',
     date: '2026-02-21',
     items: [
       'New Petal 0.1 (6 tests) and Bloom 0.1 (12 tests) suites replace old 16-test benchmark',
@@ -29,7 +39,7 @@ const CHANGELOG_ENTRIES = [
     ]
   },
   {
-    label: 'v0.5 — Memory & Chat Polish',
+    label: 'v0.4.1 — Memory & Chat Polish',
     date: '2026-02-21',
     items: [
       'Memory approval UI — review extracted memories before they are saved',

@@ -1,10 +1,26 @@
 # moni-talk Changelog
 
-Versions follow **v0.MAJOR.PATCH** — MAJOR increments for new feature releases, PATCH for fixes and polish within a release.
+Versions follow **X.Y.Z**:
+- **X** — Incremented only with explicit permission or an entirely new platform release
+- **Y** — New feature, major bug fix, or changes spanning two or more aspects of the app
+- **Z** — Minor fixes, small additions, polish
 
 ---
 
-## v0.7.1 — Settings & Server Fixes (2026-02-22)
+## v0.5.2 — Settings Redesign + Archive Chats + Move Sync (2026-02-23)
+
+VS Code-style settings sidebar, Arbor model info cards, per-chat archiving, and sync UI moved into Settings.
+
+- Settings modal redesigned: left-sidebar tab navigation (Model / Voice / Appearance / Archive / Tools), wider layout (680px)
+- Model card component for known Arbor GGUFs — shows name, badge, base model, LoRA param count, training pairs, release date
+- `KNOWN_MODELS` registry in config.js — auto-populated card when an Arbor GGUF is selected; hidden for unknown models
+- Tab state resets to Model on every open
+- **Archive Chats**: hover a chat → archive button appears → archived chats hidden from list; restore from Settings → Archive tab
+- **Move Sync**: Cloud Sync UI moved inline to Settings → Tools tab; sync header button removed
+
+---
+
+## v0.5.1 — Settings & Server Fixes (2026-02-22)
 
 - Fix: stale model ID in localStorage caused "model not found" after switching between Arbor and router mode
 - Add "(server default)" blank option to model dropdown — correct choice for Arbor single-model mode; omits `model` field from API requests so the server uses whatever is loaded
@@ -14,7 +30,7 @@ Versions follow **v0.MAJOR.PATCH** — MAJOR increments for new feature releases
 
 ---
 
-## v0.7.0 — Arbor 0.1 (2026-02-22)
+## v0.5.0 — Arbor 0.1 (2026-02-22)
 
 First fine-tuned model for moni-talk chat mode. Qwen3-14B base trained on 119 pairs (38 DDLC ch30 dialogue + 81 Qwen3-32B synthetic) via LLaMA-Factory LoRA.
 
@@ -25,14 +41,14 @@ First fine-tuned model for moni-talk chat mode. Qwen3-14B base trained on 119 pa
 
 ---
 
-## v0.6.1 — Benchmark Polish (2026-02-22)
+## v0.4.3 — Benchmark Polish (2026-02-22)
 
 - Fix benchmark scoring display regression
 - Add GPU memory free button to benchmark panel
 
 ---
 
-## v0.6.0 — Benchmark Overhaul (2026-02-21)
+## v0.4.2 — Benchmark Overhaul (2026-02-21)
 
 Complete rebuild of the benchmark system with two new suites.
 
@@ -47,7 +63,7 @@ Complete rebuild of the benchmark system with two new suites.
 
 ---
 
-## v0.5.0 — Memory & Chat Polish (2026-02-21)
+## v0.4.1 — Memory & Chat Polish (2026-02-21)
 
 - Memory approval UI — review and approve extracted memories before they're saved
 - Fix chat list sorting inconsistency

@@ -3,16 +3,15 @@ function hasPuter() { return typeof puter !== 'undefined' && puter.auth && puter
 
 function setSyncStatus(s) {
   syncStatus = s;
-  syncDot.className = 'sync-dot ' + s;
+  if (syncDot) syncDot.className = 'sync-dot ' + s;
   const sub = $('chatListSub');
   if (s === 'offline') sub.textContent = 'Your conversations with Monika';
   else if (s === 'syncing') sub.textContent = 'Syncing...';
   else if (s === 'synced') sub.textContent = 'Synced \u2713';
-  else if (s === 'error') sub.textContent = 'Sync failed \u2014 tap cloud to retry';
-  // Update modal if open
-  if (syncStateText) {
+  else if (s === 'error') sub.textContent = 'Sync failed \u2014 open Settings to retry';
+  if (toolsSyncStateText) {
     const labels = { offline: 'Not signed in', syncing: 'Syncing...', synced: 'Synced \u2713', error: 'Sync error \u2014 try again' };
-    syncStateText.textContent = labels[s] || s;
+    toolsSyncStateText.textContent = labels[s] || s;
   }
 }
 
@@ -200,18 +199,12 @@ async function initSync() {
 // ====== SYNC UI ======
 function updateSyncUI() {
   const signedIn = hasPuter() && puter.auth.isSignedIn();
-  syncSignedOut.style.display = signedIn ? 'none' : '';
-  syncSignedIn.style.display = signedIn ? '' : 'none';
-  if (signedIn && puterUser) {
-    syncUsername.textContent = puterUser.username || 'Puter User';
+  if (toolsSyncSignedOut) toolsSyncSignedOut.style.display = signedIn ? 'none' : '';
+  if (toolsSyncSignedIn) toolsSyncSignedIn.style.display = signedIn ? '' : 'none';
+  if (signedIn && puterUser && toolsSyncUsername) {
+    toolsSyncUsername.textContent = puterUser.username || 'Puter User';
   }
 }
-
-function openSyncModal() {
-  updateSyncUI();
-  syncModal.classList.add('open');
-}
-function closeSyncModal() { syncModal.classList.remove('open'); }
 
 async function handleSignIn() {
   if (!hasPuter()) { showToast('Puter SDK not available.'); return; }
@@ -234,6 +227,5 @@ function handleSignOut() {
   puterUser = null;
   setSyncStatus('offline');
   updateSyncUI();
-  closeSyncModal();
   showToast('Signed out. Data stays on this device.');
 }

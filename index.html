@@ -31,7 +31,6 @@
     </div>
     <div class="header-actions">
       <button class="icon-btn" id="themeToggleBtn" title="Toggle Theme" aria-label="Toggle Theme"><span class="theme-toggle-icon">&#9790;</span></button>
-      <button class="icon-btn sync-btn" id="syncBtn" title="Cloud Sync" aria-label="Cloud Sync">&#9729;<span class="sync-dot offline" id="syncDot"></span></button>
       <button class="icon-btn" id="profileBtn" title="Your Profile" aria-label="Profile">&#128100;</button>
       <button class="icon-btn" id="changelogBtn" title="What's New" aria-label="What's New">&#10022;</button>
       <button class="icon-btn" id="globalSettingsBtn" title="Settings" aria-label="Settings">&#9881;</button>
@@ -266,6 +265,10 @@
           <span class="nav-icon">&#127912;</span>
           Appearance
         </button>
+        <button class="settings-nav-item" data-tab="archive">
+          <span class="nav-icon">&#128452;</span>
+          Archive
+        </button>
         <button class="settings-nav-item" data-tab="tools">
           <span class="nav-icon">&#128295;</span>
           Tools
@@ -370,13 +373,40 @@
           <div class="hint">Choose your preferred color theme.</div>
         </div>
 
+        <!-- ARCHIVE TAB -->
+        <div class="settings-tab" data-tab="archive" style="display:none;">
+          <div class="settings-tab-title">Archived Chats</div>
+          <div id="archivedChatsList"></div>
+        </div>
+
         <!-- TOOLS TAB -->
         <div class="settings-tab" data-tab="tools" style="display:none;">
           <div class="settings-tab-title">Tools</div>
-          <label>Model Benchmark</label>
-          <div class="hint">Run standardized tests to compare how well your current model handles Moni-Talk scenarios.</div>
-          <button class="btn btn-primary" id="openBenchmarkBtn" style="width:100%;margin-top:8px;">Open Benchmark Suite</button>
-          <div id="benchSettingsHint"></div>
+
+          <div class="tools-section">
+            <div class="tools-section-label">&#9729; Cloud Sync <span class="sync-dot offline" id="syncDot"></span></div>
+            <div id="toolsSyncSignedOut">
+              <div class="hint">Sign in with a free Puter account to sync your chats and profile across devices. No setup needed.</div>
+              <button class="btn btn-primary btn-sm" id="signInBtn" style="margin-top:6px;">Sign In to Puter</button>
+            </div>
+            <div id="toolsSyncSignedIn" style="display:none;">
+              <div class="sync-user" id="toolsSyncUsername"></div>
+              <div class="sync-state" id="toolsSyncStateText">Checking...</div>
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <button class="btn btn-secondary btn-sm" id="syncNowBtn">Sync Now</button>
+                <button class="btn btn-danger btn-sm" id="signOutBtn">Sign Out</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-gap"></div>
+
+          <div class="tools-section">
+            <div class="tools-section-label">Model Benchmark</div>
+            <div class="hint">Run standardized tests to compare how well your current model handles Moni-Talk scenarios.</div>
+            <button class="btn btn-primary" id="openBenchmarkBtn" style="width:100%;margin-top:8px;">Open Benchmark Suite</button>
+            <div id="benchSettingsHint"></div>
+          </div>
         </div>
 
       </div>
@@ -388,30 +418,6 @@
   </div>
 </div>
 
-<!-- Sync Modal -->
-<div class="modal-overlay" id="syncModal">
-  <div class="modal">
-    <h2>&#9729; Cloud Sync</h2>
-    <div id="syncSignedOut">
-      <p>Sign in with a free Puter account to sync your chats and profile across all your devices. No setup needed.</p>
-      <div class="modal-actions">
-        <button class="btn btn-secondary" id="cancelSyncBtn">Cancel</button>
-        <button class="btn btn-primary" id="signInBtn">Sign In to Puter</button>
-      </div>
-    </div>
-    <div id="syncSignedIn" style="display:none">
-      <div class="sync-info">
-        <div class="sync-user" id="syncUsername"></div>
-        <div class="sync-state" id="syncStateText">Checking...</div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-danger" id="signOutBtn">Sign Out</button>
-        <button class="btn btn-secondary" id="closeSyncBtn">Close</button>
-        <button class="btn btn-primary" id="syncNowBtn">Sync Now</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- Changelog Modal -->
 <div class="modal-overlay" id="changelogModal">
