@@ -2024,10 +2024,11 @@ function compareRow(label, alphaVal, currentVal, suffix) {
 // --- Changelog Modal ---
 // ====== MODELS MODAL ======
 const STATUS_LABELS = {
-  released:  { text: 'Released',       cls: 'model-status-released'  },
-  upcoming:  { text: 'In Development', cls: 'model-status-upcoming'  },
-  skipped:   { text: 'Skipped',        cls: 'model-status-skipped'   },
-  planned:   { text: 'Planned',        cls: 'model-status-planned'   },
+  released:      { text: 'Released',       cls: 'model-status-released'   },
+  upcoming:      { text: 'In Development', cls: 'model-status-upcoming'   },
+  in_development:{ text: 'In Dev',         cls: 'model-status-indev'      },
+  skipped:       { text: 'Skipped',        cls: 'model-status-skipped'    },
+  planned:       { text: 'Planned',        cls: 'model-status-planned'    },
 };
 
 const ARBOR_ORDER = [
@@ -2036,6 +2037,7 @@ const ARBOR_ORDER = [
   'Arbor-0.1-P-Q8_0.gguf',
   'Arbor-0.1-W-Q8_0.gguf',
   'Arbor-0.1.1-Q8_0.gguf',
+  'Arbor-0.2-Q8_0.gguf',
 ];
 
 function openModelsModal() {
@@ -2046,10 +2048,13 @@ function openModelsModal() {
     const s = STATUS_LABELS[m.status] || { text: m.status || '—', cls: '' };
     const meta = [];
     if (m.base && m.base !== 'TBD') meta.push(`<span>${escapeHtml(m.base)}</span>`);
-    if (m.loraParams) meta.push(`<span>${escapeHtml(m.loraParams)}</span>`);
-    if (m.trainingPairs) meta.push(`<span>${m.trainingPairs} training pairs</span>`);
+    if (m.trainingPairs) meta.push(`<span>${escapeHtml(String(m.trainingPairs))} training pairs</span>`);
     if (m.released) meta.push(`<span>Released ${escapeHtml(m.released)}</span>`);
     const bestBadge = m.best ? `<span class="model-best-badge">\u2b50 Best</span>` : '';
+    const attrParts = [];
+    if (m.tester)  attrParts.push(`<span class="model-attr-item"><span class="model-attr-label">Tester</span> ${escapeHtml(m.tester)}</span>`);
+    if (m.credits) attrParts.push(`<span class="model-attr-item"><span class="model-attr-label">Tooling</span> ${escapeHtml(m.credits)}</span>`);
+    const desc = m.longDesc || m.desc;
     return `
       <div class="model-catalog-card ${s.cls}">
         <div class="model-catalog-top">
@@ -2058,8 +2063,9 @@ function openModelsModal() {
           <span class="model-catalog-badge">${escapeHtml(m.badge)}</span>
           <span class="model-catalog-status ${s.cls}">${s.text}</span>
         </div>
-        <div class="model-catalog-desc">${escapeHtml(m.desc)}</div>
+        <div class="model-catalog-desc">${escapeHtml(desc)}</div>
         ${meta.length ? `<div class="model-card-meta">${meta.join('')}</div>` : ''}
+        ${attrParts.length ? `<div class="model-catalog-attr">${attrParts.join('<span class="model-attr-sep">\u00b7</span>')}</div>` : ''}
         <div class="model-catalog-gguf">${escapeHtml(gguf)}</div>
       </div>`;
   };
