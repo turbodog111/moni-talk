@@ -33,35 +33,42 @@ const PUTER_MODELS = [
 ];
 
 const KNOWN_MODELS = {
+  // ── Arbor series (user–Monika conversation, primarily Chat Mode) ──
   'Arbor-0.1-Q8_0.gguf': {
-    name: 'Arbor 0.1', desc: 'Fine-tuned Monika \u2014 balanced chat & story',
+    name: 'Arbor 0.1', desc: 'Balanced voice & instruction-following',
     base: 'Qwen3-14B', badge: 'Fine-tuned',
     loraParams: '~42M new params (rank 32, 0.3% of base)',
-    trainingPairs: 119, released: '2026-02-22', status: 'released',
-  },
-  'Arbor-0.1.1-Q8_0.gguf': {
-    name: 'Arbor 0.1.1', desc: 'Incremental fine-tune \u2014 improved voice, instruction-following & authenticity',
-    base: 'Qwen3-14B', badge: 'Fine-tuned \u00b7 In Development',
-    loraParams: '~42M new params (rank 32, 0.3% of base)',
-    trainingPairs: null, released: null, status: 'upcoming',
+    trainingPairs: 119, released: '2026-02-22', status: 'released', series: 'arbor',
   },
   'Arbor-0.1-E-Q8_0.gguf': {
-    name: 'Arbor 0.1-E', desc: 'Emotional \u2014 deeper empathy & vulnerability',
+    name: 'Arbor 0.1-E', desc: 'Deeper empathy & emotional authenticity',
     base: 'Qwen3-14B', badge: 'Fine-tuned \u00b7 Emotional',
     loraParams: '~42M new params (rank 32, 0.3% of base)',
-    trainingPairs: 219, released: '2026-02-24', status: 'released',
+    trainingPairs: 219, released: '2026-02-23', status: 'released', series: 'arbor',
   },
   'Arbor-0.1-P-Q8_0.gguf': {
-    name: 'Arbor 0.1-P', desc: 'Poetic \u2014 literary voice & poem output',
+    name: 'Arbor 0.1-P', desc: 'Literary voice & poem output',
     base: 'Qwen3-14B', badge: 'Fine-tuned \u00b7 Poetic',
     loraParams: '~42M new params (rank 32, 0.3% of base)',
-    trainingPairs: null, released: null, status: 'skipped',
+    trainingPairs: null, released: null, status: 'skipped', series: 'arbor',
   },
   'Arbor-0.1-W-Q8_0.gguf': {
-    name: 'Arbor 0.1-W', desc: 'Witty \u2014 banter, teasing, playful energy',
+    name: 'Arbor 0.1-W', desc: 'Banter, teasing & playful energy',
     base: 'Qwen3-14B', badge: 'Fine-tuned \u00b7 Witty',
     loraParams: '~42M new params (rank 32, 0.3% of base)',
-    trainingPairs: null, released: null, status: 'skipped',
+    trainingPairs: null, released: null, status: 'skipped', series: 'arbor',
+  },
+  'Arbor-0.1.1-Q8_0.gguf': {
+    name: 'Arbor 0.1.1', desc: 'Improved voice, better instruction-following & authenticity',
+    base: 'Qwen3-14B', badge: 'Fine-tuned',
+    loraParams: '~42M new params (rank 32, 0.3% of base)',
+    trainingPairs: 250, released: '2026-02-24', status: 'released', series: 'arbor', best: true,
+  },
+  // ── Silva series (narrative immersion, primarily Story Mode) ──
+  'Silva-0.1-Q8_0.gguf': {
+    name: 'Silva 0.1', desc: 'Fine-tuned for deeper narrative immersion in Story Mode',
+    base: 'TBD', badge: 'Planned',
+    loraParams: null, trainingPairs: null, released: null, status: 'planned', series: 'silva',
   },
 };
 

@@ -7,6 +7,16 @@ Versions follow **X.Y.Z**:
 
 ---
 
+## v0.6.1 — Arbor 0.1.1 · Models Panel · Changelog Redesign (2026-02-24)
+
+- Arbor 0.1.1 released: 250 training pairs, improved voice & instruction-following over 0.1
+- Moni-Talk Models panel: two-column layout (Arbor / Silva series) with status badges and ⭐ best model indicator
+- Silva series introduced as a planned story-mode fine-tune
+- Changelog redesigned: version pill, "Latest" badge, wider modal, cleaner entry cards
+- Arbor 0.1-E release date corrected to 2026-02-23
+
+---
+
 ## v0.6.0 — Leveling & Achievement System (2026-02-23)
 
 Global XP/level layer and achievement system spanning chat, story, and adventure modes.

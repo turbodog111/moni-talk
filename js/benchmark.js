@@ -8,6 +8,17 @@ const SUITE_VERSIONS = { petal: '0.1', bloom: '0.1' };
 
 const CHANGELOG_ENTRIES = [
   {
+    label: 'v0.6.1 — Arbor 0.1.1 \u00b7 Models Panel \u00b7 Changelog Redesign',
+    date: '2026-02-24',
+    items: [
+      'Arbor 0.1.1 released: 250 training pairs, improved voice & instruction-following over 0.1',
+      'Moni-Talk Models panel: two-column layout (Arbor / Silva series) with status badges and \u2b50 best model indicator',
+      'Silva series introduced as a planned story-mode fine-tune',
+      'Changelog redesigned: version pill, \u201cLatest\u201d badge, wider modal, cleaner entry cards',
+      'Arbor 0.1-E release date corrected to 2026-02-23',
+    ]
+  },
+  {
     label: 'v0.6.0 — Leveling & Achievement System',
     date: '2026-02-23',
     items: [
@@ -2016,26 +2027,34 @@ const STATUS_LABELS = {
   released:  { text: 'Released',       cls: 'model-status-released'  },
   upcoming:  { text: 'In Development', cls: 'model-status-upcoming'  },
   skipped:   { text: 'Skipped',        cls: 'model-status-skipped'   },
+  planned:   { text: 'Planned',        cls: 'model-status-planned'   },
 };
+
+const ARBOR_ORDER = [
+  'Arbor-0.1-Q8_0.gguf',
+  'Arbor-0.1-E-Q8_0.gguf',
+  'Arbor-0.1-P-Q8_0.gguf',
+  'Arbor-0.1-W-Q8_0.gguf',
+  'Arbor-0.1.1-Q8_0.gguf',
+];
 
 function openModelsModal() {
   const body = $('modelsBody');
   if (!body) return;
-  const order = { released: 0, upcoming: 1, skipped: 2 };
-  const entries = Object.entries(KNOWN_MODELS)
-    .sort((a, b) => (order[a[1].status] ?? 9) - (order[b[1].status] ?? 9));
 
-  body.innerHTML = entries.map(([gguf, m]) => {
+  const renderCard = ([gguf, m]) => {
     const s = STATUS_LABELS[m.status] || { text: m.status || '—', cls: '' };
     const meta = [];
-    if (m.base) meta.push(`<span>${escapeHtml(m.base)}</span>`);
+    if (m.base && m.base !== 'TBD') meta.push(`<span>${escapeHtml(m.base)}</span>`);
     if (m.loraParams) meta.push(`<span>${escapeHtml(m.loraParams)}</span>`);
     if (m.trainingPairs) meta.push(`<span>${m.trainingPairs} training pairs</span>`);
     if (m.released) meta.push(`<span>Released ${escapeHtml(m.released)}</span>`);
+    const bestBadge = m.best ? `<span class="model-best-badge">\u2b50 Best</span>` : '';
     return `
       <div class="model-catalog-card ${s.cls}">
         <div class="model-catalog-top">
           <span class="model-catalog-name">${escapeHtml(m.name)}</span>
+          ${bestBadge}
           <span class="model-catalog-badge">${escapeHtml(m.badge)}</span>
           <span class="model-catalog-status ${s.cls}">${s.text}</span>
         </div>
@@ -2043,7 +2062,28 @@ function openModelsModal() {
         ${meta.length ? `<div class="model-card-meta">${meta.join('')}</div>` : ''}
         <div class="model-catalog-gguf">${escapeHtml(gguf)}</div>
       </div>`;
-  }).join('');
+  };
+
+  const arborEntries = ARBOR_ORDER.map(k => [k, KNOWN_MODELS[k]]).filter(([, m]) => m);
+  const silvaEntries = Object.entries(KNOWN_MODELS).filter(([, m]) => m.series === 'silva');
+
+  body.innerHTML = `
+    <div class="models-columns-wrap">
+      <div class="model-series-col">
+        <div class="model-series-header">
+          <span class="model-series-name">Arbor</span>
+          <span class="model-series-desc">Designed for user\u2013Monika conversation \u00b7 primarily Chat Mode</span>
+        </div>
+        ${arborEntries.map(renderCard).join('')}
+      </div>
+      <div class="model-series-col">
+        <div class="model-series-header">
+          <span class="model-series-name">Silva</span>
+          <span class="model-series-desc">Designed for narrative immersion \u00b7 primarily Story Mode</span>
+        </div>
+        ${silvaEntries.map(renderCard).join('')}
+      </div>
+    </div>`;
   $('modelsModal').classList.add('open');
 }
 
@@ -2054,17 +2094,28 @@ function closeModelsModal() {
 function openChangelogModal() {
   const body = $('changelogBody');
   if (!body) return;
-  body.innerHTML = CHANGELOG_ENTRIES.map(entry => `
-    <div class="changelog-entry">
-      <div class="changelog-entry-header">
-        <span class="changelog-entry-label">${escapeHtml(entry.label)}</span>
-        <span class="changelog-entry-date">${escapeHtml(entry.date)}</span>
-      </div>
-      <ul class="changelog-entry-items">
-        ${entry.items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}
-      </ul>
-    </div>
-  `).join('');
+  body.innerHTML = CHANGELOG_ENTRIES.map((entry, idx) => {
+    const vMatch = entry.label.match(/^(v[\d.]+)/);
+    const version = vMatch ? vMatch[1] : '—';
+    const title   = vMatch
+      ? entry.label.slice(vMatch[0].length).replace(/^\s*[\u2014\-]\s*/, '')
+      : entry.label;
+    const dateStr = entry.date
+      ? new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US',
+          { month: 'short', day: 'numeric', year: 'numeric' })
+      : '';
+    return `
+      <div class="cl-entry${idx === 0 ? ' cl-latest' : ''}">
+        <div class="cl-head">
+          <span class="cl-version">${escapeHtml(version)}</span>
+          <span class="cl-title">${escapeHtml(title)}</span>
+          <span class="cl-date">${escapeHtml(dateStr)}</span>
+        </div>
+        <ul class="cl-items">
+          ${entry.items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}
+        </ul>
+      </div>`;
+  }).join('');
   $('changelogModal').classList.add('open');
 }
 
