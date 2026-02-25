@@ -49,7 +49,7 @@ const KNOWN_MODELS = {
     name: 'Arbor 0.1-E', desc: 'Emotional \u2014 deeper empathy & vulnerability',
     base: 'Qwen3-14B', badge: 'Fine-tuned \u00b7 Emotional',
     loraParams: '~42M new params (rank 32, 0.3% of base)',
-    trainingPairs: null, released: null, status: 'skipped',
+    trainingPairs: 219, released: '2026-02-24', status: 'released',
   },
   'Arbor-0.1-P-Q8_0.gguf': {
     name: 'Arbor 0.1-P', desc: 'Poetic \u2014 literary voice & poem output',
