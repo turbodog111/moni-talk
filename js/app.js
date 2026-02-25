@@ -1,3 +1,23 @@
+// ====== GUIDE ======
+function toggleGuide() {
+  const body    = $('guideBody');
+  const chevron = $('guideChevron');
+  const open    = body.classList.toggle('open');
+  chevron.classList.toggle('open', open);
+  localStorage.setItem('moni_guide_open', open);
+}
+
+function initGuide() {
+  const saved = localStorage.getItem('moni_guide_open');
+  // Default open on first visit; respect saved state on return
+  const open = saved === null ? true : saved === 'true';
+  if (open) {
+    $('guideBody').classList.add('open');
+    $('guideChevron').classList.add('open');
+  }
+  $('guideToggle').addEventListener('click', toggleGuide);
+}
+
 // ====== THEME ======
 function applyTheme() {
   let effective;
@@ -31,6 +51,7 @@ function init() {
   puterModelSelect.value = puterModel;
 
   applyTheme();
+  initGuide();
   renderChatList();
   updateRelDisplay();
   loadProfile();

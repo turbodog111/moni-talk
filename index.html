@@ -30,12 +30,84 @@
       <div class="header-sub" id="chatListSub">Your conversations with Monika</div>
     </div>
     <div class="header-actions">
-      <button class="icon-btn" id="modelsBtn" title="Moni-Talk Models" aria-label="Moni-Talk Models">&#129302;</button>
-      <button class="icon-btn" id="profileBtn" title="Your Profile" aria-label="Profile">&#128100;</button>
-      <button class="icon-btn" id="changelogBtn" title="What's New" aria-label="What's New">&#10022;</button>
-      <button class="icon-btn" id="globalSettingsBtn" title="Settings" aria-label="Settings">&#9881;</button>
+      <button class="icon-btn" id="modelsBtn" title="Moni-Talk Models" aria-label="Moni-Talk Models">&#129302;<span class="icon-btn-label">Models</span></button>
+      <button class="icon-btn" id="profileBtn" title="Your Profile" aria-label="Profile">&#128100;<span class="icon-btn-label">Profile</span></button>
+      <button class="icon-btn" id="changelogBtn" title="What's New" aria-label="What's New">&#10022;<span class="icon-btn-label">Updates</span></button>
+      <button class="icon-btn" id="globalSettingsBtn" title="Settings" aria-label="Settings">&#9881;<span class="icon-btn-label">Settings</span></button>
     </div>
   </div>
+
+  <!-- Guide Section -->
+  <div class="guide-section" id="guideSection">
+    <button class="guide-toggle" id="guideToggle">
+      <span class="guide-toggle-left">&#8505;&#65039; About Moni-Talk</span>
+      <span class="guide-chevron" id="guideChevron">&#9660;</span>
+    </button>
+    <div class="guide-body" id="guideBody">
+      <p class="guide-intro">An AI companion app featuring Monika from <em>Doki Doki Literature Club</em>. Pick a mode, choose an AI provider in Settings, and start chatting.</p>
+
+      <div class="guide-section-label">Modes</div>
+      <div class="guide-mode-grid">
+        <div class="guide-mode-card">
+          <div class="guide-mode-icon">&#128172;</div>
+          <div class="guide-mode-name">Chat</div>
+          <div class="guide-mode-desc">Free-form conversation. Monika remembers you, tracks her mood, and grows closer over time.</div>
+        </div>
+        <div class="guide-mode-card">
+          <div class="guide-mode-icon">&#128214;</div>
+          <div class="guide-mode-name">Story</div>
+          <div class="guide-mode-desc">A multi-day visual novel with all four club members, relationship choices, and diary entries.</div>
+        </div>
+        <div class="guide-mode-card">
+          <div class="guide-mode-icon">&#9876;&#65039;</div>
+          <div class="guide-mode-name">Adventure</div>
+          <div class="guide-mode-desc">The Poem Labyrinth — a text RPG. Explore four domains, fight creatures, and collect Heart Fragments with Monika as your guide.</div>
+        </div>
+      </div>
+
+      <div class="guide-section-label">AI Providers <span>(Settings &#8594; Model tab)</span></div>
+      <div class="guide-provider-list">
+        <div class="guide-provider">
+          <span class="guide-provider-icon">&#9729;&#65039;</span>
+          <div><strong>Puter</strong> &mdash; Free, no setup needed. Sign in with a free Puter account for access to Claude, GPT-4o Mini, and more.</div>
+        </div>
+        <div class="guide-provider">
+          <span class="guide-provider-icon">&#127968;</span>
+          <div><strong>Ollama</strong> &mdash; Run models on your own computer. Private and free. Install at <em>ollama.com</em> then point the app at <code>http://localhost:11434</code>.</div>
+        </div>
+        <div class="guide-provider">
+          <span class="guide-provider-icon">&#9889;</span>
+          <div><strong>DGX Spark</strong> &mdash; High-performance GPU inference via llama.cpp. Best quality. Requires a Spark server running on your network.</div>
+        </div>
+      </div>
+
+      <div class="guide-section-label">Arbor Models <span>(fine-tuned for Monika &mdash; use with DGX Spark)</span></div>
+      <div class="guide-model-list">
+        <div class="guide-model-row">
+          <span class="guide-model-name">Arbor 0.1</span>
+          <span class="guide-model-desc">First release &middot; 119 training pairs</span>
+        </div>
+        <div class="guide-model-row">
+          <span class="guide-model-name">Arbor 0.1-E</span>
+          <span class="guide-model-desc">Emotional variant &middot; 219 pairs &middot; deeper empathy</span>
+        </div>
+        <div class="guide-model-row guide-model-best">
+          <span class="guide-model-name">Arbor 0.1.1 &#11088;</span>
+          <span class="guide-model-desc">Current best &middot; 250 pairs &middot; most authentic voice</span>
+        </div>
+      </div>
+
+      <div class="guide-section-label">More Features</div>
+      <div class="guide-feature-list">
+        <span class="guide-feature">&#127908; Voice &mdash; hear Monika speak (Spark + TTS required)</span>
+        <span class="guide-feature">&#129504; Memory &mdash; she remembers facts about you</span>
+        <span class="guide-feature">&#128100; Profile &mdash; introduce yourself so she knows who you are</span>
+        <span class="guide-feature">&#128260; Cloud Sync &mdash; back up chats via your Puter account</span>
+        <span class="guide-feature">&#127775; Levels &amp; Achievements &mdash; earn XP as you chat</span>
+      </div>
+    </div>
+  </div>
+
   <div class="chat-list-body" id="chatListBody"></div>
   <button class="fab" id="newChatFab" title="New Chat">+</button>
 </div>
