@@ -64,13 +64,15 @@ function init() {
   $('modeStoryBtn').addEventListener('click', () => setNewChatMode('story'));
   $('modeAdventureBtn').addEventListener('click', () => setNewChatMode('adventure'));
 
-  // Story option chip selection
+  // Story option chip selection — select chip and update hint text
   document.querySelectorAll('.story-opt-chips').forEach(group => {
     group.addEventListener('click', e => {
       const chip = e.target.closest('.story-chip');
       if (!chip) return;
       group.querySelectorAll('.story-chip').forEach(c => c.classList.remove('selected'));
       chip.classList.add('selected');
+      const hint = group.closest('.story-opt-row').querySelector('.story-opt-hint');
+      if (hint && chip.dataset.desc) hint.textContent = chip.dataset.desc;
     });
   });
   $('wordSubmitBtn').addEventListener('click', submitPoem);

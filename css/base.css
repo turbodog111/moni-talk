@@ -493,7 +493,10 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
 /* === Story mode option chips === */
 .story-opt-row { margin: 10px 0 4px; }
 .story-opt-label { font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.7px; color: var(--gray-text); margin-bottom: 6px; }
+  letter-spacing: 0.7px; color: var(--gray-text); margin-bottom: 3px; }
+.story-opt-section-desc { font-size: 11px; color: var(--gray-text); margin-bottom: 8px; line-height: 1.4; }
+.story-opt-hint { font-size: 11px; color: var(--gray-text); margin-top: 6px; min-height: 2.8em;
+  line-height: 1.4; font-style: italic; }
 .story-opt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .story-chip { padding: 5px 13px; border-radius: 20px; border: 1.5px solid var(--gray-mid);
   background: var(--bg); color: var(--gray-text); font-size: 12px; cursor: pointer;
