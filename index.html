@@ -222,6 +222,85 @@
         <input type="text" id="mcNameInput" placeholder="What should the MC be called?">
         <div class="form-hint">This name will be used throughout the story.</div>
       </div>
+
+      <div id="storyOptionRows">
+
+        <!-- Season -->
+        <div class="story-opt-row">
+          <div class="story-opt-label">Season</div>
+          <div class="story-opt-chips" data-opt="season">
+            <button class="story-chip selected" data-value="spring">Spring</button>
+            <button class="story-chip" data-value="autumn">Autumn</button>
+            <button class="story-chip" data-value="winter">Winter</button>
+            <button class="story-chip random" data-value="random">&#127922; Random</button>
+          </div>
+        </div>
+
+        <!-- How You Joined -->
+        <div class="story-opt-row">
+          <div class="story-opt-label">How You Joined</div>
+          <div class="story-opt-chips" data-opt="joinReason">
+            <button class="story-chip selected" data-value="sayori">Sayori invited me</button>
+            <button class="story-chip" data-value="monika">Monika recruited me</button>
+            <button class="story-chip" data-value="yuri">Yuri mentioned it</button>
+            <button class="story-chip" data-value="natsuki">Natsuki let it slip</button>
+            <button class="story-chip" data-value="self">Found it myself</button>
+            <button class="story-chip random" data-value="random">&#127922; Random</button>
+          </div>
+        </div>
+
+        <!-- History -->
+        <div class="story-opt-row">
+          <div class="story-opt-label">History with Club</div>
+          <div class="story-opt-chips" data-opt="history">
+            <button class="story-chip selected" data-value="first_day">First day</button>
+            <button class="story-chip" data-value="weeks_in">A few weeks in</button>
+            <button class="story-chip" data-value="old_friend">Old friend of Sayori</button>
+            <button class="story-chip random" data-value="random">&#127922; Random</button>
+          </div>
+        </div>
+
+        <!-- Tone -->
+        <div class="story-opt-row">
+          <div class="story-opt-label">Narrative Tone</div>
+          <div class="story-opt-chips" data-opt="tone">
+            <button class="story-chip selected" data-value="warm">Warm &amp; Cheerful</button>
+            <button class="story-chip" data-value="melancholic">Melancholic &amp; Literary</button>
+            <button class="story-chip" data-value="humorous">Light &amp; Humorous</button>
+            <button class="story-chip random" data-value="random">&#127922; Random</button>
+          </div>
+        </div>
+
+        <!-- MC Personality -->
+        <div class="story-opt-row">
+          <div class="story-opt-label">MC Personality</div>
+          <div class="story-opt-chips" data-opt="personality">
+            <button class="story-chip selected" data-value="introspective">Introspective</button>
+            <button class="story-chip" data-value="outgoing">Outgoing</button>
+            <button class="story-chip" data-value="reserved">Reserved</button>
+            <button class="story-chip random" data-value="random">&#127922; Random</button>
+          </div>
+        </div>
+
+        <!-- Club Emphasis -->
+        <div class="story-opt-row">
+          <div class="story-opt-label">Club Emphasis</div>
+          <div class="story-opt-chips" data-opt="clubEmphasis">
+            <button class="story-chip selected" data-value="balanced">Balanced</button>
+            <button class="story-chip" data-value="literary">Literary Discussions</button>
+            <button class="story-chip" data-value="baking">Baking &amp; Craft</button>
+            <button class="story-chip" data-value="poetry">Deep Poetry</button>
+            <button class="story-chip random" data-value="random">&#127922; Random</button>
+          </div>
+        </div>
+
+        <!-- Profile Import -->
+        <label class="story-toggle-row">
+          <input type="checkbox" id="storyImportProfile">
+          Import your profile (name, about, interests, values)
+        </label>
+
+      </div>
     </div>
     <div id="adventureModeOptions" class="form-section" style="display:none;">
       <div class="rel-display">

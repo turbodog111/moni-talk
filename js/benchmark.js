@@ -8,6 +8,18 @@ const SUITE_VERSIONS = { petal: '0.1', bloom: '0.1' };
 
 const CHANGELOG_ENTRIES = [
   {
+    label: 'v0.6.2 — Story Mode Augmentation',
+    date: '2026-02-25',
+    items: [
+      '6 pre-story selectors: Season, How You Joined, History with Club, Narrative Tone, MC Personality, Club Emphasis',
+      'Random option on every selector — resolved at chat creation, never stored as "random"',
+      'Starting affinities now derived from join reason; history modifier boosts affinities for non-first-day starts',
+      'Profile import toggle: inject player profile into story system prompt via Monika\'s meta-awareness',
+      'All options injected as a STORY CONTEXT block in the AI system prompt; legacy chats unaffected',
+      'Options preserved in story checkpoints across day transitions',
+    ]
+  },
+  {
     label: 'v0.6.1 — Arbor 0.1.1 \u00b7 Models Panel \u00b7 Changelog Redesign',
     date: '2026-02-24',
     items: [

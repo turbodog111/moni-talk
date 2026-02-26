@@ -63,6 +63,16 @@ function init() {
   $('modeChatBtn').addEventListener('click', () => setNewChatMode('chat'));
   $('modeStoryBtn').addEventListener('click', () => setNewChatMode('story'));
   $('modeAdventureBtn').addEventListener('click', () => setNewChatMode('adventure'));
+
+  // Story option chip selection
+  document.querySelectorAll('.story-opt-chips').forEach(group => {
+    group.addEventListener('click', e => {
+      const chip = e.target.closest('.story-chip');
+      if (!chip) return;
+      group.querySelectorAll('.story-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
   $('wordSubmitBtn').addEventListener('click', submitPoem);
   $('vnPanelBtn').addEventListener('click', toggleVnPanel);
   $('vnPanelClose').addEventListener('click', closeVnPanel);

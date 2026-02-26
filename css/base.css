@@ -489,3 +489,19 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
   .form-body { max-width: 540px; margin: 0 auto; width: 100%; }
   .modal { max-width: 500px; }
 }
+
+/* === Story mode option chips === */
+.story-opt-row { margin: 10px 0 4px; }
+.story-opt-label { font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.7px; color: var(--gray-text); margin-bottom: 6px; }
+.story-opt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.story-chip { padding: 5px 13px; border-radius: 20px; border: 1.5px solid var(--gray-mid);
+  background: var(--bg); color: var(--gray-text); font-size: 12px; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s; }
+.story-chip:hover { border-color: var(--green-mid); color: var(--text); }
+.story-chip.selected { border-color: var(--green-mid); background: var(--green-pale);
+  color: var(--text); font-weight: 600; }
+.story-chip.random { border-style: dashed; }
+.story-toggle-row { display: flex; align-items: center; gap: 8px; font-size: 13px;
+  color: var(--gray-text); margin-top: 14px; cursor: pointer; user-select: none; }
+.story-toggle-row input { cursor: pointer; }

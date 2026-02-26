@@ -1290,6 +1290,7 @@ function createCheckpoint(chat, isAuto = false) {
     milestonesCrossed: { ...(chat.milestonesCrossed || {}) },
     storyYesterday: chat.storyYesterday || null,
     confessions: { ...(chat.confessions || {}) },
+    storyOptions: chat.storyOptions || null,
     preview
   };
 
@@ -1322,6 +1323,7 @@ function loadCheckpoint(chat, cpId) {
   chat.milestonesCrossed = { ...(cp.milestonesCrossed || {}) };
   chat.storyYesterday = cp.storyYesterday || null;
   chat.confessions = { ...(cp.confessions || {}) };
+  if (cp.storyOptions) chat.storyOptions = cp.storyOptions;
   chat.lastChoices = null;
 
   saveChats();

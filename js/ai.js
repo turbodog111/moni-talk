@@ -175,6 +175,60 @@ function sanitizeMessages(msgs) {
   return merged;
 }
 
+// ====== STORY OPTIONS BLOCK ======
+function buildStoryOptionsBlock(chat) {
+  const opts = chat.storyOptions;
+  if (!opts) return '';
+  const parts = [];
+
+  const seasonMap = {
+    spring: 'SEASON: It is spring — cherry blossoms line the path to school, mild air, a hopeful atmosphere.',
+    autumn: 'SEASON: It is autumn — maple leaves drift outside the clubroom windows, cool crisp air, a wistful mood.',
+    winter: 'SEASON: It is winter — bare trees, cold air sharp at the edges, the warmth of being indoors feels precious.'
+  };
+  if (seasonMap[opts.season]) parts.push(seasonMap[opts.season]);
+
+  const joinMap = {
+    sayori:  "JOIN: MC joined the Literature Club because his childhood friend Sayori enthusiastically invited him — he couldn't say no to her.",
+    monika:  'JOIN: MC joined because Monika personally approached him in the hallway and recruited him with her characteristic confidence.',
+    yuri:    'JOIN: MC joined because Yuri quietly mentioned the club during class, and something about her earnestness intrigued him.',
+    natsuki: 'JOIN: MC joined after overhearing Natsuki mention the club — she denies she was encouraging him, but he came anyway.',
+    self:    'JOIN: MC discovered the club notice on the bulletin board himself and joined on his own initiative, out of genuine curiosity.'
+  };
+  if (joinMap[opts.joinReason]) parts.push(joinMap[opts.joinReason]);
+
+  if (opts.history === 'weeks_in')
+    parts.push('HISTORY: MC has been a member of the Literature Club for a few weeks. He knows all four girls and they are at ease around him. There is no awkward first-meeting energy.');
+  if (opts.history === 'old_friend')
+    parts.push('HISTORY: MC and Sayori have been close friends since childhood. Their bond is deep and easy. Through her, he already knows the other club members by name and reputation.');
+
+  if (opts.tone === 'melancholic')
+    parts.push('TONE: Write with a melancholic, literary sensibility — moments of quiet longing, wistful reflection, and beauty in impermanence are welcome alongside warmth.');
+  if (opts.tone === 'humorous')
+    parts.push('TONE: Write with warmth and gentle humor — light banter, amusing misunderstandings, and the small comedies of club life are encouraged.');
+
+  const personalityMap = {
+    introspective: 'MC VOICE: He is introspective — he notices small details, muses on what he reads, and expresses himself through observation rather than assertion.',
+    outgoing:      'MC VOICE: He is outgoing and warm — he takes initiative in conversation, puts people at ease, and genuinely enjoys connecting with each girl.',
+    reserved:      'MC VOICE: He is reserved — he speaks carefully and prefers listening; his rare moments of openness carry extra weight.'
+  };
+  if (personalityMap[opts.personality]) parts.push(personalityMap[opts.personality]);
+
+  const emphasisMap = {
+    literary: 'CLUB EMPHASIS: The club leans into its literary side — discussions of poetry, novel excerpts, and writing exercises are prominent.',
+    baking:   "CLUB EMPHASIS: Natsuki's enthusiasm for baking and manga is front-and-center today. Expect snacks, craft energy, and her brand of passionate directness.",
+    poetry:   'CLUB EMPHASIS: Yuri\'s love of immersive poetry shapes the mood. Expect intimate, introspective moments and discussions of language and meaning.'
+  };
+  if (emphasisMap[opts.clubEmphasis]) parts.push(emphasisMap[opts.clubEmphasis]);
+
+  if (opts.importProfile && typeof buildProfilePrompt === 'function') {
+    const profileText = buildProfilePrompt();
+    if (profileText) parts.push('PLAYER PROFILE (Monika knows this about the real person behind the screen — weave it in subtly):\n' + profileText);
+  }
+
+  return parts.length ? '\n\n=== STORY CONTEXT ===\n' + parts.join('\n') : '';
+}
+
 // ====== BUILD MESSAGES ======
 // Condensed character reminder injected when conversation is long
 const CHARACTER_REMINDER = `[Character quick-ref: Sayori=coral pink hair+red bow, sky blue eyes, bubbly/cheerful childhood friend. Natsuki=pink bob+ribbon clips, fuchsia eyes, tsundere with sharp tongue. Yuri=long dark purple hair, soft violet eyes, shy bookworm. Monika=chestnut ponytail+white bow, emerald green eyes, confident club president. Write their dialogue in-character.]`;
@@ -205,10 +259,12 @@ function buildMessages(chat) {
       }
     }
     // Keep phase instruction out of the main system prompt — it goes at the END
+    const storyOptionsBlock = buildStoryOptionsBlock(chat);
     const systemPrompt = STORY_PROMPT_BASE
       + `\n\n${AFFINITY_BEHAVIOR_TIERS}`
       + (milestoneNote ? `\n\n${milestoneNote}` : '')
       + dayContinuity
+      + storyOptionsBlock
       + `\n\n=== CURRENT STATE ===\nDay: ${day}\nMC's name: ${mcName}\n${buildAffinityDirective(aff, chat)}`;
 
     // Trim to last N messages to prevent context overflow

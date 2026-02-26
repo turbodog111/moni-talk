@@ -7,6 +7,17 @@ Versions follow **X.Y.Z**:
 
 ---
 
+## v0.6.2 — Story Mode Augmentation (2026-02-25)
+
+- **6 pre-story selectors**: Season (Spring / Autumn / Winter), How You Joined (Sayori / Monika / Yuri / Natsuki / Self), History with Club (First day / Weeks in / Old friend of Sayori), Narrative Tone (Warm / Melancholic / Humorous), MC Personality (Introspective / Outgoing / Reserved), Club Emphasis (Balanced / Literary / Baking / Poetry)
+- **Random option** on every selector — resolved at chat creation, never stored as "random"
+- **Starting affinities** now derived from join reason; history modifier boosts affinities for non-first-day starts
+- **Profile import toggle**: optionally inject player profile (name, about, interests, values) into the story system prompt via Monika's meta-awareness
+- All options injected as a `=== STORY CONTEXT ===` block in the AI system prompt; legacy chats unaffected
+- Options preserved in story checkpoints (save/restore across day transitions)
+
+---
+
 ## v0.6.1 — Arbor 0.1.1 · Models Panel · Changelog Redesign (2026-02-24)
 
 - Arbor 0.1.1 released: 250 training pairs, improved voice & instruction-following over 0.1

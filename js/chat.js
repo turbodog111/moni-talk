@@ -261,8 +261,41 @@ function createChat() {
     chat.storyDay = 1;
     chat.storyPhase = 'd1_before_club';
     chat.storyBeatInPhase = 0;
-    chat.storyAffinity = { sayori: 15, natsuki: 1, yuri: 1, monika: 10 };
     chat.milestonesCrossed = {};
+
+    // Read chip selections and resolve any "random" values
+    const resolveChip = (optName, values) => {
+      const sel = document.querySelector(`.story-opt-chips[data-opt="${optName}"] .story-chip.selected`);
+      const v = sel ? sel.dataset.value : null;
+      if (!v || v === 'random') return values[Math.floor(Math.random() * values.length)];
+      return v;
+    };
+    chat.storyOptions = {
+      season:       resolveChip('season',       ['spring','autumn','winter']),
+      joinReason:   resolveChip('joinReason',   ['sayori','monika','yuri','natsuki','self']),
+      history:      resolveChip('history',      ['first_day','weeks_in','old_friend']),
+      tone:         resolveChip('tone',         ['warm','melancholic','humorous']),
+      personality:  resolveChip('personality',  ['introspective','outgoing','reserved']),
+      clubEmphasis: resolveChip('clubEmphasis', ['balanced','literary','baking','poetry']),
+      importProfile: !!$('storyImportProfile').checked
+    };
+
+    // Starting affinity by joinReason
+    const affinityByJoin = {
+      sayori:  { sayori: 20, monika: 10, yuri:  1, natsuki:  1 },
+      monika:  { sayori: 10, monika: 20, yuri:  1, natsuki:  1 },
+      yuri:    { sayori: 10, monika:  8, yuri: 15, natsuki:  1 },
+      natsuki: { sayori: 10, monika:  8, yuri:  1, natsuki: 15 },
+      self:    { sayori: 10, monika: 10, yuri:  5, natsuki:  5 }
+    };
+    chat.storyAffinity = { ...(affinityByJoin[chat.storyOptions.joinReason] || affinityByJoin.sayori) };
+
+    // History: boost affinities for non-first-day starts
+    if (chat.storyOptions.history === 'weeks_in') {
+      for (const k of Object.keys(chat.storyAffinity)) chat.storyAffinity[k] = Math.min(chat.storyAffinity[k] + 12, 40);
+    } else if (chat.storyOptions.history === 'old_friend') {
+      chat.storyAffinity.sayori = Math.min(chat.storyAffinity.sayori + 25, 50);
+    }
   } else if (newChatMode === 'room') {
     chat.mode = 'room';
     const roomSlider = $('roomRelSlider');
