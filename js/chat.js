@@ -259,7 +259,7 @@ function createChat() {
     chat.mode = 'story';
     chat.mcName = $('mcNameInput').value.trim() || 'MC';
     chat.storyDay = 1;
-    chat.storyPhase = 'd1_before_club';
+    chat.storyPhase = 'd1_before_club'; // may be overridden below after storyOptions is resolved
     chat.storyBeatInPhase = 0;
     chat.milestonesCrossed = {};
 
@@ -295,6 +295,13 @@ function createChat() {
       for (const k of Object.keys(chat.storyAffinity)) chat.storyAffinity[k] = Math.min(chat.storyAffinity[k] + 12, 40);
     } else if (chat.storyOptions.history === 'old_friend') {
       chat.storyAffinity.sayori = Math.min(chat.storyAffinity.sayori + 25, 50);
+    }
+
+    // Non-first-day history: skip the scripted first-meeting intro phases entirely
+    // d1_before_club → d1_introductions are all first-meeting scenes and would directly
+    // contradict weeks_in / old_friend. Jump to d1_settling (casual clubroom scene).
+    if (chat.storyOptions.history === 'weeks_in' || chat.storyOptions.history === 'old_friend') {
+      chat.storyPhase = 'd1_settling';
     }
   } else if (newChatMode === 'room') {
     chat.mode = 'room';

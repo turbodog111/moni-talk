@@ -84,6 +84,60 @@ Do NOT include [END_OF_DAY], [POETRY], or [CHOICE] tags.`;
 
   let instruction = phase.instruction;
 
+  // ── Story-options overrides ──────────────────────────────────────────────
+  // Phase instructions are the final (most influential) message. They must not
+  // contradict the player's chosen history or join reason, or the AI ignores both.
+  const opts = chat.storyOptions;
+  if (opts) {
+    const capJoin = { sayori: 'Sayori', monika: 'Monika', yuri: 'Yuri', natsuki: 'Natsuki', self: null }[opts.joinReason] || 'Sayori';
+
+    // --- Join-reason overrides for d1_before_club (first_day only) ---
+    // The default instruction hardcodes Sayori + math-class Monika regardless of join reason.
+    if (phaseKey === 'd1_before_club' && opts.history === 'first_day') {
+      if (opts.joinReason === 'monika') {
+        instruction = `Scene: The final bell rings. Monika approaches MC in the hallway specifically to recruit him — she made her case earlier today and this is the follow-up. She's confident and warm, mentioning she thinks he'd fit the Literature Club well. MC is genuinely considering it. Sayori spots him talking to Monika and bounces over, immediately thrilled that her childhood friend might be joining too. Both girls now want him at today's meeting. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (opts.joinReason === 'yuri') {
+        instruction = `Scene: The final bell rings. MC is still thinking about something Yuri quietly said in class — she mentioned the Literature Club almost to herself, and somehow it stuck. He's actually considering going. Sayori finds him in the hallway still deliberating and immediately adopts him as her new recruitment project, cheerfully declaring she's been meaning to get him to come. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (opts.joinReason === 'natsuki') {
+        instruction = `Scene: The final bell rings. MC is thinking about what he overheard Natsuki saying about the Literature Club — it wasn't directed at him, but it clearly made an impression. He finds himself heading upstairs anyway. Sayori is waiting near the club door and nearly explodes with excitement when she realizes he's actually coming. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (opts.joinReason === 'self') {
+        instruction = `Scene: The final bell rings. MC stops at the bulletin board on the way out — the Literature Club notice. He's passed it for weeks. Today he actually reads it, and then actually goes. He walks up to the clubroom alone. Sayori is waiting by the door and her reaction to seeing him is immediate and overwhelming. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      }
+      // 'sayori' join reason: default instruction already centers Sayori — acceptable as-is
+    }
+
+    // --- weeks_in / old_friend: replace all intro-sequence phases with familiar-club openings ---
+    // These phases contain explicit "MC does not know names yet" / "THIS is when MC learns names"
+    // language that directly contradicts non-first-day history.
+    if (opts.history === 'weeks_in' && ['d1_settling', 'd1_activity'].includes(phaseKey)) {
+      if (phaseKey === 'd1_settling') {
+        instruction = `Scene: MC arrives at the Literature Club — a routine he knows well by now. He knows all four girls: Sayori, Natsuki, Yuri, and Monika. They know him. No introductions are needed and none should happen. Write an opening scene that shows the easy, established familiarity of a group that has settled into each other: small habits, inside references, the particular comfort of people who have spent weeks together. ${capJoin !== null ? `${capJoin}'s presence is the warmest — a small reminder of the connection that brought MC here.` : 'The girls each greet him in their own characteristic way.'} Do NOT write any first-meeting language. Do NOT introduce any character as if MC is meeting them for the first time. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (phaseKey === 'd1_activity') {
+        instruction = `Scene: The club session continues. Monika steers things toward today's activity — this is familiar territory, not an explanation for a new member's benefit. The girls engage naturally: Yuri is thoughtful and considered, Natsuki is opinionated and quick, Sayori is enthusiastic. MC participates as someone who belongs here. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      }
+    }
+
+    if (opts.history === 'old_friend' && ['d1_settling', 'd1_activity'].includes(phaseKey)) {
+      if (phaseKey === 'd1_settling') {
+        instruction = `Scene: MC and Sayori arrive at the Literature Club together — they always do. The other girls greet MC with the easy warmth of people who know him through Sayori; he is not new here and none of them treat him as if he is. The scene opens on this web of familiarity: Sayori's particular ease with MC (the shorthand of childhood friends), and the way the others have folded him into the group through her. Do NOT write any introductions or first-meeting energy. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (phaseKey === 'd1_activity') {
+        instruction = `Scene: The club session moves into its activity. MC is comfortable here — this is Sayori's world and through her it became his. Monika runs things with her usual ease. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      }
+    }
+
+    // --- Season atmosphere: prefix to every phase instruction ---
+    // The season storyContext block is in the system prompt (lower weight for small models).
+    // A brief prefix here reinforces it where it matters most.
+    if (instruction && opts.season && opts.season !== 'spring') {
+      const seasonPrefix = {
+        autumn: '[Autumn: golden light through the windows, cool air, wistful mood] ',
+        winter: '[Winter: cold outside, clubroom heater on, the warmth of being indoors feels earned] '
+      }[opts.season];
+      if (seasonPrefix) instruction = seasonPrefix + instruction;
+    }
+  }
+  // ── End story-options overrides ──────────────────────────────────────────
+
   // Dynamic free_time instruction — focused on chosen companion
   if (!instruction && phaseKey === 'free_time') {
     const aff = chat.storyAffinity || {};
