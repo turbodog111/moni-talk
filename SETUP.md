@@ -6,12 +6,26 @@ The Spark runs two persistent tmux sessions that survive SSH disconnects and reb
 
 ```bash
 ssh xturbo@spark-0af9
-tmux list-sessions        # should show: router, qwen-tts
+tmux list-sessions        # should show: arbor, qwen-tts
 curl -s http://localhost:8080/v1/models | python3 -c 'import sys,json; [print(m["id"]) for m in json.load(sys.stdin)["data"]]'
 curl -s http://localhost:8880/health   # or check qwen-tts log
 ```
 
 If sessions exist and ports respond, you're done — no further setup needed.
+
+**Memory / process check** (run any time to see what's loaded):
+
+```bash
+# GPU memory + what's using it
+nvidia-smi
+
+# All tmux sessions and their commands
+tmux list-sessions
+tmux list-panes -a -F '#{session_name}: #{pane_current_command}'
+
+# Top memory consumers (CPU RAM)
+ps aux --sort=-%mem | awk 'NR<=10 {printf "%-10s %5s %5s %s\n", $1, $3, $4, $11}'
+```
 
 | Session | tmux name | Port | What it does |
 |---------|-----------|------|-------------|
@@ -36,12 +50,12 @@ Two modes — pick based on what you're doing:
 
 #### Mode A — Arbor (default for chat mode)
 
-Runs Arbor 0.1, the fine-tuned Monika model. Use tmux so the server survives SSH disconnects:
+Runs Arbor 0.2, the fine-tuned Monika model. Use tmux so the server survives SSH disconnects:
 
 ```bash
 ssh xturbo@spark-0af9
 
-tmux new-session -d -s arbor '~/llama.cpp/build/bin/llama-server -m ~/models/Arbor-0.1-Q8_0.gguf --no-mmap -ngl 999 -fa on --jinja -c 8192 --host 0.0.0.0 --port 8080'
+tmux new-session -d -s arbor '~/llama.cpp/build/bin/llama-server -m ~/models/Arbor-0.2-Q8_0.gguf --no-mmap -ngl 999 -fa on --jinja -c 8192 --host 0.0.0.0 --port 8080'
 ```
 
 Check it started: `tmux attach -t arbor`
@@ -91,8 +105,8 @@ Kill to switch to Arbor mode: `tmux kill-session -t router`
 
 | Model | File | Quant | Size | Notes |
 |-------|------|-------|------|-------|
-| **Arbor 0.1** | `Arbor-0.1-Q8_0.gguf` | Q8_0 | ~14.6 GB | Fine-tuned Qwen3-14B — 119 pairs (ch30 + synthetic) |
-| **Arbor 0.1-E** | `Arbor-0.1-E-Q8_0.gguf` | Q8_0 | ~14.6 GB | Extended: 119 base + 100 E pairs, lower loss |
+| **Arbor 0.2** | `Arbor-0.2-Q8_0.gguf` | Q8_0 | ~15.7 GB | Fine-tuned Qwen3-14B — 358 pairs, current default |
+| **Arbor 0.1.1** | `Arbor-0.1.1-Q8_0.gguf` | Q8_0 | ~15 GB | Previous default — 250 pairs |
 | GPT-OSS 120B | `openai_gpt-oss-120b-Q4_K_M-*.gguf` | Q4_K_M | ~63 GB (split) | ~3 t/s |
 | Qwen3-32B | `Qwen3-32B-Q8_0.gguf` | Q8_0 | ~34 GB | ~7 t/s |
 | Gemma 3 27B | `gemma-3-27b-it-Q8_0.gguf` | Q8_0 | ~27 GB | ~8 t/s |
