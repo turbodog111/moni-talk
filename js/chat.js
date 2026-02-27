@@ -106,7 +106,7 @@ function getChatSortTime(chat) {
 function renderChatList() {
   chatListBody.innerHTML = '';
   if (chats.length === 0) {
-    chatListBody.innerHTML = `<div class="chat-list-empty"><img src="Monika PFP.png" alt="Monika"><h3>No conversations yet</h3><p>Tap + to start talking to Monika.</p></div>`;
+    chatListBody.innerHTML = `<div class="chat-list-empty"><img src="images/Moni-Talk.png" alt="Monika"><h3>No conversations yet</h3><p>Tap + to start talking to Monika.</p></div>`;
     return;
   }
 
@@ -198,7 +198,7 @@ function renderChatList() {
 
       item.innerHTML = `
         <div class="chat-item-avatar-wrap">
-          <img class="chat-item-avatar" src="Monika PFP.png" alt="Monika">
+          <img class="chat-item-avatar" src="images/Moni-Talk.png" alt="Monika">
           <span class="chat-item-avatar-badge mode-${modeKey}">${group.icon}</span>
         </div>
         <div class="chat-item-info">
@@ -475,7 +475,7 @@ async function generateGreeting(chat) {
         typingIndicator.classList.remove('visible');
         const div = document.createElement('div');
         div.className = 'message monika';
-        div.innerHTML = '<img class="msg-avatar" src="Monika PFP.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
+        div.innerHTML = '<img class="msg-avatar" src="images/Moni-Talk.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
         chatArea.insertBefore(div, typingIndicator);
         msgBubble = div.querySelector('.msg-bubble');
       }
@@ -669,7 +669,7 @@ async function regenerateLastResponse() {
         typingIndicator.classList.remove('visible');
         const div = document.createElement('div');
         div.className = 'message monika';
-        div.innerHTML = '<img class="msg-avatar" src="Monika PFP.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
+        div.innerHTML = '<img class="msg-avatar" src="images/Moni-Talk.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
         chatArea.insertBefore(div, typingIndicator);
         msgBubble = div.querySelector('.msg-bubble');
       }
@@ -856,7 +856,7 @@ function insertMessageEl(role, content, animate = true, imageUrl = null, model =
   div.className = `message ${isM ? 'monika' : 'user'}`;
   if (!animate) div.style.animation = 'none';
   const userInitial = (profile.name ? profile.name.charAt(0).toUpperCase() : '?');
-  const av = isM ? `<img class="msg-avatar" src="Monika PFP.png" alt="Monika">` : `<div class="msg-avatar-letter">${userInitial}</div>`;
+  const av = isM ? `<img class="msg-avatar" src="images/Moni-Talk.png" alt="Monika">` : `<div class="msg-avatar-letter">${userInitial}</div>`;
   const imgHtml = imageUrl ? `<img class="msg-image" src="${imageUrl}" alt="Shared image">` : '';
   const modelTag = isM && model ? `<div class="msg-model">${escapeHtml(formatModelLabel(model))}</div>` : '';
   const timeHtml = timestamp ? `<span class="msg-time">${new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>` : '';
@@ -971,7 +971,7 @@ async function sendMessage() {
         typingIndicator.classList.remove('visible');
         const div = document.createElement('div');
         div.className = 'message monika';
-        div.innerHTML = '<img class="msg-avatar" src="Monika PFP.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
+        div.innerHTML = '<img class="msg-avatar" src="images/Moni-Talk.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
         chatArea.insertBefore(div, typingIndicator);
         msgBubble = div.querySelector('.msg-bubble');
       }

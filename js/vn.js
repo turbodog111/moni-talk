@@ -188,7 +188,7 @@ function renderJournalEntries(entries) {
   container.innerHTML = '';
   const order = ['sayori', 'monika', 'natsuki', 'yuri'];
   const names = { sayori: "Sayori's Diary", monika: "Monika's Journal", natsuki: "Natsuki's Notes", yuri: "Yuri's Diary" };
-  const images = { sayori: 'Sayori PFP.png', monika: 'Monika PFP.png', natsuki: 'Natsuki PFP.png', yuri: 'Yuri PFP.png' };
+  const images = { sayori: 'images/Sayori PFP.png', monika: 'images/Monika PFP.png', natsuki: 'images/Natsuki PFP.png', yuri: 'images/Yuri PFP.png' };
   order.forEach(girl => {
     const text = entries[girl] || 'Nothing to write today...';
     const div = document.createElement('div');

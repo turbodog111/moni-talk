@@ -399,7 +399,7 @@ function updateAdventurePanel() {
   const mapList = $('advDomainMap');
   if (mapList) {
     const domains = ['sayori', 'natsuki', 'yuri', 'monika'];
-    const pfpMap = { sayori: 'Sayori PFP.png', natsuki: 'Natsuki PFP.png', yuri: 'Yuri PFP.png', monika: 'Monika PFP.png' };
+    const pfpMap = { sayori: 'images/Sayori PFP.png', natsuki: 'images/Natsuki PFP.png', yuri: 'images/Yuri PFP.png', monika: 'images/Monika PFP.png' };
     const current = s.currentDomain || detectDomain(s.location);
     const cards = domains.map(key => {
       const d = ADVENTURE_DOMAINS[key];
