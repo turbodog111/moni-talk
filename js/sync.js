@@ -151,6 +151,8 @@ async function syncFromCloud() {
         );
         if (!isDup) merged.push(cm);
       }
+      // Back-fill IDs on any cloud memories that predate the ID system
+      merged.forEach(m => { if (!m.id) m.id = _makeId(); });
       memories = merged.slice(0, 50);
       localStorage.setItem('moni_talk_memories', JSON.stringify(memories));
     }
