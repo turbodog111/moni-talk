@@ -177,7 +177,7 @@ function renderProfileMemories() {
     const catLabel = capitalize(cat);
     html += `<div class="memory-category"><div class="memory-category-header"><span class="memory-category-icon">${icon}</span>${catLabel}</div>`;
     mems.forEach(m => {
-      html += `<div class="memory-item"><span class="memory-fact">${escapeHtml(m.fact)}</span><span class="memory-date">${m.date || ''}</span><button class="memory-delete" data-fact="${escapeHtml(m.fact)}" title="Forget">&times;</button></div>`;
+      html += `<div class="memory-item"><span class="memory-fact">${escapeHtml(m.fact)}</span><span class="memory-date">${m.date || ''}</span><button class="memory-delete" data-id="${escapeHtml(m.id || '')}" title="Forget">&times;</button></div>`;
     });
     html += '</div>';
   }

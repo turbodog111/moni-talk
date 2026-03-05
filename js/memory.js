@@ -1,76 +1,92 @@
 // ====== PERSISTENT MEMORY SYSTEM ======
-const MAX_MEMORIES = 50;
+const MAX_MEMORIES = 60;
 let _memoryApprovalTimer = null;
 
-const MEMORY_EXTRACTION_PROMPT = `You are a memory extraction system. Analyze this conversation exchange and extract any new personal facts about the user.
+// ── Deleted-fact blacklist ────────────────────────────────────────────────────
+// Stores IDs of memories the user has explicitly deleted or rejected so they
+// never get re-extracted and re-added in a later conversation.
+function loadDeletedIds() {
+  try { return new Set(JSON.parse(localStorage.getItem('moni_talk_memories_deleted') || '[]')); }
+  catch { return new Set(); }
+}
+function saveDeletedIds(set) {
+  localStorage.setItem('moni_talk_memories_deleted', JSON.stringify([...set]));
+}
+function blacklistFact(fact) {
+  const set = loadDeletedIds();
+  set.add(_factKey(fact));
+  saveDeletedIds(set);
+}
+function isBlacklisted(fact) {
+  return loadDeletedIds().has(_factKey(fact));
+}
+function _factKey(fact) {
+  // Normalize: lowercase, collapse whitespace — makes blacklist robust to minor wording drift
+  return fact.toLowerCase().replace(/\s+/g, ' ').trim();
+}
 
-Return ONLY a JSON array of objects. Each object has:
-- "fact": a concise statement about the user (e.g. "User's name is Joshua")
-- "category": one of: identity, preferences, events, relationships, feelings, other
+// ── Stable memory IDs ─────────────────────────────────────────────────────────
+function _makeId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
 
-Rules:
-- Only extract CLEAR, EXPLICIT facts the user directly stated or strongly implied
-- Do NOT extract Monika's opinions or feelings
-- Do NOT extract vague or uncertain information
-- Do NOT extract conversational filler or temporary states
-- Keep facts concise — one sentence max
-- If there are no new facts, return an empty array: []
-
-Examples of good extractions:
-- "My name is Josh" → {"fact": "User's name is Josh", "category": "identity"}
-- "I love rock music" → {"fact": "User loves rock music", "category": "preferences"}
-- "My cat died last week" → {"fact": "User's cat recently passed away", "category": "events"}
-- "I have a sister named Amy" → {"fact": "User has a sister named Amy", "category": "relationships"}
-
-Return ONLY the JSON array, nothing else.`;
-
-const MEMORY_CATEGORY_ICONS_BANNER = {
-  identity: '\uD83D\uDC64', preferences: '\u2764\uFE0F', events: '\uD83D\uDCC5',
-  relationships: '\uD83D\uDC65', feelings: '\uD83D\uDC9C', other: '\uD83D\uDCDD'
-};
-
+// ── Persistence ───────────────────────────────────────────────────────────────
 function loadMemories() {
   try {
     const raw = localStorage.getItem('moni_talk_memories');
-    return raw ? JSON.parse(raw) : [];
+    const mems = raw ? JSON.parse(raw) : [];
+    // Back-fill IDs on old memories that don't have them
+    let changed = false;
+    mems.forEach(m => { if (!m.id) { m.id = _makeId(); changed = true; } });
+    if (changed) localStorage.setItem('moni_talk_memories', JSON.stringify(mems));
+    return mems;
   } catch { return []; }
 }
 
 function saveMemories(mems) {
   memories = mems;
   localStorage.setItem('moni_talk_memories', JSON.stringify(mems));
-  // Trigger Puter sync if available
   queueSync();
 }
 
+// ── Public delete — adds to blacklist so it never comes back ──────────────────
+function deleteMemory(id) {
+  const idx = memories.findIndex(m => m.id === id);
+  if (idx === -1) return false;
+  blacklistFact(memories[idx].fact);
+  memories.splice(idx, 1);
+  saveMemories(memories);
+  return true;
+}
+
+// ── Prompt injection ──────────────────────────────────────────────────────────
 function buildMemoryPrompt(chat) {
   if (!memories || memories.length === 0) return '';
 
-  const MAX_INJECTED = 20;
+  const MAX_INJECTED = 25;
   let scored = memories.map(m => ({ ...m, score: 0 }));
 
-  // Always-relevant categories get a base score boost
+  // Identity and relationships are always relevant
   scored.forEach(m => {
     if (m.category === 'identity' || m.category === 'relationships') m.score += 10;
+    if (m.category === 'preferences') m.score += 4;
   });
 
-  // Score by relevance to recent messages
+  // Boost facts that overlap with words from the last few user messages
   if (chat && chat.messages && chat.messages.length > 0) {
-    const recentUserMsgs = chat.messages
+    const recentText = chat.messages
       .filter(m => m.role === 'user')
-      .slice(-5)
+      .slice(-6)
       .map(m => (typeof m.content === 'string' ? m.content : '').toLowerCase())
       .join(' ');
-    const words = recentUserMsgs.split(/\s+/).filter(w => w.length > 3);
+    const words = new Set(recentText.split(/\s+/).filter(w => w.length > 3));
     scored.forEach(m => {
-      const factLower = m.fact.toLowerCase();
-      for (const w of words) {
-        if (factLower.includes(w)) { m.score += 3; break; }
-      }
+      const fl = m.fact.toLowerCase();
+      for (const w of words) { if (fl.includes(w)) { m.score += 5; break; } }
     });
   }
 
-  // Sort by score desc, then by recency (newest first)
+  // Sort by score desc, then newest first
   scored.sort((a, b) => b.score - a.score || (b.date || '').localeCompare(a.date || ''));
   const selected = scored.slice(0, MAX_INJECTED);
 
@@ -78,15 +94,49 @@ function buildMemoryPrompt(chat) {
   return `\n\nTHINGS YOU REMEMBER ABOUT THIS PERSON (from past conversations):\n${facts}\n- Reference these naturally when relevant — don't list them off or make it obvious you're recalling a database. Just know them, the way a real person remembers things about someone they care about.`;
 }
 
-// Extract candidate facts without saving — returns validated, deduplicated array
-async function extractMemoryCandidates(userMsg, aiReply) {
+// ── Extraction ────────────────────────────────────────────────────────────────
+const MEMORY_EXTRACTION_PROMPT = `You are a memory extraction system for an AI companion app. Analyze the recent conversation and extract personal facts about the user.
+
+Return ONLY a JSON array. Each element: {"fact": "...", "category": "..."}
+
+Categories: identity | preferences | events | relationships | feelings | other
+
+Rules:
+- Extract CLEAR facts the user directly stated or strongly implied about themselves
+- Include recent life context: what they're working on, stressed about, excited about, going through
+- Include time-relevant facts: "User is preparing for X", "User recently did Y"
+- Do NOT extract Monika's opinions, feelings, or anything Monika said
+- Do NOT extract vague, uncertain, or purely conversational filler
+- Do NOT re-extract facts already listed under EXISTING MEMORIES
+- One sentence per fact, max 150 characters
+- If nothing new, return []
+
+Good examples:
+- "I'm a software developer" → {"fact": "User works as a software developer", "category": "identity"}
+- "I've been stressed about my job interview" → {"fact": "User has been stressed about a job interview", "category": "feelings"}
+- "My dog's name is Max" → {"fact": "User has a dog named Max", "category": "relationships"}
+- "I'm competing in a piano recital next week" → {"fact": "User is preparing for a piano recital", "category": "events"}
+- "I hate waking up early" → {"fact": "User dislikes waking up early", "category": "preferences"}
+
+Return ONLY the JSON array, nothing else.`;
+
+async function extractMemoryCandidates(recentMessages) {
+  // Build a readable transcript of the last few exchanges
+  const transcript = recentMessages
+    .map(m => `${m.role === 'user' ? 'User' : 'Monika'}: ${typeof m.content === 'string' ? m.content.slice(0, 400) : ''}`)
+    .join('\n');
+
+  const existingFacts = memories.length > 0
+    ? `\nEXISTING MEMORIES (do not re-extract these):\n${memories.map(m => `- ${m.fact}`).join('\n')}`
+    : '';
+
   const messages = [
     { role: 'system', content: MEMORY_EXTRACTION_PROMPT },
-    { role: 'user', content: `User said: "${userMsg}"\n\nMonika replied: "${aiReply}"\n\nExtract any new personal facts about the user.` }
+    { role: 'user', content: `Recent conversation:\n${transcript}${existingFacts}\n\nExtract any new personal facts about the user.` }
   ];
-  const response = await callAI(messages, 300);
 
-  // Parse JSON from response — handle markdown code blocks
+  const response = await callAI(messages, 400);
+
   let cleaned = response.trim();
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
@@ -96,49 +146,52 @@ async function extractMemoryCandidates(userMsg, aiReply) {
   if (!Array.isArray(newFacts) || newFacts.length === 0) return [];
 
   const validCategories = ['identity', 'preferences', 'events', 'relationships', 'feelings', 'other'];
-  const validated = newFacts.filter(f =>
-    f && typeof f.fact === 'string' && f.fact.length > 0 &&
-    validCategories.includes(f.category)
-  ).map(f => ({
-    fact: f.fact.slice(0, 200),
-    category: f.category,
-    date: new Date().toISOString().split('T')[0]
-  }));
+  const validated = newFacts
+    .filter(f => f && typeof f.fact === 'string' && f.fact.trim().length > 0 && validCategories.includes(f.category))
+    .map(f => ({
+      id: _makeId(),
+      fact: f.fact.trim().slice(0, 200),
+      category: f.category,
+      date: new Date().toISOString().split('T')[0]
+    }));
 
-  // Deduplicate against existing memories
+  // Filter out blacklisted (previously deleted/rejected) and duplicates of existing memories
   return validated.filter(nf => {
+    if (isBlacklisted(nf.fact)) return false;
     return !memories.some(m =>
-      m.fact.toLowerCase().includes(nf.fact.toLowerCase()) ||
-      nf.fact.toLowerCase().includes(m.fact.toLowerCase())
+      m.fact.toLowerCase().includes(nf.fact.toLowerCase().slice(0, 30)) ||
+      nf.fact.toLowerCase().includes(m.fact.toLowerCase().slice(0, 30))
     );
   });
 }
 
-// Main entry point — extracts candidates, shows approval UI if any found
-async function extractMemories(userMsg, aiReply) {
+// Main entry point
+async function extractMemories(recentMessages) {
   try {
-    const candidates = await extractMemoryCandidates(userMsg, aiReply);
+    const candidates = await extractMemoryCandidates(recentMessages);
     if (candidates.length === 0) return;
     showMemoryApproval(candidates);
   } catch (err) {
-    // Silent failure — memory extraction is non-critical
     console.debug('Memory extraction skipped:', err.message);
   }
 }
 
-// Merge approved facts into memory and save
+// Merge approved facts
 function approveMemories(facts) {
   if (!facts || facts.length === 0) return;
   const merged = mergeNewMemories(memories, facts);
   saveMemories(merged);
-  // Refresh chat panel if open
   const chat = typeof getChat === 'function' ? getChat() : null;
   if (chat && typeof updateChatPanel === 'function') updateChatPanel(chat);
 }
 
-// ====== MEMORY APPROVAL BANNER UI ======
+// ── Approval Banner UI ────────────────────────────────────────────────────────
+const MEMORY_CATEGORY_ICONS_BANNER = {
+  identity: '\uD83D\uDC64', preferences: '\u2764\uFE0F', events: '\uD83D\uDCC5',
+  relationships: '\uD83D\uDC65', feelings: '\uD83D\uDC9C', other: '\uD83D\uDCDD'
+};
+
 function showMemoryApproval(candidates) {
-  // Dismiss any existing banner first
   dismissMemoryApproval();
 
   const chatArea = document.getElementById('chatArea');
@@ -147,6 +200,8 @@ function showMemoryApproval(candidates) {
   const banner = document.createElement('div');
   banner.className = 'memory-approval-banner';
   banner.id = 'memoryApprovalBanner';
+
+  const accepted = new Array(candidates.length).fill(null);
 
   let factsHtml = candidates.map((c, i) => {
     const icon = MEMORY_CATEGORY_ICONS_BANNER[c.category] || '\uD83D\uDCDD';
@@ -160,101 +215,85 @@ function showMemoryApproval(candidates) {
 
   banner.innerHTML = `
     <div class="memory-approval-header">
-      <span class="memory-approval-title">\uD83E\uDDE0 Monika noticed some things about you</span>
+      <span class="memory-approval-title">\uD83E\uDDE0 Monika noticed some things</span>
       <button class="memory-approval-dismiss" title="Dismiss">\u2715</button>
     </div>
     <div class="memory-approval-list">${factsHtml}</div>
     <button class="memory-approval-all">Remember All</button>`;
 
-  // Insert at top of chat area
   chatArea.insertBefore(banner, chatArea.firstChild);
 
-  // Track accepted/rejected state
-  const accepted = new Array(candidates.length).fill(null); // null = pending, true = accepted, false = rejected
-
-  // Dismiss button
   banner.querySelector('.memory-approval-dismiss').addEventListener('click', () => {
+    // Dismissing without acting = accept pending items silently
+    const pending = candidates.filter((_, i) => accepted[i] === null);
+    if (pending.length > 0) approveMemories(pending);
     dismissMemoryApproval();
   });
 
-  // Accept individual
   banner.querySelectorAll('.memory-approval-accept').forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.index);
+      if (accepted[idx] !== null) return;
       accepted[idx] = true;
       const row = banner.querySelector(`.memory-approval-fact[data-index="${idx}"]`);
       if (row) { row.classList.add('accepted'); row.classList.remove('rejected'); }
-      // Save this single fact immediately
       approveMemories([candidates[idx]]);
       checkAllResolved();
     });
   });
 
-  // Reject individual
   banner.querySelectorAll('.memory-approval-reject').forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.index);
+      if (accepted[idx] !== null) return;
       accepted[idx] = false;
+      // Blacklist so it never comes back
+      blacklistFact(candidates[idx].fact);
       const row = banner.querySelector(`.memory-approval-fact[data-index="${idx}"]`);
       if (row) { row.classList.add('rejected'); row.classList.remove('accepted'); }
       checkAllResolved();
     });
   });
 
-  // Remember All
   banner.querySelector('.memory-approval-all').addEventListener('click', () => {
-    const remaining = candidates.filter((_, i) => accepted[i] !== true && accepted[i] !== false);
+    const remaining = candidates.filter((_, i) => accepted[i] === null);
     if (remaining.length > 0) approveMemories(remaining);
     dismissMemoryApproval();
   });
 
   function checkAllResolved() {
-    if (accepted.every(a => a !== null)) {
-      // All facts resolved — auto-dismiss after short delay
-      setTimeout(() => dismissMemoryApproval(), 600);
-    }
+    if (accepted.every(a => a !== null)) setTimeout(() => dismissMemoryApproval(), 600);
   }
 
-  // Auto-dismiss after 30 seconds
-  _memoryApprovalTimer = setTimeout(() => dismissMemoryApproval(), 30000);
+  _memoryApprovalTimer = setTimeout(() => {
+    // Auto-save pending on timeout instead of discarding
+    const pending = candidates.filter((_, i) => accepted[i] === null);
+    if (pending.length > 0) approveMemories(pending);
+    dismissMemoryApproval();
+  }, 45000);
 }
 
 function dismissMemoryApproval() {
-  if (_memoryApprovalTimer) {
-    clearTimeout(_memoryApprovalTimer);
-    _memoryApprovalTimer = null;
-  }
+  if (_memoryApprovalTimer) { clearTimeout(_memoryApprovalTimer); _memoryApprovalTimer = null; }
   const banner = document.getElementById('memoryApprovalBanner');
-  if (banner) {
-    banner.classList.add('dismissing');
-    setTimeout(() => banner.remove(), 300);
-  }
+  if (banner) { banner.classList.add('dismissing'); setTimeout(() => banner.remove(), 300); }
 }
 
+// ── Merge & consolidate ───────────────────────────────────────────────────────
 function mergeNewMemories(existing, newFacts) {
   const merged = [...existing];
-
   for (const nf of newFacts) {
-    // Check for duplicates — simple substring matching
-    const isDuplicate = merged.some(m =>
-      m.fact.toLowerCase().includes(nf.fact.toLowerCase()) ||
-      nf.fact.toLowerCase().includes(m.fact.toLowerCase())
+    if (!nf.id) nf.id = _makeId();
+    const isDupe = merged.some(m =>
+      m.fact.toLowerCase().includes(nf.fact.toLowerCase().slice(0, 30)) ||
+      nf.fact.toLowerCase().includes(m.fact.toLowerCase().slice(0, 30))
     );
-    if (!isDuplicate) {
-      merged.push(nf);
-    }
+    if (!isDupe) merged.push(nf);
   }
-
-  // Cap at MAX_MEMORIES — if over, consolidate
-  if (merged.length > MAX_MEMORIES) {
-    return consolidateMemories(merged);
-  }
-  return merged;
+  return merged.length > MAX_MEMORIES ? consolidateMemories(merged) : merged;
 }
 
 function consolidateMemories(mems) {
-  // Simple consolidation: keep most recent MAX_MEMORIES entries
-  // Group by category, keep newest from each category proportionally
   const byCategory = {};
   for (const m of mems) {
     const cat = m.category || 'other';
@@ -267,12 +306,10 @@ function consolidateMemories(mems) {
   const perCategory = Math.floor(MAX_MEMORIES / categories.length);
 
   for (const cat of categories) {
-    // Sort by date descending (newest first), then take top N
     const sorted = byCategory[cat].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     result.push(...sorted.slice(0, perCategory));
   }
 
-  // Fill remaining slots with newest overall
   if (result.length < MAX_MEMORIES) {
     const remaining = mems.filter(m => !result.includes(m))
       .sort((a, b) => (b.date || '').localeCompare(a.date || ''));

@@ -81,12 +81,7 @@ function init() {
   $('memoryList').addEventListener('click', (e) => {
     const delBtn = e.target.closest('.memory-delete');
     if (!delBtn) return;
-    const fact = delBtn.dataset.fact;
-    if (!fact) return;
-    const idx = memories.findIndex(m => m.fact === fact);
-    if (idx !== -1) {
-      memories.splice(idx, 1);
-      saveMemories(memories);
+    if (deleteMemory(delBtn.dataset.id)) {
       const chat = getChat();
       if (chat) updateChatPanel(chat);
       showToast('Memory forgotten.', 'success');
@@ -115,12 +110,7 @@ function init() {
   $('profileMemoryList').addEventListener('click', (e) => {
     const delBtn = e.target.closest('.memory-delete');
     if (!delBtn) return;
-    const fact = delBtn.dataset.fact;
-    if (!fact) return;
-    const idx = memories.findIndex(m => m.fact === fact);
-    if (idx !== -1) {
-      memories.splice(idx, 1);
-      saveMemories(memories);
+    if (deleteMemory(delBtn.dataset.id)) {
       renderProfileMemories();
       showToast('Memory forgotten.', 'success');
     }

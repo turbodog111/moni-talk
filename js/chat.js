@@ -468,7 +468,7 @@ async function generateGreeting(chat) {
 
   // Build a greeting-specific prompt using the existing system prompt + a trigger message
   const rel = RELATIONSHIPS[chat.relationship] || RELATIONSHIPS[2];
-  let sys = BASE_PROMPT + '\n\n' + rel.prompt + buildProfilePrompt() + buildMemoryPrompt();
+  let sys = BASE_PROMPT + '\n\n' + rel.prompt + buildProfilePrompt() + buildMemoryPrompt(chat);
   sys += '\n\nIf the conversation is brand new, greet the person warmly according to your relationship level. Keep it natural and short (1-3 sentences).';
 
   const greetChat = { ...chat, messages: [{ role: 'user', content: '[NEW_CONVERSATION]' }] };
@@ -1038,9 +1038,10 @@ async function sendMessage() {
       speakText(reply, mood, moodIntensity);
     }
 
-    // Memory extraction — rate limited: every 3rd exchange, skip short messages
-    if (chat.mode !== 'story' && chat.messages.length % 6 === 0 && text.length >= 15) {
-      extractMemories(text, reply).catch(() => {});
+    // Memory extraction — every 2 exchanges, skip trivially short messages
+    if (chat.mode !== 'story' && chat.messages.length % 4 === 0 && text.length >= 12) {
+      const recentMsgs = chat.messages.slice(-8); // last 4 exchanges for context
+      extractMemories(recentMsgs).catch(() => {});
     }
   } catch (err) {
     typingIndicator.classList.remove('visible');
@@ -1237,7 +1238,7 @@ function updateChatPanel(chat) {
         const icon = MEMORY_CATEGORY_ICONS[cat] || '\u{1F4DD}';
         html += `<div class="memory-category"><div class="memory-category-header"><span class="memory-category-icon">${icon}</span>${cat}</div>`;
         mems.forEach(m => {
-          html += `<div class="memory-item"><span class="memory-fact">${escapeHtml(m.fact)}</span><span class="memory-date">${m.date || ''}</span><button class="memory-delete" data-fact="${escapeHtml(m.fact)}" title="Forget">&times;</button></div>`;
+          html += `<div class="memory-item"><span class="memory-fact">${escapeHtml(m.fact)}</span><span class="memory-date">${m.date || ''}</span><button class="memory-delete" data-id="${escapeHtml(m.id || '')}" title="Forget">&times;</button></div>`;
         });
         html += '</div>';
       }
