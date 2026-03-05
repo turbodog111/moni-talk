@@ -87,28 +87,70 @@ Do NOT include [END_OF_DAY], [POETRY], or [CHOICE] tags.`;
   // ── Story-options overrides ──────────────────────────────────────────────
   // Phase instructions are the final (most influential) message. They must not
   // contradict the player's chosen history or join reason, or the AI ignores both.
+  // Every scripted Day 1 phase must have join-reason-specific instructions so the
+  // player's choice actually shapes the story from the first line of narration.
   const opts = chat.storyOptions;
   if (opts) {
     const capJoin = { sayori: 'Sayori', monika: 'Monika', yuri: 'Yuri', natsuki: 'Natsuki', self: null }[opts.joinReason] || 'Sayori';
 
-    // --- Join-reason overrides for d1_before_club (first_day only) ---
-    // The default instruction hardcodes Sayori + math-class Monika regardless of join reason.
+    // --- d1_before_club: how the invitation happens ---
     if (phaseKey === 'd1_before_club' && opts.history === 'first_day') {
       if (opts.joinReason === 'monika') {
-        instruction = `Scene: The final bell rings. Monika approaches MC in the hallway specifically to recruit him — she made her case earlier today and this is the follow-up. She's confident and warm, mentioning she thinks he'd fit the Literature Club well. MC is genuinely considering it. Sayori spots him talking to Monika and bounces over, immediately thrilled that her childhood friend might be joining too. Both girls now want him at today's meeting. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+        instruction = `Scene: The final bell rings. Monika approaches MC in the hallway — this is the follow-up to the direct pitch she made earlier today. She's confident and warm: she saw something in him and she's not shy about it. She tells him the club needs someone like him and asks him to come today. MC is genuinely considering it. On their way out Sayori spots them together and bounds over, happy that her friend might be coming too — but Monika remains the one who brought him here. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
       } else if (opts.joinReason === 'yuri') {
-        instruction = `Scene: The final bell rings. MC is still thinking about something Yuri quietly said in class — she mentioned the Literature Club almost to herself, and somehow it stuck. He's actually considering going. Sayori finds him in the hallway still deliberating and immediately adopts him as her new recruitment project, cheerfully declaring she's been meaning to get him to come. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+        instruction = `Scene: The final bell rings. MC is still turning over what Yuri said in class — she mentioned the Literature Club almost by accident, half to herself, and he can't quite let it go. He's decided to go. He runs into Sayori in the hallway and she immediately co-opts this as her personal victory, declaring she's been meaning to recruit him herself. He doesn't correct her. But the reason he's going is Yuri. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
       } else if (opts.joinReason === 'natsuki') {
-        instruction = `Scene: The final bell rings. MC is thinking about what he overheard Natsuki saying about the Literature Club — it wasn't directed at him, but it clearly made an impression. He finds himself heading upstairs anyway. Sayori is waiting near the club door and nearly explodes with excitement when she realizes he's actually coming. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+        instruction = `Scene: The final bell rings. MC is still thinking about what he overheard Natsuki say about the club — offhand, not meant for him, but it landed anyway. He's heading upstairs before he's made a conscious decision to. Sayori materializes beside him in the hallway, already thrilled that he's coming. He lets her think it was her influence. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
       } else if (opts.joinReason === 'self') {
-        instruction = `Scene: The final bell rings. MC stops at the bulletin board on the way out — the Literature Club notice. He's passed it for weeks. Today he actually reads it, and then actually goes. He walks up to the clubroom alone. Sayori is waiting by the door and her reaction to seeing him is immediate and overwhelming. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+        instruction = `Scene: The final bell rings. MC stops at the bulletin board — the Literature Club notice. He's walked past it a hundred times. Today he reads it all the way through. He goes. He runs into Sayori on the stairs; she reacts as if she had something to do with this. He doesn't correct her. He has no idea what he's walking into. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
       }
-      // 'sayori' join reason: default instruction already centers Sayori — acceptable as-is
+      // 'sayori': default instruction already centers Sayori — fine as-is
     }
 
-    // --- weeks_in / old_friend: replace all intro-sequence phases with familiar-club openings ---
-    // These phases contain explicit "MC does not know names yet" / "THIS is when MC learns names"
-    // language that directly contradicts non-first-day history.
+    // --- d1_arriving: who leads MC to the clubroom and what the entry moment feels like ---
+    if (phaseKey === 'd1_arriving' && opts.history === 'first_day') {
+      if (opts.joinReason === 'monika') {
+        instruction = `Scene: Monika walks with MC to the clubroom — she brought him here, and she's accompanying him properly. She tells him a little about the others on the way: there's a girl who reads everything, a girl who bakes and is prickly about it, and Sayori who will probably scream when she sees him. She's right. When they step inside, Sayori sees MC and lights up. Monika takes in his reaction to the room with quiet satisfaction. She knew this would be a good fit. Two girls MC doesn't know yet look up from what they're doing. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (opts.joinReason === 'yuri') {
+        instruction = `Scene: MC makes his way to the clubroom alone — he memorized just enough from what Yuri said to find it. He knocks. Sayori swings the door open, stares at him for half a second, then erupts. She hauls him inside before he can reconsider. From across the room, Yuri looks up from her book. When she recognizes him, she goes still. She was not expecting this. She drops her gaze quickly. Monika steps forward to greet the new arrival. Two girls MC doesn't know yet. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (opts.joinReason === 'natsuki') {
+        instruction = `Scene: MC finds the clubroom on his own — the door is slightly open, and he can hear voices inside. He pushes it wider. Natsuki is one of the first people he sees, and she sees him at almost the same moment. Something passes over her face — surprise, then immediate reset to neutral. She looks back at what she was doing with a studied lack of reaction. Sayori appears from somewhere behind her and immediately begins celebrating the arrival of a new person. Monika introduces herself. Two girls MC doesn't know yet. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (opts.joinReason === 'self') {
+        instruction = `Scene: MC climbs the stairs to the Literature Club on his own — no guide, no invitation, just a decision he made. The door has the club's name on it. He knocks. Sayori opens it and immediately makes a sound that is hard to describe. He is inside before he fully understands how. From behind Sayori, Monika looks at him with something that might be genuine surprise — she did not expect a self-directed recruit. Monika steps forward to introduce herself. Two girls MC doesn't know yet. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      }
+      // 'sayori': default instruction has Sayori leading him — fine as-is
+    }
+
+    // --- d1_introductions: how the formal meeting of Yuri and Natsuki plays out ---
+    if (phaseKey === 'd1_introductions' && opts.history === 'first_day') {
+      if (opts.joinReason === 'monika') {
+        instruction = `Scene: Monika introduces the two girls MC hasn't met yet: Yuri (long dark hair, currently holding a very thick book, shy but composed) and Natsuki (short pink hair, immediately annoyed that a boy showed up). This is when MC learns their names for the first time. Monika's introductions are warmer than a standard club-president welcome — she's been looking forward to this. She watches how MC receives each girl with quiet, personal interest. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (opts.joinReason === 'yuri') {
+        instruction = `Scene: Monika introduces the club members. She introduces Yuri — and this is the moment Yuri has been low-key dreading since she saw him walk in. Monika says her name and Yuri manages a quiet hello, barely holding eye contact. Natsuki is introduced second and makes her opinions about boys in the club clear immediately. THIS is when MC learns Yuri's and Natsuki's names for the first time. MC now has a name for the girl who accidentally changed his afternoon. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (opts.joinReason === 'natsuki') {
+        instruction = `Scene: Monika handles introductions. Yuri is introduced first — polite, soft-spoken, already watching MC with careful eyes. Then Natsuki. Her expression when Monika says her name and gestures toward the new arrival is carefully neutral in a way that is itself a tell. She does not acknowledge any prior connection. THIS is when MC learns Yuri's and Natsuki's names for the first time. Internally: one of these girls is very specifically pretending she has never seen him before in her life. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (opts.joinReason === 'self') {
+        instruction = `Scene: Monika takes charge — introductions are her job. She introduces Yuri (quiet, composed, immediately looks like someone with strong opinions about literature) and Natsuki (short, pink-haired, annoyed about the gender of the new arrival). THIS is when MC learns Yuri's and Natsuki's names for the first time. Monika's manner has a note of genuine interest — she didn't plan for this person, and she's already calibrating. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      }
+      // 'sayori': default instruction has Monika introducing people to MC and Sayori nearby — fine as-is
+    }
+
+    // --- d1_settling: casual conversation, shaped by who brought MC here ---
+    if (phaseKey === 'd1_settling' && opts.history === 'first_day') {
+      if (opts.joinReason === 'monika') {
+        instruction = `Scene: Casual conversation in the clubroom as everyone finds their rhythm for the afternoon. MC gets a clearer picture of each girl — Yuri's passion for reading, Natsuki's defensiveness about manga, Sayori's boundless enthusiasm. Monika is a more deliberate presence than she would be with a random new member: she checks in, makes space for MC in conversations, ensures he's not drifting to the edge of the room. It's subtle — not obvious — but it's there. She brought him here specifically, and she's invested in how this goes. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (opts.joinReason === 'yuri') {
+        instruction = `Scene: Casual conversation in the clubroom. MC learns about each girl: Natsuki defends her manga preferences, Sayori fills every silence with energy, Monika explains the club's purpose. Yuri is quieter than the others — she's holding up her end of conversations but she's more aware of MC than she usually is of new people. She knows where he is in the room. She chooses her words more carefully when he's nearby. She doesn't know why she mentioned the club to him, and she's still processing the fact that he came. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (opts.joinReason === 'natsuki') {
+        instruction = `Scene: Casual conversation in the clubroom. MC learns about each girl: Yuri is thoughtful and a little intense, Sayori is warm and loud about it, Monika explains the club's history. Natsuki is fully participating in conversation except for any topic that might drift toward why the new person is here. She bakes, she reads manga, she has opinions — none of this has anything to do with MC specifically, and she would like that point clearly understood. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      } else if (opts.joinReason === 'self') {
+        instruction = `Scene: Casual conversation in the clubroom as everyone settles. MC learns about each girl: Yuri reads voraciously, Natsuki bakes and is defensive about manga, Sayori is enthusiastic about everything. Monika explains she founded the club because she wanted something more personal than debate club — and then, almost as an aside, tells MC it's unusual for someone to just walk in on their own. She means it as a compliment. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
+      }
+      // 'sayori': default instruction already generic enough — fine as-is
+    }
+
+    // --- weeks_in / old_friend: replace intro-sequence phases with familiar-club openings ---
+    // These phases contain "MC does not know names yet" language that contradicts non-first-day history.
     if (opts.history === 'weeks_in' && ['d1_settling', 'd1_activity'].includes(phaseKey)) {
       if (phaseKey === 'd1_settling') {
         instruction = `Scene: MC arrives at the Literature Club — a routine he knows well by now. He knows all four girls: Sayori, Natsuki, Yuri, and Monika. They know him. No introductions are needed and none should happen. Write an opening scene that shows the easy, established familiarity of a group that has settled into each other: small habits, inside references, the particular comfort of people who have spent weeks together. ${capJoin !== null ? `${capJoin}'s presence is the warmest — a small reminder of the connection that brought MC here.` : 'The girls each greet him in their own characteristic way.'} Do NOT write any first-meeting language. Do NOT introduce any character as if MC is meeting them for the first time. Do NOT include any tags like [END_OF_DAY], [POETRY], or [CHOICE] in your response.`;
