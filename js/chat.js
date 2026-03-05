@@ -216,31 +216,48 @@ function renderChatList() {
             <span class="chat-item-preview">${escapeHtml(preview)}</span>
           </div>
         </div>
-        <button class="chat-item-rename" title="Rename">&#9998;</button>
-        <button class="chat-item-star ${chat.starred ? 'starred' : ''}" title="Star">${starIcon}</button>
-        <button class="chat-item-archive" data-id="${chat.id}" title="Archive chat">&#128452;</button>
-        <button class="chat-item-delete" title="Delete">&times;</button>`;
-      item.addEventListener('click', (e) => { if (!e.target.closest('.chat-item-delete') && !e.target.closest('.chat-item-star') && !e.target.closest('.chat-item-rename') && !e.target.closest('.chat-item-archive')) openChat(chat.id); });
-      item.querySelector('.chat-item-rename').addEventListener('click', (e) => {
+        <button class="chat-item-menu-btn${chat.starred ? ' has-starred' : ''}" title="Options">&#8942;</button>
+        <div class="chat-item-dropdown">
+          <button class="chat-dropdown-item star-action">${chat.starred ? '\u2605 Unstar' : '\u2606 Star'}</button>
+          <button class="chat-dropdown-item rename-action">&#9998; Rename</button>
+          <button class="chat-dropdown-item archive-action">&#128452; Archive</button>
+          <button class="chat-dropdown-item delete-action danger">&times; Delete</button>
+        </div>`;
+      item.addEventListener('click', (e) => { if (!e.target.closest('.chat-item-menu-btn') && !e.target.closest('.chat-item-dropdown')) openChat(chat.id); });
+
+      const menuBtn = item.querySelector('.chat-item-menu-btn');
+      const dropdown = item.querySelector('.chat-item-dropdown');
+      menuBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        const isOpen = dropdown.classList.contains('open');
+        document.querySelectorAll('.chat-item-dropdown.open').forEach(d => d.classList.remove('open'));
+        if (!isOpen) dropdown.classList.add('open');
+      });
+
+      dropdown.querySelector('.star-action').addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.remove('open');
+        chat.starred = !chat.starred;
+        chat.starredAt = Date.now();
+        saveChats(); renderChatList();
+      });
+      dropdown.querySelector('.rename-action').addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.remove('open');
         const newTitle = prompt('Rename this conversation:', chat.title || displayTitle);
         if (newTitle !== null) {
           chat.title = newTitle.trim() || null;
           saveChats(); renderChatList();
         }
       });
-      item.querySelector('.chat-item-star').addEventListener('click', (e) => {
+      dropdown.querySelector('.archive-action').addEventListener('click', (e) => {
         e.stopPropagation();
-        chat.starred = !chat.starred;
-        chat.starredAt = Date.now();
-        saveChats(); renderChatList();
+        dropdown.classList.remove('open');
+        archiveChat(chat.id);
       });
-      item.querySelector('.chat-item-archive').addEventListener('click', (e) => {
+      dropdown.querySelector('.delete-action').addEventListener('click', async (e) => {
         e.stopPropagation();
-        archiveChat(e.currentTarget.dataset.id);
-      });
-      item.querySelector('.chat-item-delete').addEventListener('click', async (e) => {
-        e.stopPropagation();
+        dropdown.classList.remove('open');
         if (confirm('Delete this conversation?')) {
           const delId = chat.id;
           chats = chats.filter(c => c.id !== delId);
