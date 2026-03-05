@@ -94,6 +94,15 @@ function getChatModeKey(chat) {
   return chat.mode === 'story' ? 'story' : chat.mode === 'adventure' ? 'adventure' : 'chat';
 }
 
+const CHAR_AVATARS = { sayori: 'sayori-avatar.png', natsuki: 'natsuki-avatar.png', yuri: 'yuri-avatar.png' };
+function getChatAvatar(chat) {
+  if (chat.mode === 'story') {
+    const key = chat.storyOptions?.joinReason;
+    if (CHAR_AVATARS[key]) return `images/${CHAR_AVATARS[key]}`;
+  }
+  return 'images/monika-avatar.png';
+}
+
 function getChatSortTime(chat) {
   const msgs = chat.messages;
   if (msgs.length > 0) {
@@ -106,7 +115,7 @@ function getChatSortTime(chat) {
 function renderChatList() {
   chatListBody.innerHTML = '';
   if (chats.length === 0) {
-    chatListBody.innerHTML = `<div class="chat-list-empty"><img src="images/Moni-Talk.png" alt="Monika"><h3>No conversations yet</h3><p>Tap + to start talking to Monika.</p></div>`;
+    chatListBody.innerHTML = `<div class="chat-list-empty"><img src="images/monika-avatar.png" alt="Monika"><h3>No conversations yet</h3><p>Tap + to start talking to Monika.</p></div>`;
     return;
   }
 
@@ -197,17 +206,15 @@ function renderChatList() {
       const badgeLabel = modeKey === 'chat' ? '\uD83D\uDCAC Chat' : modeKey === 'story' ? '\uD83D\uDCD6 Story' : '\uD83D\uDDFA\uFE0F Adventure';
 
       item.innerHTML = `
-        <div class="chat-item-avatar-wrap">
-          <img class="chat-item-avatar" src="images/Moni-Talk.png" alt="Monika">
-          <span class="chat-item-avatar-badge mode-${modeKey}">${group.icon}</span>
-        </div>
         <div class="chat-item-info">
           <div class="chat-item-top">
             <span class="chat-item-title">${escapeHtml(displayTitle)}</span>
             <span class="chat-item-time">${timeline}</span>
           </div>
-          <div class="chat-item-subtitle"><span>${escapeHtml(subtitle)}</span><span class="chat-item-mode-badge mode-${modeKey}">${badgeLabel}</span></div>
-          <div class="chat-item-preview">${escapeHtml(preview)}</div>
+          <div class="chat-item-bottom">
+            <span class="chat-item-mode-badge mode-${modeKey}">${badgeLabel}</span>
+            <span class="chat-item-preview">${escapeHtml(preview)}</span>
+          </div>
         </div>
         <button class="chat-item-rename" title="Rename">&#9998;</button>
         <button class="chat-item-star ${chat.starred ? 'starred' : ''}" title="Star">${starIcon}</button>
@@ -475,7 +482,7 @@ async function generateGreeting(chat) {
         typingIndicator.classList.remove('visible');
         const div = document.createElement('div');
         div.className = 'message monika';
-        div.innerHTML = '<img class="msg-avatar" src="images/Moni-Talk.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
+        div.innerHTML = '<img class="msg-avatar" src="images/monika-avatar.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
         chatArea.insertBefore(div, typingIndicator);
         msgBubble = div.querySelector('.msg-bubble');
       }
@@ -669,7 +676,7 @@ async function regenerateLastResponse() {
         typingIndicator.classList.remove('visible');
         const div = document.createElement('div');
         div.className = 'message monika';
-        div.innerHTML = '<img class="msg-avatar" src="images/Moni-Talk.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
+        div.innerHTML = '<img class="msg-avatar" src="images/monika-avatar.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
         chatArea.insertBefore(div, typingIndicator);
         msgBubble = div.querySelector('.msg-bubble');
       }
@@ -856,7 +863,7 @@ function insertMessageEl(role, content, animate = true, imageUrl = null, model =
   div.className = `message ${isM ? 'monika' : 'user'}`;
   if (!animate) div.style.animation = 'none';
   const userInitial = (profile.name ? profile.name.charAt(0).toUpperCase() : '?');
-  const av = isM ? `<img class="msg-avatar" src="images/Moni-Talk.png" alt="Monika">` : `<div class="msg-avatar-letter">${userInitial}</div>`;
+  const av = isM ? `<img class="msg-avatar" src="images/monika-avatar.png" alt="Monika">` : `<div class="msg-avatar-letter">${userInitial}</div>`;
   const imgHtml = imageUrl ? `<img class="msg-image" src="${imageUrl}" alt="Shared image">` : '';
   const modelTag = isM && model ? `<div class="msg-model">${escapeHtml(formatModelLabel(model))}</div>` : '';
   const timeHtml = timestamp ? `<span class="msg-time">${new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>` : '';
@@ -972,7 +979,7 @@ async function sendMessage() {
         typingIndicator.classList.remove('visible');
         const div = document.createElement('div');
         div.className = 'message monika';
-        div.innerHTML = '<img class="msg-avatar" src="images/Moni-Talk.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
+        div.innerHTML = '<img class="msg-avatar" src="images/monika-avatar.png" alt="Monika"><div class="msg-content"><div class="msg-name">Monika</div><div class="msg-bubble"></div></div>';
         chatArea.insertBefore(div, typingIndicator);
         msgBubble = div.querySelector('.msg-bubble');
       }

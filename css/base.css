@@ -135,6 +135,7 @@ body {
 }
 .sidebar-nav-item:hover { background: var(--pink-pale); color: var(--pink-dark); }
 .sidebar-nav-icon { width: 26px; height: 26px; object-fit: contain; flex-shrink: 0; border: 1.5px solid var(--pink-mid); border-radius: 8px; padding: 2px; background: var(--pink-pale); }
+.sidebar-nav-icon-emoji { display: flex; align-items: center; justify-content: center; font-size: 15px; }
 .sidebar-nav-label { line-height: 1; }
 
 /* === Main Panel === */
@@ -196,7 +197,7 @@ body {
 }
 .model-switcher-btn:hover { background: rgba(255,255,255,0.25); }
 .model-switcher-caret { font-size: 9px; opacity: 0.8; transition: transform 0.2s; }
-.model-switcher-btn[aria-expanded="true"] .model-switcher-caret { transform: rotate(180deg); }
+.model-switcher.open .model-switcher-caret { transform: rotate(180deg); }
 .model-switcher-dropdown {
   display: none;
   position: absolute;
@@ -210,7 +211,7 @@ body {
   z-index: 200;
   overflow: hidden;
 }
-.model-switcher-dropdown.open { display: block; }
+.model-switcher.open .model-switcher-dropdown { display: block; }
 .model-switcher-group-label {
   font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
   color: var(--gray-text); padding: 10px 14px 4px;
@@ -279,19 +280,6 @@ body {
 .icon-btn:hover { background: rgba(255,255,255,0.15); }
 
 /* === Guide Section === */
-.guide-section { border-bottom: 1px solid var(--gray-mid); }
-.guide-toggle {
-  width: 100%; background: none; border: none; color: var(--text);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px; cursor: pointer; font-size: 13px; font-weight: 600;
-  gap: 8px;
-}
-.guide-toggle:hover { background: var(--gray-light); }
-.guide-toggle-left { display: flex; align-items: center; gap: 8px; color: var(--green-dark); }
-.guide-chevron { font-size: 10px; color: var(--gray-text); transition: transform 0.2s; }
-.guide-chevron.open { transform: rotate(180deg); }
-.guide-body { padding: 0 16px 16px; display: none; }
-.guide-body.open { display: block; }
 .guide-intro { font-size: 13px; color: var(--gray-text); line-height: 1.6;
   margin-bottom: 16px; padding-top: 4px; }
 .guide-section-label {
@@ -336,12 +324,10 @@ body {
   border-radius: 20px; padding: 4px 10px; color: var(--text);
 }
 /* Dark mode adjustments */
-[data-theme="dark"] .guide-toggle:hover { background: rgba(255,255,255,0.04); }
 [data-theme="dark"] .guide-mode-card,
 [data-theme="dark"] .guide-provider,
 [data-theme="dark"] .guide-model-row,
 [data-theme="dark"] .guide-feature { background: rgba(255,255,255,0.04); }
-[data-theme="dark"] .guide-toggle-left { color: var(--green-mid); }
 [data-theme="dark"] .guide-section-label { color: var(--green-mid); }
 
 /* FAB removed — new chat is in sidebar-new-btn */

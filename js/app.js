@@ -1,22 +1,3 @@
-// ====== GUIDE ======
-function toggleGuide() {
-  const body    = $('guideBody');
-  const chevron = $('guideChevron');
-  const open    = body.classList.toggle('open');
-  chevron.classList.toggle('open', open);
-  localStorage.setItem('moni_guide_open', open);
-}
-
-function initGuide() {
-  const saved = localStorage.getItem('moni_guide_open');
-  // Default open on first visit; respect saved state on return
-  const open = saved === null ? true : saved === 'true';
-  if (open) {
-    $('guideBody').classList.add('open');
-    $('guideChevron').classList.add('open');
-  }
-  $('guideToggle').addEventListener('click', toggleGuide);
-}
 
 // ====== THEME ======
 function applyTheme() {
@@ -51,7 +32,6 @@ function init() {
   puterModelSelect.value = puterModel;
 
   applyTheme();
-  initGuide();
   renderChatList();
   updateRelDisplay();
   loadProfile();
@@ -339,6 +319,11 @@ function init() {
   $('modelsBtn').addEventListener('click', openModelsModal);
   $('modelsCloseBtn').addEventListener('click', closeModelsModal);
   $('modelsModal').addEventListener('click', (e) => { if (e.target === $('modelsModal')) closeModelsModal(); });
+
+  // About
+  $('aboutBtn').addEventListener('click', () => $('aboutModal').classList.add('open'));
+  $('aboutCloseBtn').addEventListener('click', () => $('aboutModal').classList.remove('open'));
+  $('aboutModal').addEventListener('click', (e) => { if (e.target === $('aboutModal')) $('aboutModal').classList.remove('open'); });
 
   // Changelog
   $('changelogBtn').addEventListener('click', openChangelogModal);

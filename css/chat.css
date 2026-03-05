@@ -33,11 +33,10 @@
 
 /* === Card-Style Chat Items === */
 .chat-item {
-  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
   cursor: pointer; transition: all 0.2s ease;
-  border-radius: 14px; background: var(--pink-bg);
   border-left: 4px solid var(--mode-chat);
-  border-radius: 12px; margin: 4px 4px;
+  border-radius: 10px; margin: 3px 4px;
   background: var(--card-bg); box-shadow: var(--card-shadow);
   animation: chatItemIn 0.25s ease both;
   animation-delay: calc(var(--item-index, 0) * 30ms);
@@ -74,11 +73,11 @@
 
 /* === Chat Item Content === */
 .chat-item-info { flex: 1; min-width: 0; }
-.chat-item-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.chat-item-title { font-size: 15px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chat-item-time { font-size: 11px; color: var(--green-mid); flex-shrink: 0; font-weight: 600; }
-.chat-item-subtitle { font-size: 12px; color: var(--gray-text); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.85; display: flex; align-items: center; gap: 4px; }
-.chat-item-preview { font-size: 13px; color: var(--gray-text); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-item-top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.chat-item-title { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-item-time { font-size: 10px; color: var(--gray-text); flex-shrink: 0; }
+.chat-item-bottom { display: flex; align-items: center; gap: 6px; margin-top: 3px; min-width: 0; }
+.chat-item-preview { font-size: 11px; color: var(--gray-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.75; }
 
 /* === Mode Badge Pill === */
 .chat-item-mode-badge {
