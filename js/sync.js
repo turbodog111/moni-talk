@@ -52,7 +52,10 @@ async function syncToCloud() {
       puter.kv.set('moni_chat_index', JSON.stringify(index)),
       puter.kv.set('moni_profile', JSON.stringify(profile)),
       puter.kv.set('moni_deleted_ids', JSON.stringify([...deletedChatIds])),
-      puter.kv.set('moni_talk_memories', JSON.stringify(memories))
+      puter.kv.set('moni_talk_memories', JSON.stringify(memories)),
+      puter.kv.set('moni_talk_benchmarks', localStorage.getItem('moni_talk_benchmarks') || '{}'),
+      puter.kv.set('moni_talk_benchmarks_beta', localStorage.getItem('moni_talk_benchmarks_beta') || '{}'),
+      puter.kv.set('moni_talk_benchmarks_alpha', localStorage.getItem('moni_talk_benchmarks_alpha') || '{}')
     ]);
     if (failedIds.length > 0) {
       console.warn('Partial sync: failed to upload', failedIds.length, 'chat(s):', failedIds);
@@ -111,6 +114,13 @@ async function syncFromCloud() {
           winner.starred = loser.starred;
           winner.starredAt = loser.starredAt;
         }
+        // Archived: most recent archive/unarchive action wins
+        const winArchiveTime = winner.archivedAt || 0;
+        const loseArchiveTime = loser.archivedAt || 0;
+        if (loseArchiveTime > winArchiveTime) {
+          winner.archived = loser.archived;
+          winner.archivedAt = loser.archivedAt;
+        }
         // Preserve custom title from either copy if winner's is null
         if (!winner.title && loser.title) winner.title = loser.title;
         merged.set(cc.id, winner);
@@ -155,6 +165,21 @@ async function syncFromCloud() {
       merged.forEach(m => { if (!m.id) m.id = _makeId(); });
       memories = merged.slice(0, 50);
       localStorage.setItem('moni_talk_memories', JSON.stringify(memories));
+    }
+
+    // Restore benchmark data — merge cloud into local (local wins for same model keys)
+    const benchEntries = [
+      ['moni_talk_benchmarks', 'moni_talk_benchmarks'],
+      ['moni_talk_benchmarks_beta', 'moni_talk_benchmarks_beta'],
+      ['moni_talk_benchmarks_alpha', 'moni_talk_benchmarks_alpha']
+    ];
+    for (const [kvKey, lsKey] of benchEntries) {
+      const cloudBench = parseKV(await puter.kv.get(kvKey));
+      if (cloudBench && Object.keys(cloudBench).length > 0) {
+        const localBench = JSON.parse(localStorage.getItem(lsKey) || '{}');
+        const mergedBench = Object.assign({}, cloudBench, localBench); // local wins conflicts
+        localStorage.setItem(lsKey, JSON.stringify(mergedBench));
+      }
     }
 
     renderChatList();

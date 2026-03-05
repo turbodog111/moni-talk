@@ -1293,6 +1293,7 @@ function archiveChat(id) {
   const chat = chats.find(c => c.id === id);
   if (!chat) return;
   chat.archived = true;
+  chat.archivedAt = Date.now();
   saveChats();
   renderChatList();
 }
@@ -1301,6 +1302,7 @@ function unarchiveChat(id) {
   const chat = chats.find(c => c.id === id);
   if (!chat) return;
   chat.archived = false;
+  chat.archivedAt = Date.now();
   saveChats();
   renderChatList();
   if (typeof renderArchivedChats === 'function') renderArchivedChats();
