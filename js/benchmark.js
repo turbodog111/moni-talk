@@ -2082,13 +2082,13 @@ const STATUS_LABELS = {
 };
 
 const ARBOR_ORDER = [
-  'Arbor-0.1-Q8_0.gguf',
+  'Arbor-0.2b-Q8_0.gguf',
+  'Arbor-0.2-Q8_0.gguf',
+  'Arbor-0.1.1-Q8_0.gguf',
   'Arbor-0.1-E-Q8_0.gguf',
+  'Arbor-0.1-Q8_0.gguf',
   'Arbor-0.1-P-Q8_0.gguf',
   'Arbor-0.1-W-Q8_0.gguf',
-  'Arbor-0.1.1-Q8_0.gguf',
-  'Arbor-0.2-Q8_0.gguf',
-  'Arbor-0.2b-Q8_0.gguf',
 ];
 
 function openModelsModal() {
