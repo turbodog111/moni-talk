@@ -506,6 +506,19 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
 .model-catalog-card {
   padding: 14px 16px; border-radius: 10px; margin-bottom: 10px;
   border: 1.5px solid var(--gray-mid); background: var(--bg);
+  overflow: hidden;
+}
+.model-catalog-img {
+  display: block;
+  width: calc(100% + 32px);
+  margin: -14px -16px 14px -16px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px 8px 0 0;
+  background: #fff;
+}
+[data-theme="dark"] .model-catalog-img {
+  border-bottom: 1px solid var(--gray-mid);
 }
 .model-catalog-card.model-status-released { border-color: var(--green-mid); background: var(--green-pale); }
 .model-catalog-card.model-status-upcoming { border-color: #f6ad55; background: rgba(246,173,85,0.08); }

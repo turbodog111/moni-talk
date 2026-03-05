@@ -2071,6 +2071,7 @@ function openModelsModal() {
     const desc = m.longDesc || m.desc;
     return `
       <div class="model-catalog-card ${s.cls}">
+        ${m.image ? `<img class="model-catalog-img" src="${escapeHtml(m.image)}" alt="${escapeHtml(m.name)}">` : ''}
         <div class="model-catalog-top">
           <span class="model-catalog-name">${escapeHtml(m.name)}</span>
           ${bestBadge}
