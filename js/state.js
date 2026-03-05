@@ -17,7 +17,17 @@ let puterUser = null;
 let syncTimer = null;
 let deletedChatIds = new Set(JSON.parse(localStorage.getItem('moni_talk_deleted_ids') || '[]'));
 let currentTheme = localStorage.getItem('moni_talk_theme') || 'system';
-let memories = JSON.parse(localStorage.getItem('moni_talk_memories') || '[]');
+let memories = (() => {
+  try {
+    const mems = JSON.parse(localStorage.getItem('moni_talk_memories') || '[]');
+    let changed = false;
+    mems.forEach(m => {
+      if (!m.id) { m.id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6); changed = true; }
+    });
+    if (changed) localStorage.setItem('moni_talk_memories', JSON.stringify(mems));
+    return mems;
+  } catch { return []; }
+})();
 let pendingImage = null;
 let activeAbortController = null; // AbortController for current streaming generation
 let ttsEnabled = localStorage.getItem('moni_talk_tts_enabled') === 'true';

@@ -230,8 +230,14 @@ function renderChatList() {
       menuBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         const isOpen = dropdown.classList.contains('open');
-        document.querySelectorAll('.chat-item-dropdown.open').forEach(d => d.classList.remove('open'));
-        if (!isOpen) dropdown.classList.add('open');
+        document.querySelectorAll('.chat-item-dropdown.open').forEach(d => {
+          d.classList.remove('open');
+          d.closest('.chat-item')?.classList.remove('menu-open');
+        });
+        if (!isOpen) {
+          dropdown.classList.add('open');
+          item.classList.add('menu-open');
+        }
       });
 
       dropdown.querySelector('.star-action').addEventListener('click', (e) => {

@@ -423,7 +423,10 @@ function initModelSwitcher() {
   document.addEventListener('click', (e) => {
     if (!wrap.contains(e.target)) wrap.classList.remove('open');
     if (!e.target.closest('.chat-item-menu-btn') && !e.target.closest('.chat-item-dropdown')) {
-      document.querySelectorAll('.chat-item-dropdown.open').forEach(d => d.classList.remove('open'));
+      document.querySelectorAll('.chat-item-dropdown.open').forEach(d => {
+        d.classList.remove('open');
+        d.closest('.chat-item')?.classList.remove('menu-open');
+      });
     }
   });
 

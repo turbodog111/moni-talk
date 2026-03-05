@@ -95,9 +95,10 @@
 .chat-item-menu-btn:hover { color: var(--green-mid); background: rgba(72,187,120,0.1); }
 
 /* === Chat Item Dropdown === */
-.chat-item-dropdown { display: none; position: absolute; right: 6px; top: calc(100% - 4px); background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); z-index: 200; min-width: 140px; overflow: hidden; }
+.chat-item-dropdown { display: none; position: absolute; right: 6px; top: calc(100% - 4px); background: #ffffff; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.18); z-index: 9999; min-width: 140px; overflow: hidden; }
 .chat-item-dropdown.open { display: block; }
 .chat-item { position: relative; }
+.chat-item.menu-open { z-index: 9998; }
 .chat-dropdown-item { display: block; width: 100%; background: none; border: none; text-align: left; padding: 9px 14px; font-size: 13px; cursor: pointer; color: #333; transition: background 0.15s; white-space: nowrap; }
 .chat-dropdown-item:hover { background: #f5f5f5; }
 .chat-dropdown-item.danger { color: #c0392b; }
