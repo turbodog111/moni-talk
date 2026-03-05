@@ -308,6 +308,7 @@ body {
   border-radius: 10px; padding: 10px 12px;
 }
 .guide-mode-icon { font-size: 20px; margin-bottom: 5px; }
+.guide-mode-icon img { width: 36px; height: 36px; object-fit: contain; }
 .guide-mode-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
 .guide-mode-desc { font-size: 12px; color: var(--gray-text); line-height: 1.5; }
 /* Provider list */
@@ -442,6 +443,7 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
   transition: background 0.15s, color 0.15s;
 }
 .settings-nav-item .nav-icon { font-size: 18px; display: block; }
+.settings-nav-item img.nav-icon { width: 22px; height: 22px; object-fit: contain; border: 1.5px solid var(--pink-mid); border-radius: 6px; padding: 1px; background: var(--pink-pale); }
 .settings-nav-item:hover { background: var(--gray-light); color: var(--text); }
 .settings-nav-item.active { background: var(--green-light); color: var(--green-dark); }
 

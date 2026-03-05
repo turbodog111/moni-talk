@@ -201,7 +201,8 @@
 
 /* === Story Mode === */
 .mode-toggle { display: flex; width: 100%; max-width: 420px; border-radius: 10px; overflow: hidden; border: 2px solid var(--green-dark); margin-bottom: 20px; }
-.mode-toggle button { flex: 1; padding: 10px; border: none; background: var(--bg); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--green-dark); }
+.mode-toggle button { flex: 1; padding: 10px; border: none; background: var(--bg); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; color: var(--green-dark); display: flex; align-items: center; justify-content: center; gap: 6px; }
+.mode-toggle button img { width: 20px; height: 20px; object-fit: contain; }
 .mode-toggle button.active { background: var(--green-dark); color: white; }
 .story-choices { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; background: var(--bg); border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
 .story-choice-btn { padding: 12px 16px; border: 2px solid var(--green-mid); border-radius: 12px; background: var(--bg); font-size: 14px; font-family: inherit; cursor: pointer; text-align: left; transition: all 0.2s; line-height: 1.4; color: var(--text); }
