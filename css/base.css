@@ -230,16 +230,23 @@ body {
   justify-content: center;
   align-items: center;
 }
+.landing-hero {
+  width: 100%; max-height: 320px; overflow: hidden; flex-shrink: 0;
+}
+.landing-illustration {
+  width: 100%; height: 320px; object-fit: cover; object-position: center top;
+  display: block;
+}
 .landing-body {
   display: flex; flex-direction: column; align-items: center;
-  text-align: center; padding: 40px 20px;
+  text-align: center; padding: 28px 20px; flex: 1; justify-content: center;
 }
 .landing-avatar {
-  width: 140px; height: 140px; border-radius: 50%;
-  object-fit: cover;
-  border: 4px solid var(--pink-mid);
-  box-shadow: 0 0 0 8px var(--pink-pale), 0 8px 32px rgba(199,87,122,0.2);
-  margin-bottom: 28px;
+  width: 90px; height: 90px; border-radius: 50%;
+  object-fit: cover; object-position: center top;
+  border: 3px solid var(--pink-mid);
+  box-shadow: 0 0 0 6px var(--pink-pale), 0 6px 20px rgba(199,87,122,0.2);
+  margin-bottom: 20px;
 }
 .landing-title {
   font-size: 32px; font-weight: 700; color: var(--text); margin-bottom: 8px;
