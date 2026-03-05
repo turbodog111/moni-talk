@@ -7,6 +7,18 @@ Versions follow **X.Y.Z**:
 
 ---
 
+## v0.7.1 — Memory Overhaul · Sync Fixes · Sidebar Polish (2026-03-05)
+
+- **[REMEMBER] tag system**: Monika can now save facts mid-conversation by emitting `[REMEMBER: fact]` — stripped from display, saved to memory, confirmed with a pink brain toast
+- **Memory IDs**: Stable IDs back-filled on all existing memories; prevents delete/re-add loop after cloud sync
+- **Memory delete fixed**: Cloud sync no longer re-adds memories that were explicitly deleted (blacklist respected during merge)
+- **Archived chat sync fixed**: `archiveChat`/`unarchiveChat` now stamp `archivedAt`; sync merge uses timestamp to pick correct archived state across devices
+- **Benchmark sync**: All three benchmark storage keys now synced to Puter KV — results survive device switches and localStorage clears
+- **Portrait loading fixed**: Story and adventure mode now reference correct avatar filenames after image reorganization
+- **Sidebar action menu**: Four individual action buttons (star, rename, archive, delete) collapsed into a single ⋮ menu per chat item — more room for title and preview text
+
+---
+
 ## v0.6.3 — Competitions Panel · Arbor 0.2b (2026-03-04)
 
 - **Competitions section** added to Models panel — standings for both completed tournaments: Moni-Talk Candidates (C01, March 2) and Moni-Talk Championship (M01, March 4)
