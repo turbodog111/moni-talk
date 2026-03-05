@@ -35,19 +35,20 @@
 .chat-item {
   display: flex; align-items: center; gap: 12px; padding: 12px 14px;
   cursor: pointer; transition: all 0.2s ease;
-  border-left: 3px solid var(--mode-chat);
+  border-radius: 14px; background: var(--pink-bg);
+  border-left: 4px solid var(--mode-chat);
   border-radius: 12px; margin: 4px 4px;
   background: var(--card-bg); box-shadow: var(--card-shadow);
   animation: chatItemIn 0.25s ease both;
   animation-delay: calc(var(--item-index, 0) * 30ms);
 }
-.chat-item:hover { transform: scale(1.01); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.chat-item:hover { transform: scale(1.01); box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: var(--pink-pale); }
 .chat-item.mode-chat { border-left-color: var(--mode-chat); }
 .chat-item.mode-story { border-left-color: var(--mode-story); }
 .chat-item.mode-adventure { border-left-color: var(--mode-adventure); }
-.chat-item.mode-chat:hover { background: var(--mode-chat-pale); }
-.chat-item.mode-story:hover { background: var(--mode-story-pale); }
-.chat-item.mode-adventure:hover { background: var(--mode-adventure-pale); }
+.chat-item.mode-chat:hover { background: var(--pink-pale); }
+.chat-item.mode-story:hover { background: var(--pink-pale); }
+.chat-item.mode-adventure:hover { background: var(--pink-pale); }
 @keyframes chatItemIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 /* === Starred Glow === */
