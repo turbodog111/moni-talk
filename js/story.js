@@ -64,6 +64,58 @@ function advancePhase(chat) {
   return false;
 }
 
+// Build a compact style directive block appended to every phase instruction.
+// Tone, personality, and club emphasis have no presence in the phase instruction by default —
+// they only live in the background system prompt where small models ignore them.
+// Putting them here (in the final, highest-weight system message) makes them actually apply.
+function buildStyleFooter(opts) {
+  if (!opts) return '';
+  const parts = [];
+
+  // Season — brief reinforcement; full context is in the system prompt
+  const seasonDirectives = {
+    spring:  'Season: spring — cherry blossoms, mild air, hopeful energy; let the setting show actively',
+    autumn:  'Season: autumn — golden slant light, cool air; write with a wistful undercurrent even in cheerful moments; reference the season in sensory detail at least once',
+    winter:  'Season: winter — cold outside, heater on; physical warmth feels earned; reference the cold at least once and let proximity carry extra charge'
+  };
+  if (opts.season && opts.season !== 'random' && seasonDirectives[opts.season]) {
+    parts.push(seasonDirectives[opts.season]);
+  }
+
+  // Tone — must shape the writing itself, not just the plot
+  const toneDirectives = {
+    warm:        'Tone: warm and cheerful — genuine affection is visible in small gestures; humor arises from personality; the friendship between these people feels real and worth having',
+    melancholic: 'Tone: melancholic and literary — beauty and sadness coexist; description lingers on light, texture, subtext; what characters do NOT say matters as much as what they do',
+    humorous:    'Tone: light and humorous — clashing personalities create real comedy; banter is fast and characters talk past each other; they recover dignity with varying success; timing matters'
+  };
+  if (opts.tone && opts.tone !== 'random' && toneDirectives[opts.tone]) {
+    parts.push(toneDirectives[opts.tone]);
+  }
+
+  // MC personality — shapes how he narrates, speaks, and moves through scenes
+  const personalityDirectives = {
+    introspective: 'MC voice: introspective — he notices small specific details others walk past; speaks carefully and rarely; his internal monologue is layered; he reveals himself sideways through observation',
+    outgoing:      'MC voice: outgoing — he takes conversational initiative, asks real follow-up questions, and drives scenes forward; his warmth is genuine; the girls relax around him faster than they would otherwise',
+    reserved:      'MC voice: reserved — he listens fully and speaks rarely; when he DOES speak or reveal something personal it carries disproportionate weight because it is not his habit; silence is comfortable for him'
+  };
+  if (opts.personality && opts.personality !== 'random' && personalityDirectives[opts.personality]) {
+    parts.push(personalityDirectives[opts.personality]);
+  }
+
+  // Club emphasis — relevant in club scenes; model ignores it naturally in walk/morning scenes
+  const emphasisDirectives = {
+    literary: 'Club emphasis: literary discussions anchor today — a specific poem, line, or question is the center of gravity; make literature feel like it genuinely matters to these people',
+    baking:   'Club emphasis: Natsuki\'s baking is central, not background — the scene is tactile (flour, smells, kitchen sounds); her precision and passion here are a window into who she actually is',
+    poetry:   'Club emphasis: Yuri has brought something to share; the room quiets when she reads; the discussion is genuine and unhurried; MC\'s honest reaction will be noticed and will matter'
+  };
+  if (opts.clubEmphasis && opts.clubEmphasis !== 'random' && emphasisDirectives[opts.clubEmphasis]) {
+    parts.push(emphasisDirectives[opts.clubEmphasis]);
+  }
+
+  if (!parts.length) return '';
+  return '\n\n[STYLE — apply throughout this scene: ' + parts.join(' | ') + ']';
+}
+
 function buildPhaseInstruction(chat) {
   // Check for active cutscene — overrides normal phase instruction for one beat
   if (chat._activeCutscene) {
@@ -167,16 +219,6 @@ Do NOT include [END_OF_DAY], [POETRY], or [CHOICE] tags.`;
       }
     }
 
-    // --- Season atmosphere: prefix to every phase instruction ---
-    // The season storyContext block is in the system prompt (lower weight for small models).
-    // A brief prefix here reinforces it where it matters most.
-    if (instruction && opts.season && opts.season !== 'spring') {
-      const seasonPrefix = {
-        autumn: '[Autumn: golden light through the windows, cool air, wistful mood] ',
-        winter: '[Winter: cold outside, clubroom heater on, the warmth of being indoors feels earned] '
-      }[opts.season];
-      if (seasonPrefix) instruction = seasonPrefix + instruction;
-    }
   }
   // ── End story-options overrides ──────────────────────────────────────────
 
@@ -382,7 +424,8 @@ End your response with [END_OF_DAY] on its own line.`;
   }
   header += `\nYou MUST write this scene as described below. The user's previous choice affects tone and affinity only — it does NOT override this scene.`;
 
-  return `${header}\n\n${instruction}`;
+  const styleFooter = buildStyleFooter(chat.storyOptions);
+  return `${header}\n\n${instruction}${styleFooter}`;
 }
 
 // Phase-specific rivalry hint — only fires when active rivalry exists
