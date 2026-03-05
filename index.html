@@ -109,6 +109,7 @@
         <button class="icon-btn" id="advPanelBtn" title="Inventory" style="display:none;">&#127890;</button>
         <button class="icon-btn" id="chatPanelBtn" title="Chat Panel" style="display:none;">&#9776;</button>
         <button class="icon-btn" id="vnPanelBtn" title="Status Panel" style="display:none;">&#9776;</button>
+        <button class="icon-btn" id="topbarNewChatBtn" title="New Conversation" style="display:none;">&#43;</button>
         <button class="icon-btn" id="chatSettingsBtn" title="Settings">&#9881;</button>
       </div>
 
@@ -199,15 +200,29 @@
          SCREEN: New Chat
     ───────────────────────────────────────────── -->
     <div class="screen" id="screenNewChat">
-      <div class="form-body">
-        <img src="images/monika-avatar.png" alt="Monika">
-        <h2 id="newChatTitle">Talk to Monika</h2>
-        <div class="subtitle" id="newChatSubtitle">How well do you two know each other?</div>
-        <div class="mode-toggle">
-          <button id="modeChatBtn" class="active"><img src="images/icon-mode-chat.png" alt="">Chat</button>
-          <button id="modeStoryBtn"><img src="images/icon-mode-story.png" alt="">Story</button>
-          <button id="modeAdventureBtn"><img src="images/icon-mode-adventure.png" alt="">Adventure</button>
+      <div class="new-chat-header">
+        <img src="images/monika-avatar.png" alt="Monika" class="new-chat-avatar">
+        <h2 id="newChatTitle">New Conversation</h2>
+        <div class="new-chat-mode-cards">
+          <button id="modeChatBtn" class="mode-card-btn active">
+            <img src="images/icon-mode-chat.png" alt="" class="mode-card-icon">
+            <div class="mode-card-name">Chat</div>
+            <div class="mode-card-tag">Free conversation</div>
+          </button>
+          <button id="modeStoryBtn" class="mode-card-btn">
+            <img src="images/icon-mode-story.png" alt="" class="mode-card-icon">
+            <div class="mode-card-name">Story</div>
+            <div class="mode-card-tag">Visual novel</div>
+          </button>
+          <button id="modeAdventureBtn" class="mode-card-btn">
+            <img src="images/icon-mode-adventure.png" alt="" class="mode-card-icon">
+            <div class="mode-card-name">Adventure</div>
+            <div class="mode-card-tag">Fantasy RPG</div>
+          </button>
         </div>
+      </div>
+      <div class="new-chat-body">
+        <div class="subtitle" id="newChatSubtitle">How well do you two know each other?</div>
         <div id="chatModeOptions" class="form-section">
           <div class="rel-display">
             <div class="rel-label" id="relLabel"></div>

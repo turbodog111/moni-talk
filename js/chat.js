@@ -426,6 +426,7 @@ function openChat(id) {
   $('vnPanelBtn').style.display = isStory ? '' : 'none';
   $('chatPanelBtn').style.display = (!isStory && !isAdventure) ? '' : 'none';
   $('advPanelBtn').style.display = isAdventure ? '' : 'none';
+  $('topbarNewChatBtn').style.display = '';
   showScreen('chat');
 
   // Teardown room mode if switching away

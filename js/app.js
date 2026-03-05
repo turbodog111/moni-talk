@@ -39,6 +39,7 @@ function init() {
   relSlider.addEventListener('input', updateRelDisplay);
   $('newChatFab').addEventListener('click', () => { resetNewChatScreen(); showScreen('newChat'); });
   $('landingNewBtn').addEventListener('click', () => { resetNewChatScreen(); showScreen('newChat'); });
+  $('topbarNewChatBtn').addEventListener('click', () => { resetNewChatScreen(); showScreen('newChat'); });
   $('startChatBtn').addEventListener('click', createChat);
   $('modeChatBtn').addEventListener('click', () => setNewChatMode('chat'));
   $('modeStoryBtn').addEventListener('click', () => setNewChatMode('story'));
@@ -128,6 +129,7 @@ function init() {
       const picker = document.querySelector('.adv-item-picker');
       if (picker) picker.remove();
       renderChatList();
+      $('topbarNewChatBtn').style.display = 'none';
     }
     showScreen('landing');
   });
