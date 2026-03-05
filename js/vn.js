@@ -184,6 +184,7 @@ function parseJournals(text) {
 }
 
 function renderJournalEntries(entries) {
+  checkAchievement('diary_reader');
   const container = $('journalEntries');
   container.innerHTML = '';
   const order = ['sayori', 'monika', 'natsuki', 'yuri'];

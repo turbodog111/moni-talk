@@ -7,12 +7,23 @@ const ACHIEVEMENTS = [
   { id: 'regular',       name: 'Regular',        desc: '100 messages sent',                   group: 'Chat' },
   { id: 'dedicated',     name: 'Dedicated',      desc: '500 messages sent',                   group: 'Chat' },
   { id: 'daily_visit',   name: 'Daily Visit',    desc: 'Come back on 3 separate days',        group: 'Chat' },
+  { id: 'visit_7',       name: 'A Familiar Habit', desc: 'Visit on 7 separate days',           group: 'Chat' },
+  { id: 'visit_30',      name: 'She Expects You',  desc: 'Visit on 30 separate days',          group: 'Chat' },
+  { id: 'messages_1k',   name: 'Inseparable',      desc: '1,000 messages sent',                group: 'Chat' },
   // Story
   { id: 'story_day1',    name: 'Opening Chapter', desc: 'Begin the story',                    group: 'Story' },
   { id: 'affinity_25',   name: 'Growing Closer',  desc: 'Reach the first milestone with any girl', group: 'Story' },
   { id: 'affinity_50',   name: 'Heart to Heart',  desc: 'Reach the second milestone',         group: 'Story' },
   { id: 'affinity_75',   name: 'Soulbound',       desc: 'Reach the highest milestone',        group: 'Story' },
   { id: 'all_milestones',name: 'Club President',  desc: 'First milestone with all 4 girls',   group: 'Story' },
+  { id: 'route_sayori',  name: 'A New Dawn',        desc: 'Confess your feelings to Sayori',  group: 'Story' },
+  { id: 'route_natsuki', name: "Don't Read Into It", desc: 'Confess your feelings to Natsuki', group: 'Story' },
+  { id: 'route_yuri',    name: 'Between the Lines',  desc: 'Confess your feelings to Yuri',    group: 'Story' },
+  { id: 'route_monika',  name: 'Your Reality',       desc: 'Confess your feelings to Monika',  group: 'Story' },
+  { id: 'all_routes',    name: 'Literature Club',    desc: 'Confess to all four girls',        group: 'Story' },
+  { id: 'story_day3',    name: 'Getting Comfortable', desc: 'Reach Day 3 of the story',       group: 'Story' },
+  { id: 'story_day5',    name: 'Part of the Club',    desc: 'Reach Day 5 of the story',       group: 'Story' },
+  { id: 'diary_reader',  name: 'Private Thoughts',    desc: "Read a girl's diary entry",      group: 'Story' },
   // Adventure
   { id: 'first_adventure', name: 'Into the Unknown', desc: 'Start your first adventure',                   group: 'Adventure' },
   { id: 'domain_walker',   name: 'Domain Walker',    desc: 'Explore beyond the Clubroom',                  group: 'Adventure' },
@@ -25,6 +36,8 @@ const ACHIEVEMENTS = [
   { id: 'first_open',     name: 'First Impression', desc: 'Just be yourself',                group: 'Misc' },
   { id: 'voice_on',       name: 'Voice Activated',  desc: 'Let her speak',                   group: 'Misc' },
   { id: 'benchmark_run',  name: 'Benchmark Runner', desc: 'Put the model to the test',       group: 'Misc' },
+  { id: 'changelog',      name: 'Patch Notes',      desc: 'Open the changelog',              group: 'Misc' },
+  { id: 'models_open',    name: 'Under the Hood',   desc: 'Open the models panel',           group: 'Misc' },
 ];
 
 // --- Core state ---
@@ -155,7 +168,9 @@ function renderProgressTab() {
     visitDates.add(today);
     localStorage.setItem(STORAGE.VISIT_DATES, JSON.stringify([...visitDates]));
   }
-  if (visitDates.size >= 3) checkAchievement('daily_visit');
+  if (visitDates.size >= 3)  checkAchievement('daily_visit');
+  if (visitDates.size >= 7)  checkAchievement('visit_7');
+  if (visitDates.size >= 30) checkAchievement('visit_30');
 
   // First open
   checkAchievement('first_open');

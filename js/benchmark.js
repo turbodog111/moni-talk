@@ -2054,6 +2054,7 @@ const ARBOR_ORDER = [
 ];
 
 function openModelsModal() {
+  checkAchievement('models_open');
   const body = $('modelsBody');
   if (!body) return;
 
@@ -2152,6 +2153,7 @@ function closeModelsModal() {
 }
 
 function openChangelogModal() {
+  checkAchievement('changelog');
   const body = $('changelogBody');
   if (!body) return;
   body.innerHTML = CHANGELOG_ENTRIES.map((entry, idx) => {

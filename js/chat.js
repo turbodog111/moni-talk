@@ -949,7 +949,8 @@ async function sendMessage() {
       checkAchievement('first_message');
       if (n >= 25)  checkAchievement('familiar');
       if (n >= 100) checkAchievement('regular');
-      if (n >= 500) checkAchievement('dedicated');
+      if (n >= 500)  checkAchievement('dedicated');
+      if (n >= 1000) checkAchievement('messages_1k');
     }
   }
 

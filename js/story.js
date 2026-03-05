@@ -243,6 +243,10 @@ Do NOT include [END_OF_DAY], [POETRY], or [CHOICE] tags.`;
     delete chat.confessionTarget; // consumed
     chat.confessions = chat.confessions || {};
     chat.confessions[target.toLowerCase()] = true;
+    checkAchievement('route_' + target.toLowerCase());
+    if (['sayori', 'natsuki', 'yuri', 'monika'].every(g => chat.confessions[g])) {
+      checkAchievement('all_routes');
+    }
     const isSayori = target.toLowerCase() === 'sayori';
     const beat = chat.storyBeatInPhase || 0;
 
@@ -886,6 +890,8 @@ async function selectStoryChoice(choice) {
     if (isStillWrapUp && lastMsg?.role === 'assistant' && /\[END_OF_DAY\]/i.test(lastMsg.content)) {
       if (!chat.storyYesterday) chat.storyYesterday = buildYesterdaySummary(chat);
       chat.storyDay = (chat.storyDay || 1) + 1;
+      if (chat.storyDay >= 3) checkAchievement('story_day3');
+      if (chat.storyDay >= 5) checkAchievement('story_day5');
       initPhaseForDay(chat);
       chat.lastChoices = null;
       updateChatHeader(chat);
