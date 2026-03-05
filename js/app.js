@@ -391,21 +391,75 @@ function initModelSwitcher() {
   localLabel.textContent = 'Local Models';
   dropdown.appendChild(localLabel);
 
-  [{ prov: 'ollama', name: 'Ollama (local)' }, { prov: 'llamacpp', name: 'llama.cpp (local)' }].forEach(({ prov, name }) => {
-    const opt = document.createElement('button');
-    opt.className = 'model-switcher-option';
-    opt.dataset.provider = prov;
-    opt.textContent = name;
-    if (provider === prov) opt.classList.add('active');
-    opt.addEventListener('click', () => {
-      provider = prov;
-      localStorage.setItem(STORAGE.PROVIDER, provider);
-      updateModelSwitcherLabel();
-      dropdown.querySelectorAll('.model-switcher-option').forEach(o => o.classList.remove('active'));
-      opt.classList.add('active');
-      wrap.classList.remove('open');
-    });
-    dropdown.appendChild(opt);
+  // Static Ollama fallback
+  const ollamaOpt = document.createElement('button');
+  ollamaOpt.className = 'model-switcher-option';
+  ollamaOpt.dataset.provider = 'ollama';
+  ollamaOpt.textContent = 'Ollama (local)';
+  if (provider === 'ollama') ollamaOpt.classList.add('active');
+  ollamaOpt.addEventListener('click', () => {
+    provider = 'ollama';
+    localStorage.setItem(STORAGE.PROVIDER, provider);
+    updateModelSwitcherLabel();
+    dropdown.querySelectorAll('.model-switcher-option').forEach(o => o.classList.remove('active'));
+    ollamaOpt.classList.add('active');
+    wrap.classList.remove('open');
+  });
+  dropdown.appendChild(ollamaOpt);
+
+  // llama.cpp — populate dynamically from server, fall back to generic
+  const lcppPlaceholder = document.createElement('button');
+  lcppPlaceholder.className = 'model-switcher-option';
+  lcppPlaceholder.textContent = 'llama.cpp (local)';
+  lcppPlaceholder.disabled = true;
+  lcppPlaceholder.style.opacity = '0.5';
+  dropdown.appendChild(lcppPlaceholder);
+
+  fetchLlamaCppModels().then(models => {
+    lcppPlaceholder.remove();
+    if (models.length === 0) {
+      const fallback = document.createElement('button');
+      fallback.className = 'model-switcher-option';
+      fallback.dataset.provider = 'llamacpp';
+      fallback.textContent = 'llama.cpp (local)';
+      if (provider === 'llamacpp') fallback.classList.add('active');
+      fallback.addEventListener('click', () => {
+        provider = 'llamacpp'; llamacppModel = '';
+        localStorage.setItem(STORAGE.PROVIDER, provider);
+        localStorage.setItem(STORAGE.LLAMACPP_MODEL, '');
+        updateModelSwitcherLabel();
+        dropdown.querySelectorAll('.model-switcher-option').forEach(o => o.classList.remove('active'));
+        fallback.classList.add('active');
+        wrap.classList.remove('open');
+      });
+      dropdown.appendChild(fallback);
+    } else {
+      models.forEach(id => {
+        const opt = document.createElement('button');
+        opt.className = 'model-switcher-option';
+        opt.dataset.provider = 'llamacpp';
+        opt.dataset.model = id;
+        opt.textContent = id.replace(/-Q\d+[^.]*\.gguf$/i, '').replace(/-/g, ' ');
+        if (provider === 'llamacpp' && llamacppModel === id) opt.classList.add('active');
+        opt.addEventListener('click', () => {
+          provider = 'llamacpp'; llamacppModel = id;
+          localStorage.setItem(STORAGE.PROVIDER, provider);
+          localStorage.setItem(STORAGE.LLAMACPP_MODEL, id);
+          updateModelSwitcherLabel();
+          dropdown.querySelectorAll('.model-switcher-option').forEach(o => o.classList.remove('active'));
+          opt.classList.add('active');
+          wrap.classList.remove('open');
+        });
+        dropdown.appendChild(opt);
+      });
+      // Auto-select first local model if currently on llamacpp with no model set
+      if (provider === 'llamacpp' && !llamacppModel) {
+        llamacppModel = models[0];
+        localStorage.setItem(STORAGE.LLAMACPP_MODEL, models[0]);
+        dropdown.querySelector('[data-provider="llamacpp"]').classList.add('active');
+        updateModelSwitcherLabel();
+      }
+    }
   });
 
   btn.addEventListener('click', (e) => {
@@ -429,7 +483,10 @@ function updateModelSwitcherLabel() {
   } else if (provider === 'ollama') {
     label.textContent = `Ollama · ${ollamaModel || 'local'}`;
   } else if (provider === 'llamacpp') {
-    label.textContent = `llama.cpp · ${llamacppModel || 'local'}`;
+    const shortName = llamacppModel
+      ? llamacppModel.replace(/-Q\d+[^.]*\.gguf$/i, '').replace(/-/g, ' ')
+      : 'local';
+    label.textContent = `llama.cpp · ${shortName}`;
   }
 }
 
