@@ -185,7 +185,7 @@ function loadBetaResults() {
 
 // --- Helpers ---
 function getCurrentModelKey() {
-  if (provider === 'llamacpp') return `llamacpp:${llamacppModel || 'unknown'}`;
+  if (provider === 'llamacpp') return `llamacpp:${_confirmedLlamaCppModel || llamacppModel || 'unknown'}`;
   if (provider === 'ollama') return `ollama:${ollamaModel}`;
   return `puter:${puterModel}`;
 }

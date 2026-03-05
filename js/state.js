@@ -5,6 +5,7 @@ let ollamaModel = localStorage.getItem(STORAGE.MODEL_OLLAMA) || 'qwen2.5:14b-ins
 let ollamaEndpoint = localStorage.getItem(STORAGE.OLLAMA_ENDPOINT) || 'http://localhost:11434';
 let llamacppEndpoint = localStorage.getItem(STORAGE.LLAMACPP_ENDPOINT) || 'http://localhost:8080';
 let llamacppModel = localStorage.getItem(STORAGE.LLAMACPP_MODEL) || '';
+let _confirmedLlamaCppModel = ''; // actual model ID returned by server in last response
 let chats = JSON.parse(localStorage.getItem(STORAGE.CHATS) || '[]');
 let profile = JSON.parse(localStorage.getItem(STORAGE.PROFILE) || '{}');
 let activeChatId = null;

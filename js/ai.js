@@ -430,6 +430,7 @@ async function callLlamaCpp(chat) {
       throw new Error(data?.error?.message || `llama.cpp error (${res.status})`);
     }
     const data = await res.json();
+    if (data.model) _confirmedLlamaCppModel = data.model;
     return data.choices?.[0]?.message?.content?.trim() || '';
   } catch (err) {
     if (err.name === 'AbortError') throw new Error('llama.cpp request timed out.');
@@ -592,7 +593,7 @@ async function streamSSE(url, headers, body, onChunk, signal) {
       if (!line.startsWith('data: ')) continue;
       const payload = line.slice(6).trim();
       if (payload === '[DONE]') continue;
-      try { const j = JSON.parse(payload); const c = j.choices?.[0]?.delta?.content || ''; if (c) { full += c; onChunk(c); } } catch {}
+      try { const j = JSON.parse(payload); if (j.model && provider === 'llamacpp') _confirmedLlamaCppModel = j.model; const c = j.choices?.[0]?.delta?.content || ''; if (c) { full += c; onChunk(c); } } catch {}
     }
   }
   return full.trim() || '';
