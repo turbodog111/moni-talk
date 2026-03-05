@@ -8,6 +8,18 @@ const SUITE_VERSIONS = { petal: '0.1', bloom: '0.1' };
 
 const CHANGELOG_ENTRIES = [
   {
+    label: 'v0.7.1 — Memory Overhaul \u00b7 Sync Fixes \u00b7 Sidebar Polish',
+    date: '2026-03-05',
+    items: [
+      '[REMEMBER] tag: Monika can save facts mid-conversation — stripped from display, saved to memory, confirmed with a toast',
+      'Memory delete fixed: cloud sync no longer re-adds deleted memories; stable IDs back-filled on all existing memories',
+      'Archived chat sync fixed: archive/unarchive actions now timestamped and respected across devices during merge',
+      'Benchmark results now synced to cloud — survive device switches and localStorage clears',
+      'Portrait loading fixed in story and adventure mode after image reorganization',
+      'Sidebar action menu: four buttons (star, rename, archive, delete) collapsed into a single \u22ee menu per chat item',
+    ]
+  },
+  {
     label: 'v0.7.0 — DDLC Aesthetic \u00b7 Desktop UI \u00b7 Arbor 0.2b',
     date: '2026-03-05',
     items: [
@@ -19,6 +31,15 @@ const CHANGELOG_ENTRIES = [
       'Sidebar overhaul: compact chat list (2\u00d7 more items visible), About moved to scrollable modal, model switcher fixed',
       'Model switcher now lists all released Arbor models by name; dynamic local model discovery via /v1/models',
       'Unused assets archived to images/unused/; icon-app.png wired as browser favicon',
+    ]
+  },
+  {
+    label: 'v0.6.3 — Competitions Panel \u00b7 Arbor 0.2b Registry',
+    date: '2026-03-04',
+    items: [
+      'Competitions section added to Models panel — standings for Moni-Talk Candidates (C01) and Championship (M01)',
+      'Arbor 0.2b added to model registry: Qwen3-32B base, 66 curated training pairs',
+      'Guide panel updated: Arbor 0.2b listed',
     ]
   },
   {
