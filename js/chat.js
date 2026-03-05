@@ -9,7 +9,7 @@ const MOOD_COLORS = {
 function getStreamingDisplay(fullText) {
   if (!fullText) return '';
   // Strip all known [TAG:...] patterns anywhere in the text
-  let display = fullText.replace(/\[(?:SCENE|ITEM|REMOVE|HP|AFFINITY|ASSIMILATION|END_SCENE|DOMAIN|CHOICE|END_OF_DAY|POETRY|DAY|MOOD|DRIFT)[^\]]*\]/gi, '');
+  let display = fullText.replace(/\[(?:SCENE|ITEM|REMOVE|HP|AFFINITY|ASSIMILATION|END_SCENE|DOMAIN|CHOICE|END_OF_DAY|POETRY|DAY|MOOD|DRIFT|REMEMBER)[^\]]*\]/gi, '');
   // Strip incomplete trailing tag that hasn't closed yet (e.g. "[AFFINITY:say")
   display = display.replace(/\[[A-Z_]{2,}[^\]]*$/i, '');
   // If [POEM] appears without [/POEM], truncate to content before the poem block
@@ -506,7 +506,8 @@ async function generateGreeting(chat) {
     pushMoodHistory(chat, mood, moodIntensity, drift);
     chat.lastActiveTime = Date.now();
     // Adventure mode: parse game state tags from greeting
-    const reply = chat.mode === 'adventure' ? processAdventureResponse(chat, parsedReply) : parsedReply;
+    const cleanedReply0 = processRememberTags(parsedReply);
+    const reply = chat.mode === 'adventure' ? processAdventureResponse(chat, cleanedReply0) : cleanedReply0;
     chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
@@ -700,7 +701,8 @@ async function regenerateLastResponse() {
     pushMoodHistory(chat, mood, moodIntensity, drift);
     chat.lastActiveTime = Date.now();
     // Adventure mode: parse game state tags
-    const reply = chat.mode === 'adventure' ? processAdventureResponse(chat, parsedReply) : parsedReply;
+    const cleanedReply1 = processRememberTags(parsedReply);
+    const reply = chat.mode === 'adventure' ? processAdventureResponse(chat, cleanedReply1) : cleanedReply1;
     chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
@@ -1005,7 +1007,8 @@ async function sendMessage() {
     pushMoodHistory(chat, mood, moodIntensity, drift);
     chat.lastActiveTime = Date.now();
     // Adventure mode: parse game state tags
-    const reply = chat.mode === 'adventure' ? processAdventureResponse(chat, parsedReply) : parsedReply;
+    const cleanedReply2 = processRememberTags(parsedReply);
+    const reply = chat.mode === 'adventure' ? processAdventureResponse(chat, cleanedReply2) : cleanedReply2;
     chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
     if (msgBubble) msgBubble.innerHTML = renderMarkdown(reply);
