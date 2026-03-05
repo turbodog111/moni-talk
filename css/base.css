@@ -231,7 +231,7 @@ body {
   align-items: center;
 }
 #screenLanding {
-  background: url('images/monika-landing.png') center 30% / cover no-repeat;
+  background: url('../images/monika-landing.png') center 30% / cover no-repeat;
   position: relative;
 }
 .landing-body {
