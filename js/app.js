@@ -58,7 +58,7 @@ function init() {
 
   relSlider.addEventListener('input', updateRelDisplay);
   $('newChatFab').addEventListener('click', () => { resetNewChatScreen(); showScreen('newChat'); });
-  $('newChatBackBtn').addEventListener('click', () => showScreen('chatList'));
+  $('landingNewBtn').addEventListener('click', () => { resetNewChatScreen(); showScreen('newChat'); });
   $('startChatBtn').addEventListener('click', createChat);
   $('modeChatBtn').addEventListener('click', () => setNewChatMode('chat'));
   $('modeStoryBtn').addEventListener('click', () => setNewChatMode('story'));
@@ -122,7 +122,6 @@ function init() {
   $('journalContinueBtn').addEventListener('click', closeJournal);
   initVnTicks();
   $('profileBtn').addEventListener('click', () => { loadProfile(); showScreen('profile'); });
-  $('profileBackBtn').addEventListener('click', () => showScreen('chatList'));
   $('saveProfileBtn').addEventListener('click', saveProfile);
   $('addSpecialDateBtn').addEventListener('click', addSpecialDate);
   // Special date delete delegation
@@ -146,7 +145,22 @@ function init() {
       showToast('Memory forgotten.', 'success');
     }
   });
-  $('chatBackBtn').addEventListener('click', () => { if (typeof stopTTS === 'function') stopTTS(); if (typeof hideMicButton === 'function') hideMicButton(); activeChatId = null; screens.chat.classList.remove('vn-mode'); screens.chat.classList.remove('room-mode'); screens.chat.classList.remove('adventure-mode'); teardownRoomMode(); closeVnPanel(); closeChatPanel(); closeAdventurePanel(); const advAct = $('adventureActions'); if (advAct) advAct.style.display = 'none'; const picker = document.querySelector('.adv-item-picker'); if (picker) picker.remove(); showScreen('chatList'); renderChatList(); });
+  $('topbarBackBtn').addEventListener('click', () => {
+    if (screens.chat.classList.contains('active')) {
+      if (typeof stopTTS === 'function') stopTTS();
+      if (typeof hideMicButton === 'function') hideMicButton();
+      activeChatId = null;
+      screens.chat.classList.remove('vn-mode', 'room-mode', 'adventure-mode');
+      teardownRoomMode();
+      closeVnPanel(); closeChatPanel(); closeAdventurePanel();
+      const advAct = $('adventureActions');
+      if (advAct) advAct.style.display = 'none';
+      const picker = document.querySelector('.adv-item-picker');
+      if (picker) picker.remove();
+      renderChatList();
+    }
+    showScreen('landing');
+  });
   $('trimBtn').addEventListener('click', trimContext);
   $('regenBtn').addEventListener('click', regenerateLastResponse);
   $('cancelBtn').addEventListener('click', () => { if (activeAbortController) activeAbortController.abort(); });
@@ -346,42 +360,92 @@ function init() {
   $('signOutBtn').addEventListener('click', handleSignOut);
   $('syncNowBtn').addEventListener('click', () => { fullSync(); });
   initSync();
+  initModelSwitcher();
 }
 
-// ====== MOBILE KEYBOARD ======
-function setupViewport() {
-  let baseHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  const KEYBOARD_THRESHOLD = 150;
+// ====== MODEL SWITCHER ======
+function initModelSwitcher() {
+  const dropdown = $('modelSwitcherDropdown');
+  const btn = $('modelSwitcherBtn');
+  const wrap = $('modelSwitcherWrap');
+  if (!dropdown || !btn || !wrap) return;
 
-  const update = () => {
-    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    document.documentElement.style.setProperty('--app-height', h + 'px');
+  dropdown.innerHTML = '';
 
-    // Track largest viewport as base (keyboard closed state)
-    if (h > baseHeight) baseHeight = h;
+  const cloudLabel = document.createElement('div');
+  cloudLabel.className = 'model-switcher-group-label';
+  cloudLabel.textContent = 'Cloud Models';
+  dropdown.appendChild(cloudLabel);
 
-    // Toggle .keyboard-open when viewport shrinks significantly
-    const keyboardOpen = (baseHeight - h) > KEYBOARD_THRESHOLD;
-    document.documentElement.classList.toggle('keyboard-open', keyboardOpen);
-
-    if (screens.chat.classList.contains('active')) scrollToBottom();
-  };
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', update);
-  }
-  window.addEventListener('resize', update);
-
-  // Reset baseHeight on orientation change (toolbar size differs)
-  window.addEventListener('orientationchange', () => {
-    setTimeout(() => {
-      baseHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-      update();
-    }, 300);
+  PUTER_MODELS.forEach(m => {
+    const opt = document.createElement('button');
+    opt.className = 'model-switcher-option';
+    opt.dataset.provider = 'puter';
+    opt.dataset.model = m.id;
+    opt.textContent = m.label;
+    if (provider === 'puter' && puterModel === m.id) opt.classList.add('active');
+    opt.addEventListener('click', () => {
+      provider = 'puter';
+      puterModel = m.id;
+      localStorage.setItem(STORAGE.PROVIDER, provider);
+      localStorage.setItem(STORAGE.MODEL_PUTER, puterModel);
+      updateModelSwitcherLabel();
+      dropdown.querySelectorAll('.model-switcher-option').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      wrap.classList.remove('open');
+    });
+    dropdown.appendChild(opt);
   });
 
-  update();
+  const sep = document.createElement('div');
+  sep.className = 'model-switcher-sep';
+  dropdown.appendChild(sep);
+
+  const localLabel = document.createElement('div');
+  localLabel.className = 'model-switcher-group-label';
+  localLabel.textContent = 'Local Models';
+  dropdown.appendChild(localLabel);
+
+  [{ prov: 'ollama', name: 'Ollama (local)' }, { prov: 'llamacpp', name: 'llama.cpp (local)' }].forEach(({ prov, name }) => {
+    const opt = document.createElement('button');
+    opt.className = 'model-switcher-option';
+    opt.dataset.provider = prov;
+    opt.textContent = name;
+    if (provider === prov) opt.classList.add('active');
+    opt.addEventListener('click', () => {
+      provider = prov;
+      localStorage.setItem(STORAGE.PROVIDER, provider);
+      updateModelSwitcherLabel();
+      dropdown.querySelectorAll('.model-switcher-option').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      wrap.classList.remove('open');
+    });
+    dropdown.appendChild(opt);
+  });
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    wrap.classList.toggle('open');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!wrap.contains(e.target)) wrap.classList.remove('open');
+  });
+
+  updateModelSwitcherLabel();
 }
 
-setupViewport();
+function updateModelSwitcherLabel() {
+  const label = $('modelSwitcherLabel');
+  if (!label) return;
+  if (provider === 'puter') {
+    const m = PUTER_MODELS.find(m => m.id === puterModel);
+    label.textContent = m ? m.label : puterModel;
+  } else if (provider === 'ollama') {
+    label.textContent = `Ollama · ${ollamaModel || 'local'}`;
+  } else if (provider === 'llamacpp') {
+    label.textContent = `llama.cpp · ${llamacppModel || 'local'}`;
+  }
+}
+
 init();

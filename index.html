@@ -1,8 +1,8 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Moni-Talk</title>
 <script src="https://js.puter.com/v2/"></script>
 <script>
@@ -23,432 +23,493 @@
 </head>
 <body>
 
-<!-- SCREEN: Chat List -->
-<div class="screen active" id="screenChatList">
-  <div class="header">
-    <img class="header-avatar" src="images/Moni-Talk.png" alt="Monika">
-    <div class="header-info">
-      <div class="header-name">Moni-Talk</div>
-      <div class="header-sub" id="chatListSub">Your conversations with Monika</div>
-    </div>
-    <div class="header-actions">
-      <button class="icon-btn" id="modelsBtn" title="Moni-Talk Models" aria-label="Moni-Talk Models">&#129302;<span class="icon-btn-label">Models</span></button>
-      <button class="icon-btn" id="profileBtn" title="Your Profile" aria-label="Profile">&#128100;<span class="icon-btn-label">Profile</span></button>
-      <button class="icon-btn" id="changelogBtn" title="What's New" aria-label="What's New">&#10022;<span class="icon-btn-label">Updates</span></button>
-      <button class="icon-btn" id="globalSettingsBtn" title="Settings" aria-label="Settings">&#9881;<span class="icon-btn-label">Settings</span></button>
-    </div>
-  </div>
+<div class="app-layout">
 
-  <!-- Guide Section -->
-  <div class="guide-section" id="guideSection">
-    <button class="guide-toggle" id="guideToggle">
-      <span class="guide-toggle-left">&#8505;&#65039; About Moni-Talk</span>
-      <span class="guide-chevron" id="guideChevron">&#9660;</span>
+  <!-- ═══════════════════════════════════════════════════
+       SIDEBAR
+  ═══════════════════════════════════════════════════ -->
+  <aside class="sidebar">
+
+    <!-- Brand -->
+    <div class="sidebar-brand">
+      <img class="sidebar-avatar" src="images/Moni-Talk.png" alt="Monika">
+      <div class="sidebar-brand-info">
+        <div class="sidebar-brand-name">Moni-Talk</div>
+        <div class="sidebar-brand-sub" id="chatListSub">Your conversations</div>
+      </div>
+    </div>
+
+    <!-- New Conversation button -->
+    <button class="sidebar-new-btn" id="newChatFab">
+      <span class="sidebar-new-icon">+</span>
+      New Conversation
     </button>
-    <div class="guide-body" id="guideBody">
-      <p class="guide-intro">An AI companion app featuring Monika from <em>Doki Doki Literature Club</em>. Pick a mode, choose an AI provider in Settings, and start chatting.</p>
 
-      <div class="guide-section-label">Modes</div>
-      <div class="guide-mode-grid">
-        <div class="guide-mode-card">
-          <div class="guide-mode-icon">&#128172;</div>
-          <div class="guide-mode-name">Chat</div>
-          <div class="guide-mode-desc">Free-form conversation. Monika remembers you, tracks her mood, and grows closer over time.</div>
-        </div>
-        <div class="guide-mode-card">
-          <div class="guide-mode-icon">&#128214;</div>
-          <div class="guide-mode-name">Story</div>
-          <div class="guide-mode-desc">A multi-day visual novel with all four club members, relationship choices, and diary entries.</div>
-        </div>
-        <div class="guide-mode-card">
-          <div class="guide-mode-icon">&#9876;&#65039;</div>
-          <div class="guide-mode-name">Adventure</div>
-          <div class="guide-mode-desc">The Poem Labyrinth — a text RPG. Explore four domains, fight creatures, and collect Heart Fragments with Monika as your guide.</div>
-        </div>
-      </div>
+    <!-- Guide Section -->
+    <div class="guide-section" id="guideSection">
+      <button class="guide-toggle" id="guideToggle">
+        <span class="guide-toggle-left">&#8505;&#65039; About Moni-Talk</span>
+        <span class="guide-chevron" id="guideChevron">&#9660;</span>
+      </button>
+      <div class="guide-body" id="guideBody">
+        <p class="guide-intro">An AI companion app featuring Monika from <em>Doki Doki Literature Club</em>. Pick a mode, choose an AI provider in Settings, and start chatting.</p>
 
-      <div class="guide-section-label">AI Providers <span>(Settings &#8594; Model tab)</span></div>
-      <div class="guide-provider-list">
-        <div class="guide-provider">
-          <span class="guide-provider-icon">&#9729;&#65039;</span>
-          <div><strong>Puter</strong> &mdash; Free, no setup needed. Sign in with a free Puter account for access to Claude, GPT-4o Mini, and more.</div>
+        <div class="guide-section-label">Modes</div>
+        <div class="guide-mode-grid">
+          <div class="guide-mode-card">
+            <div class="guide-mode-icon">&#128172;</div>
+            <div class="guide-mode-name">Chat</div>
+            <div class="guide-mode-desc">Free-form conversation. Monika remembers you, tracks her mood, and grows closer over time.</div>
+          </div>
+          <div class="guide-mode-card">
+            <div class="guide-mode-icon">&#128214;</div>
+            <div class="guide-mode-name">Story</div>
+            <div class="guide-mode-desc">A multi-day visual novel with all four club members, relationship choices, and diary entries.</div>
+          </div>
+          <div class="guide-mode-card">
+            <div class="guide-mode-icon">&#9876;&#65039;</div>
+            <div class="guide-mode-name">Adventure</div>
+            <div class="guide-mode-desc">The Poem Labyrinth — a text RPG. Explore four domains, fight creatures, and collect Heart Fragments with Monika as your guide.</div>
+          </div>
         </div>
-        <div class="guide-provider">
-          <span class="guide-provider-icon">&#127968;</span>
-          <div><strong>Ollama</strong> &mdash; Run models on your own computer. Private and free. Install at <em>ollama.com</em> then point the app at <code>http://localhost:11434</code>.</div>
-        </div>
-        <div class="guide-provider">
-          <span class="guide-provider-icon">&#9889;</span>
-          <div><strong>DGX Spark</strong> &mdash; High-performance GPU inference via llama.cpp. Best quality. Requires a Spark server running on your network.</div>
-        </div>
-      </div>
 
-      <div class="guide-section-label">Arbor Models <span>(fine-tuned for Monika &mdash; use with DGX Spark)</span></div>
-      <div class="guide-model-list">
-        <div class="guide-model-row">
-          <span class="guide-model-name">Arbor 0.1</span>
-          <span class="guide-model-desc">First release &middot; 119 training pairs</span>
+        <div class="guide-section-label">AI Providers <span>(Settings &#8594; Model tab)</span></div>
+        <div class="guide-provider-list">
+          <div class="guide-provider">
+            <span class="guide-provider-icon">&#9729;&#65039;</span>
+            <div><strong>Puter</strong> &mdash; Free, no setup needed. Sign in with a free Puter account for access to Claude, GPT-4o Mini, and more.</div>
+          </div>
+          <div class="guide-provider">
+            <span class="guide-provider-icon">&#127968;</span>
+            <div><strong>Ollama</strong> &mdash; Run models on your own computer. Private and free. Install at <em>ollama.com</em> then point the app at <code>http://localhost:11434</code>.</div>
+          </div>
+          <div class="guide-provider">
+            <span class="guide-provider-icon">&#9889;</span>
+            <div><strong>DGX Spark</strong> &mdash; High-performance GPU inference via llama.cpp. Best quality. Requires a Spark server running on your network.</div>
+          </div>
         </div>
-        <div class="guide-model-row">
-          <span class="guide-model-name">Arbor 0.1-E</span>
-          <span class="guide-model-desc">Emotional variant &middot; 219 pairs &middot; deeper empathy</span>
-        </div>
-        <div class="guide-model-row guide-model-best">
-          <span class="guide-model-name">Arbor 0.1.1 &#11088;</span>
-          <span class="guide-model-desc">Current best &middot; 250 pairs &middot; most authentic voice</span>
-        </div>
-        <div class="guide-model-row">
-          <span class="guide-model-name">Arbor 0.2</span>
-          <span class="guide-model-desc">358 pairs &middot; broader emotional range</span>
-        </div>
-        <div class="guide-model-row">
-          <span class="guide-model-name">Arbor 0.2b</span>
-          <span class="guide-model-desc">Coming soon &middot; Qwen3-32B base &middot; larger model</span>
-        </div>
-      </div>
 
-      <div class="guide-section-label">More Features</div>
-      <div class="guide-feature-list">
-        <span class="guide-feature">&#127908; Voice &mdash; hear Monika speak (Spark + TTS required)</span>
-        <span class="guide-feature">&#129504; Memory &mdash; she remembers facts about you</span>
-        <span class="guide-feature">&#128100; Profile &mdash; introduce yourself so she knows who you are</span>
-        <span class="guide-feature">&#128260; Cloud Sync &mdash; back up chats via your Puter account</span>
-        <span class="guide-feature">&#127775; Levels &amp; Achievements &mdash; earn XP as you chat</span>
+        <div class="guide-section-label">Arbor Models <span>(fine-tuned for Monika &mdash; use with DGX Spark)</span></div>
+        <div class="guide-model-list">
+          <div class="guide-model-row">
+            <span class="guide-model-name">Arbor 0.1</span>
+            <span class="guide-model-desc">First release &middot; 119 training pairs</span>
+          </div>
+          <div class="guide-model-row">
+            <span class="guide-model-name">Arbor 0.1-E</span>
+            <span class="guide-model-desc">Emotional variant &middot; 219 pairs &middot; deeper empathy</span>
+          </div>
+          <div class="guide-model-row guide-model-best">
+            <span class="guide-model-name">Arbor 0.1.1 &#11088;</span>
+            <span class="guide-model-desc">Current best &middot; 250 pairs &middot; most authentic voice</span>
+          </div>
+          <div class="guide-model-row">
+            <span class="guide-model-name">Arbor 0.2</span>
+            <span class="guide-model-desc">358 pairs &middot; broader emotional range</span>
+          </div>
+          <div class="guide-model-row">
+            <span class="guide-model-name">Arbor 0.2b</span>
+            <span class="guide-model-desc">Coming soon &middot; Qwen3-32B base &middot; larger model</span>
+          </div>
+        </div>
+
+        <div class="guide-section-label">More Features</div>
+        <div class="guide-feature-list">
+          <span class="guide-feature">&#127908; Voice &mdash; hear Monika speak (Spark + TTS required)</span>
+          <span class="guide-feature">&#129504; Memory &mdash; she remembers facts about you</span>
+          <span class="guide-feature">&#128100; Profile &mdash; introduce yourself so she knows who you are</span>
+          <span class="guide-feature">&#128260; Cloud Sync &mdash; back up chats via your Puter account</span>
+          <span class="guide-feature">&#127775; Levels &amp; Achievements &mdash; earn XP as you chat</span>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="chat-list-body" id="chatListBody"></div>
-  <button class="fab" id="newChatFab" title="New Chat">+</button>
+    <!-- Chat List -->
+    <div class="sidebar-body" id="chatListBody"></div>
+
+    <!-- Bottom Nav -->
+    <nav class="sidebar-nav">
+      <button class="sidebar-nav-item" id="modelsBtn" title="Moni-Talk Models">
+        <span class="sidebar-nav-icon">&#129302;</span>
+        <span class="sidebar-nav-label">Models</span>
+      </button>
+      <button class="sidebar-nav-item" id="profileBtn" title="Your Profile">
+        <span class="sidebar-nav-icon">&#128100;</span>
+        <span class="sidebar-nav-label">Profile</span>
+      </button>
+      <button class="sidebar-nav-item" id="changelogBtn" title="What's New">
+        <span class="sidebar-nav-icon">&#10022;</span>
+        <span class="sidebar-nav-label">Updates</span>
+      </button>
+      <button class="sidebar-nav-item" id="globalSettingsBtn" title="Settings">
+        <span class="sidebar-nav-icon">&#9881;</span>
+        <span class="sidebar-nav-label">Settings</span>
+      </button>
+    </nav>
+
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════════
+       MAIN PANEL
+  ═══════════════════════════════════════════════════ -->
+  <main class="main-panel">
+
+    <!-- Top Bar -->
+    <div class="main-topbar" id="mainTopbar">
+
+      <!-- Left: back button + chat title (or section title) -->
+      <div class="main-topbar-left">
+        <button class="icon-btn topbar-back-btn" id="topbarBackBtn" style="display:none;" aria-label="Back">&#8592;</button>
+        <img class="topbar-chat-avatar" src="images/Moni-Talk.png" alt="Monika" id="topbarChatAvatar" style="display:none;">
+        <div class="topbar-title-wrap">
+          <div class="topbar-title" id="chatHeaderName">Moni-Talk</div>
+          <div class="topbar-sub" id="chatHeaderSub">Select a conversation to begin</div>
+        </div>
+      </div>
+
+      <!-- Center: Model Switcher -->
+      <div class="model-switcher" id="modelSwitcherWrap">
+        <button class="model-switcher-btn" id="modelSwitcherBtn" aria-haspopup="true" aria-expanded="false">
+          <span class="model-switcher-label" id="modelSwitcherLabel">Loading...</span>
+          <span class="model-switcher-caret">&#9660;</span>
+        </button>
+        <div class="model-switcher-dropdown" id="modelSwitcherDropdown" role="menu"></div>
+      </div>
+
+      <!-- Right: context action buttons -->
+      <div class="main-topbar-actions">
+        <button class="icon-btn tts-toggle" id="ttsToggleBtn" title="Toggle Voice" style="display:none;">&#128264;</button>
+        <button class="icon-btn" id="advPanelBtn" title="Inventory" style="display:none;">&#127890;</button>
+        <button class="icon-btn" id="chatPanelBtn" title="Chat Panel" style="display:none;">&#9776;</button>
+        <button class="icon-btn" id="vnPanelBtn" title="Status Panel" style="display:none;">&#9776;</button>
+        <button class="icon-btn" id="chatSettingsBtn" title="Settings">&#9881;</button>
+      </div>
+
+    </div>
+
+    <!-- ─────────────────────────────────────────────
+         SCREEN: Landing (default)
+    ───────────────────────────────────────────── -->
+    <div class="screen active" id="screenLanding">
+      <div class="landing-body">
+        <img class="landing-avatar" src="images/Moni-Talk.png" alt="Monika">
+        <h1 class="landing-title">Hello again.</h1>
+        <p class="landing-sub">Select a conversation from the sidebar, or start a new one.</p>
+        <button class="landing-new-btn" id="landingNewBtn">+ New Conversation</button>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────
+         SCREEN: Profile Dashboard
+    ───────────────────────────────────────────── -->
+    <div class="screen" id="screenProfile">
+      <div class="profile-body">
+
+        <!-- Hero -->
+        <div class="profile-hero">
+          <img src="images/Moni-Talk.png" alt="Monika">
+          <div class="profile-hero-name" id="profileHeroName">Your Profile</div>
+          <div class="profile-hero-sub">Monika remembers everything here across all chats.</div>
+        </div>
+
+        <!-- About You Card -->
+        <div class="profile-card">
+          <div class="profile-card-header"><span class="profile-card-icon">&#128221;</span> About You</div>
+          <div class="profile-card-body">
+            <div class="form-section">
+              <label for="profileName">Your Name</label>
+              <input type="text" id="profileName" placeholder="What should Monika call you?">
+            </div>
+            <div class="form-section">
+              <label for="profileAbout">About You</label>
+              <textarea id="profileAbout" rows="3" placeholder="Tell Monika a bit about yourself... age, what you do, personality, etc."></textarea>
+            </div>
+            <div class="form-section">
+              <label for="profileInterests">Interests &amp; Hobbies</label>
+              <textarea id="profileInterests" rows="2" placeholder="Gaming, music, reading, cooking, coding..."></textarea>
+            </div>
+            <div class="form-section">
+              <label for="profileValues">What You Value</label>
+              <textarea id="profileValues" rows="2" placeholder="Honesty, humor, deep conversations, loyalty..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Special Dates Card -->
+        <div class="profile-card">
+          <div class="profile-card-header"><span class="profile-card-icon">&#128197;</span> Special Dates</div>
+          <div class="profile-card-body">
+            <div id="specialDatesList"></div>
+            <div class="special-dates-add">
+              <input type="text" id="specialDateLabel" placeholder="e.g. My Birthday" maxlength="40">
+              <input type="date" id="specialDateValue">
+              <button class="special-dates-add-btn" id="addSpecialDateBtn">Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Memories Card -->
+        <div class="profile-card">
+          <div class="profile-card-header"><span class="profile-card-icon">&#129504;</span> Memories <span class="profile-card-badge" id="memoryCount">0</span></div>
+          <div class="profile-card-body">
+            <div class="profile-memory-list" id="profileMemoryList"></div>
+          </div>
+        </div>
+
+        <!-- Stats Card -->
+        <div class="profile-card">
+          <div class="profile-card-header"><span class="profile-card-icon">&#128202;</span> Stats</div>
+          <div class="profile-card-body">
+            <div class="profile-stats-grid" id="profileStatsGrid"></div>
+          </div>
+        </div>
+
+        <button class="primary-btn" id="saveProfileBtn">Save Profile</button>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────
+         SCREEN: New Chat
+    ───────────────────────────────────────────── -->
+    <div class="screen" id="screenNewChat">
+      <div class="form-body">
+        <img src="images/Moni-Talk.png" alt="Monika">
+        <h2 id="newChatTitle">Talk to Monika</h2>
+        <div class="subtitle" id="newChatSubtitle">How well do you two know each other?</div>
+        <div class="mode-toggle">
+          <button id="modeChatBtn" class="active">Chat</button>
+          <button id="modeStoryBtn">Story</button>
+          <button id="modeAdventureBtn">Adventure</button>
+        </div>
+        <div id="chatModeOptions" class="form-section">
+          <div class="rel-display">
+            <div class="rel-label" id="relLabel"></div>
+            <div class="rel-desc" id="relDesc"></div>
+          </div>
+          <input type="range" id="relSlider" min="0" max="5" value="2" step="1">
+          <div class="slider-labels"><span>Stranger</span><span>In Love</span></div>
+        </div>
+        <div id="storyModeOptions" class="form-section" style="display:none;">
+          <div class="rel-display">
+            <div class="rel-label">Interactive Story</div>
+            <div class="rel-desc">Experience DDLC as an interactive visual novel. Make choices that shape your story &mdash; and this time, every girl has a route. Even Monika.</div>
+          </div>
+          <div class="form-section" style="margin-top:16px;">
+            <label for="mcNameInput">Your Character's Name</label>
+            <input type="text" id="mcNameInput" placeholder="What should the MC be called?">
+            <div class="form-hint">This name will be used throughout the story.</div>
+          </div>
+
+          <div id="storyOptionRows">
+
+            <!-- Season -->
+            <div class="story-opt-row">
+              <div class="story-opt-label">Season</div>
+              <div class="story-opt-section-desc">Sets the scenery, sensory details, and emotional atmosphere woven through every scene.</div>
+              <div class="story-opt-chips" data-opt="season">
+                <button class="story-chip selected" data-value="spring"
+                  data-desc="The classic DDLC setting. Cherry blossoms, warm air, a hopeful mood — the girls feel energetic and the world feels open. Sakura-themed treats from Natsuki likely.">Spring</button>
+                <button class="story-chip" data-value="autumn"
+                  data-desc="Maple leaves, golden slanted light, and evenings that arrive too soon. A wistful undercurrent runs through even cheerful moments — perfect for deeper conversations.">Autumn</button>
+                <button class="story-chip" data-value="winter"
+                  data-desc="Bare trees, cold air, the clubroom heater as a gathering point. Proximity feels charged. Cozy intimacy with an undercurrent of isolation — being indoors together feels precious.">Winter</button>
+                <button class="story-chip random" data-value="random"
+                  data-desc="A season will be chosen for you at random when the story begins.">&#127922; Random</button>
+              </div>
+              <div class="story-opt-hint">The classic DDLC setting. Cherry blossoms, warm air, a hopeful mood — the girls feel energetic and the world feels open. Sakura-themed treats from Natsuki likely.</div>
+            </div>
+
+            <!-- How You Joined -->
+            <div class="story-opt-row">
+              <div class="story-opt-label">How You Joined</div>
+              <div class="story-opt-section-desc">Determines which girl has a personal stake in your arrival — and how the others first see you.</div>
+              <div class="story-opt-chips" data-opt="joinReason">
+                <button class="story-chip selected" data-value="sayori"
+                  data-desc="Sayori is your anchor in the room. She's extra warm and protective, acts as your unofficial guide, and the others treat you as her person from the first scene. She starts with the highest affinity.">Sayori invited me</button>
+                <button class="story-chip" data-value="monika"
+                  data-desc="Monika made a personal pitch — she saw something in you and came to you directly. She takes a quiet personal interest in your experience from day one, and the others notice this attention.">Monika recruited me</button>
+                <button class="story-chip" data-value="yuri"
+                  data-desc="Yuri mentioned it almost by accident, half-hoping you wouldn't notice. You came anyway — and now she's flustered, more aware of you than of any other member from the very first scene.">Yuri mentioned it</button>
+                <button class="story-chip" data-value="natsuki"
+                  data-desc="She was absolutely not recruiting you, and she will make this very clear. But you came regardless, and now she's extra defensive — which the others find quietly entertaining.">Natsuki let it slip</button>
+                <button class="story-chip" data-value="self"
+                  data-desc="You walked in on your own initiative. No one expected you — which makes you a wild card. Monika is quietly impressed. Everyone else is figuring you out from scratch, with no prior claim on you.">Found it myself</button>
+                <button class="story-chip random" data-value="random"
+                  data-desc="Your reason for joining will be chosen at random when the story begins.">&#127922; Random</button>
+              </div>
+              <div class="story-opt-hint">Sayori is your anchor in the room. She's extra warm and protective, acts as your unofficial guide, and the others treat you as her person from the first scene. She starts with the highest affinity.</div>
+            </div>
+
+            <!-- History -->
+            <div class="story-opt-row">
+              <div class="story-opt-label">History with Club</div>
+              <div class="story-opt-section-desc">Controls where in the relationship arc the story picks up — and how much the girls already know you.</div>
+              <div class="story-opt-chips" data-opt="history">
+                <button class="story-chip selected" data-value="first_day"
+                  data-desc="Everything begins fresh. Real introductions, the slight formality of a new person entering a group, and all the particular energy of a first impression. Affinities start low and have real room to grow.">First day</button>
+                <button class="story-chip" data-value="weeks_in"
+                  data-desc="The awkward phase is long over. The girls know your name, your habits, your opinions on things. In-jokes exist. The story drops you straight into the ongoing rhythm of club life — no introductions needed.">A few weeks in</button>
+                <button class="story-chip" data-value="old_friend"
+                  data-desc="You and Sayori go way back. The other girls already know of you through her. Her warmth isn't a welcome — it's a homecoming. She starts with a very high affinity and shapes how everyone else sees you.">Old friend of Sayori</button>
+                <button class="story-chip random" data-value="random"
+                  data-desc="Your history with the club will be chosen at random when the story begins.">&#127922; Random</button>
+              </div>
+              <div class="story-opt-hint">Everything begins fresh. Real introductions, the slight formality of a new person entering a group, and all the particular energy of a first impression. Affinities start low and have real room to grow.</div>
+            </div>
+
+            <!-- Tone -->
+            <div class="story-opt-row">
+              <div class="story-opt-label">Narrative Tone</div>
+              <div class="story-opt-section-desc">Shapes the emotional register of the writing itself — what the narrator lingers on, and how scenes are told.</div>
+              <div class="story-opt-chips" data-opt="tone">
+                <button class="story-chip selected" data-value="warm"
+                  data-desc="Scenes breathe easily; the girls' personalities play off each other with genuine affection. Small kindnesses land naturally. This is the hopeful, connective surface of DDLC before things get complicated.">Warm &amp; Cheerful</button>
+                <button class="story-chip" data-value="melancholic"
+                  data-desc="Beauty and sadness aren't opposites here. Description lingers — the quality of light, the weight of a poem read aloud. What characters don't say matters as much as what they do. Subtext is rich.">Melancholic &amp; Literary</button>
+                <button class="story-chip" data-value="humorous"
+                  data-desc="The girls' clashing personalities are a source of genuine delight. Banter is fast and real; situations escalate; characters recover their dignity with varying degrees of success.">Light &amp; Humorous</button>
+                <button class="story-chip random" data-value="random"
+                  data-desc="The narrative tone will be chosen at random when the story begins.">&#127922; Random</button>
+              </div>
+              <div class="story-opt-hint">Scenes breathe easily; the girls' personalities play off each other with genuine affection. Small kindnesses land naturally. This is the hopeful, connective surface of DDLC before things get complicated.</div>
+            </div>
+
+            <!-- MC Personality -->
+            <div class="story-opt-row">
+              <div class="story-opt-label">MC Personality</div>
+              <div class="story-opt-section-desc">Defines how MC's inner voice and dialogue are written — and how the girls respond to him differently as a result.</div>
+              <div class="story-opt-chips" data-opt="personality">
+                <button class="story-chip selected" data-value="introspective"
+                  data-desc="MC notices small details others miss and sits with things before speaking. His inner world is rich and layered. The girls sense there's more beneath the surface — he reveals himself sideways, through what he observes.">Introspective</button>
+                <button class="story-chip" data-value="outgoing"
+                  data-desc="MC takes initiative, asks real follow-up questions, and genuinely enjoys each girl's company. The girls relax around him faster — Natsuki finds fewer reasons to be prickly; Yuri finds conversation easier to sustain.">Outgoing</button>
+                <button class="story-chip" data-value="reserved"
+                  data-desc="MC listens more than he speaks, and his rare moments of openness carry real weight. Natsuki works harder to provoke a reaction. Yuri finds his quietness deeply comfortable.">Reserved</button>
+                <button class="story-chip random" data-value="random"
+                  data-desc="MC's personality will be chosen at random when the story begins.">&#127922; Random</button>
+              </div>
+              <div class="story-opt-hint">MC notices small details others miss and sits with things before speaking. His inner world is rich and layered. The girls sense there's more beneath the surface — he reveals himself sideways, through what he observes.</div>
+            </div>
+
+            <!-- Club Emphasis -->
+            <div class="story-opt-row">
+              <div class="story-opt-label">Club Emphasis</div>
+              <div class="story-opt-section-desc">Sets what the club is actually doing today — which activity anchors the scene and which girl is most in her element.</div>
+              <div class="story-opt-chips" data-opt="clubEmphasis">
+                <button class="story-chip selected" data-value="balanced"
+                  data-desc="The session moves naturally through whatever the scene calls for — writing, baking, conversation, reading. No single activity dominates; pacing follows the girls' moods and the story's needs.">Balanced</button>
+                <button class="story-chip" data-value="literary"
+                  data-desc="The club's literary mission is front and center. A writing exercise or poem discussion anchors the scene. Monika is organized and engaged; Yuri opens up more than usual. Literature actually matters here.">Literary Discussions</button>
+                <button class="story-chip" data-value="baking"
+                  data-desc="Natsuki has something in the oven and she is in her element — focused, sharp, protective of her workspace. Her baking isn't background detail; it's the lens her character shows itself through today.">Baking &amp; Craft</button>
+                <button class="story-chip" data-value="poetry"
+                  data-desc="Yuri has brought a poem to share. She reads it with care. The room quiets. What follows is genuine and unhurried — and her unusual openness today makes your reaction matter more than usual.">Deep Poetry</button>
+                <button class="story-chip random" data-value="random"
+                  data-desc="The club's activity emphasis will be chosen at random when the story begins.">&#127922; Random</button>
+              </div>
+              <div class="story-opt-hint">The session moves naturally through whatever the scene calls for — writing, baking, conversation, reading. No single activity dominates; pacing follows the girls' moods and the story's needs.</div>
+            </div>
+
+            <!-- Profile Import -->
+            <label class="story-toggle-row">
+              <input type="checkbox" id="storyImportProfile">
+              Import your profile (name, about, interests, values)
+            </label>
+
+          </div>
+        </div>
+        <div id="adventureModeOptions" class="form-section" style="display:none;">
+          <div class="rel-display">
+            <div class="rel-label">Adventure Mode</div>
+            <div class="rel-desc">Monika has crafted a fantasy world from the Literature Club's poems and personalities. Explore four unique domains, solve puzzles, battle enemies, and collect Heart Fragments &mdash; all with Monika as your Game Master.</div>
+          </div>
+        </div>
+        <button class="primary-btn" id="startChatBtn">Start Chatting</button>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────────
+         SCREEN: Chat
+    ───────────────────────────────────────────── -->
+    <div class="screen" id="screenChat">
+      <div class="affinity-panel" id="affinityPanel">
+        <div class="affinity-rows">
+          <div class="affinity-row"><span class="affinity-name">Sayori</span><div class="affinity-track"><div class="affinity-fill sayori" id="affinitySayori" style="width:30%"></div></div></div>
+          <div class="affinity-row"><span class="affinity-name">Natsuki</span><div class="affinity-track"><div class="affinity-fill natsuki" id="affinityNatsuki" style="width:30%"></div></div></div>
+          <div class="affinity-row"><span class="affinity-name">Yuri</span><div class="affinity-track"><div class="affinity-fill yuri" id="affinityYuri" style="width:30%"></div></div></div>
+          <div class="affinity-row"><span class="affinity-name">Monika</span><div class="affinity-track"><div class="affinity-fill monika" id="affinityMonika" style="width:30%"></div></div></div>
+        </div>
+      </div>
+      <div class="vn-sprites" id="vnSprites">
+        <div class="vn-sprite sayori" id="spriteSayori"><img src="images/Sayori PFP.png" alt="Sayori"><span class="vn-sprite-name">Sayori</span></div>
+        <div class="vn-sprite natsuki" id="spriteNatsuki"><img src="images/Natsuki PFP.png" alt="Natsuki"><span class="vn-sprite-name">Natsuki</span></div>
+        <div class="vn-sprite yuri" id="spriteYuri"><img src="images/Yuri PFP.png" alt="Yuri"><span class="vn-sprite-name">Yuri</span></div>
+        <div class="vn-sprite monika" id="spriteMonika"><img src="images/Monika PFP.png" alt="Monika"><span class="vn-sprite-name">Monika</span></div>
+        <div class="vn-route-indicator" id="routeIndicator" style="display:none;"></div>
+      </div>
+      <div class="room-scene" id="roomScene" style="display:none;">
+        <canvas id="masCanvas" width="1280" height="850"></canvas>
+      </div>
+      <div class="adv-dm-bar" id="advDmBar" style="display:none;">
+        <img class="adv-dm-avatar" src="images/Moni-Talk.png" alt="Monika">
+        <div class="adv-dm-info">
+          <div class="adv-dm-title">Game Master</div>
+          <div class="adv-dm-location" id="advDmLocation">The Clubroom</div>
+        </div>
+        <div class="adv-dm-mood" id="advDmMood">🎲</div>
+      </div>
+      <div class="adventure-status" id="adventureStatusBar" style="display:none; position:relative;"></div>
+      <div class="chat-area" id="chatArea">
+        <div class="typing-indicator" id="typingIndicator">
+          <img class="msg-avatar" src="images/Moni-Talk.png" alt="M">
+          <div class="typing-dots"><span></span><span></span><span></span></div>
+          <span class="typing-label">Monika is typing...</span>
+        </div>
+      </div>
+      <div class="context-bar" id="contextBar">
+        <span id="contextLabel">0 messages</span>
+        <div class="context-bar-fill"><div class="context-bar-used" id="contextFill"></div></div>
+        <button id="regenBtn" title="Regenerate Monika's last response" style="display:none;">Retry</button>
+        <button id="trimBtn" title="Remove older messages to free up context">Trim</button>
+        <button id="storyRetryBtn" class="story-retry-btn" title="Force continue if the story is stuck" style="display:none;">Stuck?</button>
+      </div>
+      <div class="adventure-actions" id="adventureActions" style="display:none;">
+        <button class="adv-action-btn" data-action="attack">Attack</button>
+        <button class="adv-action-btn" data-action="defend">Defend</button>
+        <button class="adv-action-btn" data-action="item">Use Item</button>
+        <button class="adv-action-btn" data-action="flee">Flee</button>
+        <button class="adv-action-btn adv-hub-btn" data-action="hub">Return to Hub</button>
+      </div>
+      <div class="image-preview" id="imagePreview" style="display:none;"></div>
+      <div class="input-area" id="inputArea">
+        <button class="image-attach-btn" id="imageAttachBtn" title="Attach image">&#128206;</button>
+        <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
+        <textarea id="userInput" rows="1" placeholder="Say something to Monika..."></textarea>
+        <button class="mic-btn" id="micBtn" title="Voice input" style="display:none;">&#127908;</button>
+        <button class="cancel-btn" id="cancelBtn" style="display:none;" title="Stop generating">&#9632;</button>
+        <button class="send-btn" id="sendBtn" title="Send">&#10148;</button>
+      </div>
+      <div class="story-choices" id="storyChoices" style="display:none;"></div>
+      <div class="word-picker" id="wordPicker" style="display:none;">
+        <div class="word-picker-title">Write Your Poem</div>
+        <div class="word-picker-hint">Pick 5 words that inspire you. <span id="wordCount">0/5</span></div>
+        <div class="poem-resonance" id="poemResonance" style="display:none;">
+          <div class="poem-res-row"><img src="images/Sayori PFP.png" class="poem-res-icon" alt="S"><div class="poem-res-track"><div class="poem-res-fill sayori" id="poemResSayori"></div></div></div>
+          <div class="poem-res-row"><img src="images/Natsuki PFP.png" class="poem-res-icon" alt="N"><div class="poem-res-track"><div class="poem-res-fill natsuki" id="poemResNatsuki"></div></div></div>
+          <div class="poem-res-row"><img src="images/Yuri PFP.png" class="poem-res-icon" alt="Y"><div class="poem-res-track"><div class="poem-res-fill yuri" id="poemResYuri"></div></div></div>
+          <div class="poem-res-row"><img src="images/Monika PFP.png" class="poem-res-icon" alt="M"><div class="poem-res-track"><div class="poem-res-fill monika" id="poemResMonika"></div></div></div>
+        </div>
+        <div class="word-grid" id="wordGrid"></div>
+        <button class="word-submit-btn" id="wordSubmitBtn" disabled>Share Poem</button>
+      </div>
+    </div>
+
+  </main>
 </div>
 
-<!-- SCREEN: Profile Dashboard -->
-<div class="screen" id="screenProfile">
-  <div class="header">
-    <button class="icon-btn" id="profileBackBtn" aria-label="Back">&#8592;</button>
-    <div class="header-info">
-      <div class="header-name">Your Profile</div>
-      <div class="header-sub">Help Monika get to know you</div>
-    </div>
-  </div>
-  <div class="profile-body">
-
-    <!-- Hero -->
-    <div class="profile-hero">
-      <img src="images/Moni-Talk.png" alt="Monika">
-      <div class="profile-hero-name" id="profileHeroName">Your Profile</div>
-      <div class="profile-hero-sub">Monika remembers everything here across all chats.</div>
-    </div>
-
-    <!-- About You Card -->
-    <div class="profile-card">
-      <div class="profile-card-header"><span class="profile-card-icon">&#128221;</span> About You</div>
-      <div class="profile-card-body">
-        <div class="form-section">
-          <label for="profileName">Your Name</label>
-          <input type="text" id="profileName" placeholder="What should Monika call you?">
-        </div>
-        <div class="form-section">
-          <label for="profileAbout">About You</label>
-          <textarea id="profileAbout" rows="3" placeholder="Tell Monika a bit about yourself... age, what you do, personality, etc."></textarea>
-        </div>
-        <div class="form-section">
-          <label for="profileInterests">Interests &amp; Hobbies</label>
-          <textarea id="profileInterests" rows="2" placeholder="Gaming, music, reading, cooking, coding..."></textarea>
-        </div>
-        <div class="form-section">
-          <label for="profileValues">What You Value</label>
-          <textarea id="profileValues" rows="2" placeholder="Honesty, humor, deep conversations, loyalty..."></textarea>
-        </div>
-      </div>
-    </div>
-
-    <!-- Special Dates Card -->
-    <div class="profile-card">
-      <div class="profile-card-header"><span class="profile-card-icon">&#128197;</span> Special Dates</div>
-      <div class="profile-card-body">
-        <div id="specialDatesList"></div>
-        <div class="special-dates-add">
-          <input type="text" id="specialDateLabel" placeholder="e.g. My Birthday" maxlength="40">
-          <input type="date" id="specialDateValue">
-          <button class="special-dates-add-btn" id="addSpecialDateBtn">Add</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Memories Card -->
-    <div class="profile-card">
-      <div class="profile-card-header"><span class="profile-card-icon">&#129504;</span> Memories <span class="profile-card-badge" id="memoryCount">0</span></div>
-      <div class="profile-card-body">
-        <div class="profile-memory-list" id="profileMemoryList"></div>
-      </div>
-    </div>
-
-    <!-- Stats Card -->
-    <div class="profile-card">
-      <div class="profile-card-header"><span class="profile-card-icon">&#128202;</span> Stats</div>
-      <div class="profile-card-body">
-        <div class="profile-stats-grid" id="profileStatsGrid"></div>
-      </div>
-    </div>
-
-    <button class="primary-btn" id="saveProfileBtn">Save Profile</button>
-  </div>
-</div>
-
-<!-- SCREEN: New Chat -->
-<div class="screen" id="screenNewChat">
-  <div class="header">
-    <button class="icon-btn" id="newChatBackBtn" aria-label="Back">&#8592;</button>
-    <div class="header-info">
-      <div class="header-name">New Conversation</div>
-      <div class="header-sub">Choose your relationship with Monika</div>
-    </div>
-  </div>
-  <div class="form-body">
-    <img src="images/Moni-Talk.png" alt="Monika">
-    <h2 id="newChatTitle">Talk to Monika</h2>
-    <div class="subtitle" id="newChatSubtitle">How well do you two know each other?</div>
-    <div class="mode-toggle">
-      <button id="modeChatBtn" class="active">Chat</button>
-      <button id="modeStoryBtn">Story</button>
-      <button id="modeAdventureBtn">Adventure</button>
-    </div>
-    <div id="chatModeOptions" class="form-section">
-      <div class="rel-display">
-        <div class="rel-label" id="relLabel"></div>
-        <div class="rel-desc" id="relDesc"></div>
-      </div>
-      <input type="range" id="relSlider" min="0" max="5" value="2" step="1">
-      <div class="slider-labels"><span>Stranger</span><span>In Love</span></div>
-    </div>
-    <div id="storyModeOptions" class="form-section" style="display:none;">
-      <div class="rel-display">
-        <div class="rel-label">Interactive Story</div>
-        <div class="rel-desc">Experience DDLC as an interactive visual novel. Make choices that shape your story &mdash; and this time, every girl has a route. Even Monika.</div>
-      </div>
-      <div class="form-section" style="margin-top:16px;">
-        <label for="mcNameInput">Your Character's Name</label>
-        <input type="text" id="mcNameInput" placeholder="What should the MC be called?">
-        <div class="form-hint">This name will be used throughout the story.</div>
-      </div>
-
-      <div id="storyOptionRows">
-
-        <!-- Season -->
-        <div class="story-opt-row">
-          <div class="story-opt-label">Season</div>
-          <div class="story-opt-section-desc">Sets the scenery, sensory details, and emotional atmosphere woven through every scene.</div>
-          <div class="story-opt-chips" data-opt="season">
-            <button class="story-chip selected" data-value="spring"
-              data-desc="The classic DDLC setting. Cherry blossoms, warm air, a hopeful mood — the girls feel energetic and the world feels open. Sakura-themed treats from Natsuki likely.">Spring</button>
-            <button class="story-chip" data-value="autumn"
-              data-desc="Maple leaves, golden slanted light, and evenings that arrive too soon. A wistful undercurrent runs through even cheerful moments — perfect for deeper conversations.">Autumn</button>
-            <button class="story-chip" data-value="winter"
-              data-desc="Bare trees, cold air, the clubroom heater as a gathering point. Proximity feels charged. Cozy intimacy with an undercurrent of isolation — being indoors together feels precious.">Winter</button>
-            <button class="story-chip random" data-value="random"
-              data-desc="A season will be chosen for you at random when the story begins.">&#127922; Random</button>
-          </div>
-          <div class="story-opt-hint">The classic DDLC setting. Cherry blossoms, warm air, a hopeful mood — the girls feel energetic and the world feels open. Sakura-themed treats from Natsuki likely.</div>
-        </div>
-
-        <!-- How You Joined -->
-        <div class="story-opt-row">
-          <div class="story-opt-label">How You Joined</div>
-          <div class="story-opt-section-desc">Determines which girl has a personal stake in your arrival — and how the others first see you.</div>
-          <div class="story-opt-chips" data-opt="joinReason">
-            <button class="story-chip selected" data-value="sayori"
-              data-desc="Sayori is your anchor in the room. She's extra warm and protective, acts as your unofficial guide, and the others treat you as her person from the first scene. She starts with the highest affinity.">Sayori invited me</button>
-            <button class="story-chip" data-value="monika"
-              data-desc="Monika made a personal pitch — she saw something in you and came to you directly. She takes a quiet personal interest in your experience from day one, and the others notice this attention.">Monika recruited me</button>
-            <button class="story-chip" data-value="yuri"
-              data-desc="Yuri mentioned it almost by accident, half-hoping you wouldn't notice. You came anyway — and now she's flustered, more aware of you than of any other member from the very first scene.">Yuri mentioned it</button>
-            <button class="story-chip" data-value="natsuki"
-              data-desc="She was absolutely not recruiting you, and she will make this very clear. But you came regardless, and now she's extra defensive — which the others find quietly entertaining.">Natsuki let it slip</button>
-            <button class="story-chip" data-value="self"
-              data-desc="You walked in on your own initiative. No one expected you — which makes you a wild card. Monika is quietly impressed. Everyone else is figuring you out from scratch, with no prior claim on you.">Found it myself</button>
-            <button class="story-chip random" data-value="random"
-              data-desc="Your reason for joining will be chosen at random when the story begins.">&#127922; Random</button>
-          </div>
-          <div class="story-opt-hint">Sayori is your anchor in the room. She's extra warm and protective, acts as your unofficial guide, and the others treat you as her person from the first scene. She starts with the highest affinity.</div>
-        </div>
-
-        <!-- History -->
-        <div class="story-opt-row">
-          <div class="story-opt-label">History with Club</div>
-          <div class="story-opt-section-desc">Controls where in the relationship arc the story picks up — and how much the girls already know you.</div>
-          <div class="story-opt-chips" data-opt="history">
-            <button class="story-chip selected" data-value="first_day"
-              data-desc="Everything begins fresh. Real introductions, the slight formality of a new person entering a group, and all the particular energy of a first impression. Affinities start low and have real room to grow.">First day</button>
-            <button class="story-chip" data-value="weeks_in"
-              data-desc="The awkward phase is long over. The girls know your name, your habits, your opinions on things. In-jokes exist. The story drops you straight into the ongoing rhythm of club life — no introductions needed.">A few weeks in</button>
-            <button class="story-chip" data-value="old_friend"
-              data-desc="You and Sayori go way back. The other girls already know of you through her. Her warmth isn't a welcome — it's a homecoming. She starts with a very high affinity and shapes how everyone else sees you.">Old friend of Sayori</button>
-            <button class="story-chip random" data-value="random"
-              data-desc="Your history with the club will be chosen at random when the story begins.">&#127922; Random</button>
-          </div>
-          <div class="story-opt-hint">Everything begins fresh. Real introductions, the slight formality of a new person entering a group, and all the particular energy of a first impression. Affinities start low and have real room to grow.</div>
-        </div>
-
-        <!-- Tone -->
-        <div class="story-opt-row">
-          <div class="story-opt-label">Narrative Tone</div>
-          <div class="story-opt-section-desc">Shapes the emotional register of the writing itself — what the narrator lingers on, and how scenes are told.</div>
-          <div class="story-opt-chips" data-opt="tone">
-            <button class="story-chip selected" data-value="warm"
-              data-desc="Scenes breathe easily; the girls' personalities play off each other with genuine affection. Small kindnesses land naturally. This is the hopeful, connective surface of DDLC before things get complicated.">Warm &amp; Cheerful</button>
-            <button class="story-chip" data-value="melancholic"
-              data-desc="Beauty and sadness aren't opposites here. Description lingers — the quality of light, the weight of a poem read aloud. What characters don't say matters as much as what they do. Subtext is rich.">Melancholic &amp; Literary</button>
-            <button class="story-chip" data-value="humorous"
-              data-desc="The girls' clashing personalities are a source of genuine delight. Banter is fast and real; situations escalate; characters recover their dignity with varying degrees of success.">Light &amp; Humorous</button>
-            <button class="story-chip random" data-value="random"
-              data-desc="The narrative tone will be chosen at random when the story begins.">&#127922; Random</button>
-          </div>
-          <div class="story-opt-hint">Scenes breathe easily; the girls' personalities play off each other with genuine affection. Small kindnesses land naturally. This is the hopeful, connective surface of DDLC before things get complicated.</div>
-        </div>
-
-        <!-- MC Personality -->
-        <div class="story-opt-row">
-          <div class="story-opt-label">MC Personality</div>
-          <div class="story-opt-section-desc">Defines how MC's inner voice and dialogue are written — and how the girls respond to him differently as a result.</div>
-          <div class="story-opt-chips" data-opt="personality">
-            <button class="story-chip selected" data-value="introspective"
-              data-desc="MC notices small details others miss and sits with things before speaking. His inner world is rich and layered. The girls sense there's more beneath the surface — he reveals himself sideways, through what he observes.">Introspective</button>
-            <button class="story-chip" data-value="outgoing"
-              data-desc="MC takes initiative, asks real follow-up questions, and genuinely enjoys each girl's company. The girls relax around him faster — Natsuki finds fewer reasons to be prickly; Yuri finds conversation easier to sustain.">Outgoing</button>
-            <button class="story-chip" data-value="reserved"
-              data-desc="MC listens more than he speaks, and his rare moments of openness carry real weight. Natsuki works harder to provoke a reaction. Yuri finds his quietness deeply comfortable.">Reserved</button>
-            <button class="story-chip random" data-value="random"
-              data-desc="MC's personality will be chosen at random when the story begins.">&#127922; Random</button>
-          </div>
-          <div class="story-opt-hint">MC notices small details others miss and sits with things before speaking. His inner world is rich and layered. The girls sense there's more beneath the surface — he reveals himself sideways, through what he observes.</div>
-        </div>
-
-        <!-- Club Emphasis -->
-        <div class="story-opt-row">
-          <div class="story-opt-label">Club Emphasis</div>
-          <div class="story-opt-section-desc">Sets what the club is actually doing today — which activity anchors the scene and which girl is most in her element.</div>
-          <div class="story-opt-chips" data-opt="clubEmphasis">
-            <button class="story-chip selected" data-value="balanced"
-              data-desc="The session moves naturally through whatever the scene calls for — writing, baking, conversation, reading. No single activity dominates; pacing follows the girls' moods and the story's needs.">Balanced</button>
-            <button class="story-chip" data-value="literary"
-              data-desc="The club's literary mission is front and center. A writing exercise or poem discussion anchors the scene. Monika is organized and engaged; Yuri opens up more than usual. Literature actually matters here.">Literary Discussions</button>
-            <button class="story-chip" data-value="baking"
-              data-desc="Natsuki has something in the oven and she is in her element — focused, sharp, protective of her workspace. Her baking isn't background detail; it's the lens her character shows itself through today.">Baking &amp; Craft</button>
-            <button class="story-chip" data-value="poetry"
-              data-desc="Yuri has brought a poem to share. She reads it with care. The room quiets. What follows is genuine and unhurried — and her unusual openness today makes your reaction matter more than usual.">Deep Poetry</button>
-            <button class="story-chip random" data-value="random"
-              data-desc="The club's activity emphasis will be chosen at random when the story begins.">&#127922; Random</button>
-          </div>
-          <div class="story-opt-hint">The session moves naturally through whatever the scene calls for — writing, baking, conversation, reading. No single activity dominates; pacing follows the girls' moods and the story's needs.</div>
-        </div>
-
-        <!-- Profile Import -->
-        <label class="story-toggle-row">
-          <input type="checkbox" id="storyImportProfile">
-          Import your profile (name, about, interests, values)
-        </label>
-
-      </div>
-    </div>
-    <div id="adventureModeOptions" class="form-section" style="display:none;">
-      <div class="rel-display">
-        <div class="rel-label">Adventure Mode</div>
-        <div class="rel-desc">Monika has crafted a fantasy world from the Literature Club's poems and personalities. Explore four unique domains, solve puzzles, battle enemies, and collect Heart Fragments &mdash; all with Monika as your Game Master.</div>
-      </div>
-    </div>
-    <button class="primary-btn" id="startChatBtn">Start Chatting</button>
-  </div>
-</div>
-
-<!-- SCREEN: Chat -->
-<div class="screen" id="screenChat">
-  <div class="header">
-    <button class="icon-btn" id="chatBackBtn" aria-label="Back">&#8592;</button>
-    <img class="header-avatar" src="images/Moni-Talk.png" alt="Monika">
-    <div class="header-info">
-      <div class="header-name" id="chatHeaderName">Monika</div>
-      <div class="header-sub" id="chatHeaderSub">Just Monika.</div>
-    </div>
-    <div class="header-actions">
-      <button class="icon-btn tts-toggle" id="ttsToggleBtn" title="Toggle Voice" style="display:none;">&#128264;</button>
-      <button class="icon-btn" id="advPanelBtn" title="Inventory" style="display:none;">&#127890;</button>
-      <button class="icon-btn" id="chatPanelBtn" title="Chat Panel" style="display:none;">&#9776;</button>
-      <button class="icon-btn" id="vnPanelBtn" title="Status Panel" style="display:none;">&#9776;</button>
-      <button class="icon-btn" id="chatSettingsBtn" title="Settings">&#9881;</button>
-    </div>
-  </div>
-  <div class="affinity-panel" id="affinityPanel">
-    <div class="affinity-rows">
-      <div class="affinity-row"><span class="affinity-name">Sayori</span><div class="affinity-track"><div class="affinity-fill sayori" id="affinitySayori" style="width:30%"></div></div></div>
-      <div class="affinity-row"><span class="affinity-name">Natsuki</span><div class="affinity-track"><div class="affinity-fill natsuki" id="affinityNatsuki" style="width:30%"></div></div></div>
-      <div class="affinity-row"><span class="affinity-name">Yuri</span><div class="affinity-track"><div class="affinity-fill yuri" id="affinityYuri" style="width:30%"></div></div></div>
-      <div class="affinity-row"><span class="affinity-name">Monika</span><div class="affinity-track"><div class="affinity-fill monika" id="affinityMonika" style="width:30%"></div></div></div>
-    </div>
-  </div>
-  <div class="vn-sprites" id="vnSprites">
-    <div class="vn-sprite sayori" id="spriteSayori"><img src="images/Sayori PFP.png" alt="Sayori"><span class="vn-sprite-name">Sayori</span></div>
-    <div class="vn-sprite natsuki" id="spriteNatsuki"><img src="images/Natsuki PFP.png" alt="Natsuki"><span class="vn-sprite-name">Natsuki</span></div>
-    <div class="vn-sprite yuri" id="spriteYuri"><img src="images/Yuri PFP.png" alt="Yuri"><span class="vn-sprite-name">Yuri</span></div>
-    <div class="vn-sprite monika" id="spriteMonika"><img src="images/Monika PFP.png" alt="Monika"><span class="vn-sprite-name">Monika</span></div>
-    <div class="vn-route-indicator" id="routeIndicator" style="display:none;"></div>
-  </div>
-  <div class="room-scene" id="roomScene" style="display:none;">
-    <canvas id="masCanvas" width="1280" height="850"></canvas>
-  </div>
-  <div class="adv-dm-bar" id="advDmBar" style="display:none;">
-    <img class="adv-dm-avatar" src="images/Moni-Talk.png" alt="Monika">
-    <div class="adv-dm-info">
-      <div class="adv-dm-title">Game Master</div>
-      <div class="adv-dm-location" id="advDmLocation">The Clubroom</div>
-    </div>
-    <div class="adv-dm-mood" id="advDmMood">🎲</div>
-  </div>
-  <div class="adventure-status" id="adventureStatusBar" style="display:none; position:relative;"></div>
-  <div class="chat-area" id="chatArea">
-    <div class="typing-indicator" id="typingIndicator">
-      <img class="msg-avatar" src="images/Moni-Talk.png" alt="M">
-      <div class="typing-dots"><span></span><span></span><span></span></div>
-      <span class="typing-label">Monika is typing...</span>
-    </div>
-  </div>
-  <div class="context-bar" id="contextBar">
-    <span id="contextLabel">0 messages</span>
-    <div class="context-bar-fill"><div class="context-bar-used" id="contextFill"></div></div>
-    <button id="regenBtn" title="Regenerate Monika's last response" style="display:none;">Retry</button>
-    <button id="trimBtn" title="Remove older messages to free up context">Trim</button>
-    <button id="storyRetryBtn" class="story-retry-btn" title="Force continue if the story is stuck" style="display:none;">Stuck?</button>
-  </div>
-  <div class="adventure-actions" id="adventureActions" style="display:none;">
-    <button class="adv-action-btn" data-action="attack">Attack</button>
-    <button class="adv-action-btn" data-action="defend">Defend</button>
-    <button class="adv-action-btn" data-action="item">Use Item</button>
-    <button class="adv-action-btn" data-action="flee">Flee</button>
-    <button class="adv-action-btn adv-hub-btn" data-action="hub">Return to Hub</button>
-  </div>
-  <div class="image-preview" id="imagePreview" style="display:none;"></div>
-  <div class="input-area" id="inputArea">
-    <button class="image-attach-btn" id="imageAttachBtn" title="Attach image">&#128206;</button>
-    <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
-    <textarea id="userInput" rows="1" placeholder="Say something to Monika..."></textarea>
-    <button class="mic-btn" id="micBtn" title="Voice input" style="display:none;">&#127908;</button>
-    <button class="cancel-btn" id="cancelBtn" style="display:none;" title="Stop generating">&#9632;</button>
-    <button class="send-btn" id="sendBtn" title="Send">&#10148;</button>
-  </div>
-  <div class="story-choices" id="storyChoices" style="display:none;"></div>
-  <div class="word-picker" id="wordPicker" style="display:none;">
-    <div class="word-picker-title">Write Your Poem</div>
-    <div class="word-picker-hint">Pick 5 words that inspire you. <span id="wordCount">0/5</span></div>
-    <div class="poem-resonance" id="poemResonance" style="display:none;">
-      <div class="poem-res-row"><img src="images/Sayori PFP.png" class="poem-res-icon" alt="S"><div class="poem-res-track"><div class="poem-res-fill sayori" id="poemResSayori"></div></div></div>
-      <div class="poem-res-row"><img src="images/Natsuki PFP.png" class="poem-res-icon" alt="N"><div class="poem-res-track"><div class="poem-res-fill natsuki" id="poemResNatsuki"></div></div></div>
-      <div class="poem-res-row"><img src="images/Yuri PFP.png" class="poem-res-icon" alt="Y"><div class="poem-res-track"><div class="poem-res-fill yuri" id="poemResYuri"></div></div></div>
-      <div class="poem-res-row"><img src="images/Monika PFP.png" class="poem-res-icon" alt="M"><div class="poem-res-track"><div class="poem-res-fill monika" id="poemResMonika"></div></div></div>
-    </div>
-    <div class="word-grid" id="wordGrid"></div>
-    <button class="word-submit-btn" id="wordSubmitBtn" disabled>Share Poem</button>
-  </div>
-</div>
+<!-- ═══════════════════════════════════════════════════
+     MODALS & OVERLAYS (outside app-layout)
+═══════════════════════════════════════════════════ -->
 
 <!-- Settings Modal -->
 <div class="modal-overlay" id="settingsModal">
@@ -635,7 +696,6 @@
     </div>
   </div>
 </div>
-
 
 <!-- Models Modal -->
 <div class="modal-overlay" id="modelsModal">

@@ -2,7 +2,7 @@
 .chat-list-body {
   flex: 1; overflow-y: auto;
   background: linear-gradient(180deg, var(--bg) 0%, var(--chat-list-tint) 50%, var(--bg) 100%);
-  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 16px;
 }
 .chat-list-empty { text-align: center; padding: 60px 20px; color: var(--gray-text); }
 .chat-list-empty img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 16px; opacity: 0.7; }
@@ -123,7 +123,7 @@
 .typing-dots span { width: 7px; height: 7px; background: var(--green-mid); border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; }
 .typing-dots span:nth-child(2) { animation-delay: 0.16s; } .typing-dots span:nth-child(3) { animation-delay: 0.32s; }
 @keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
-.input-area { display: flex; gap: 8px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
+.input-area { display: flex; gap: 8px; padding: 12px 16px; background: var(--bg); border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
 .input-area textarea { flex: 1; border: 1px solid var(--gray-mid); border-radius: 20px; padding: 10px 16px; font-size: 15px; font-family: inherit; resize: none; outline: none; max-height: 120px; line-height: 1.4; transition: border-color 0.2s; background: var(--bg); color: var(--text); }
 .input-area textarea:focus { border-color: var(--green-mid); }
 .input-area textarea::placeholder { color: #aaa; }
@@ -142,7 +142,7 @@
 .mic-btn:hover { color: var(--green-dark); }
 .mic-btn.recording { color: white; background: #e53935; animation: mic-pulse 1s ease-in-out infinite; }
 @keyframes mic-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-.keyboard-open .mic-btn { display: none !important; }
+/* keyboard-open removed — desktop layout */
 [data-theme="dark"] .mic-btn { color: #888; }
 [data-theme="dark"] .mic-btn:hover { color: var(--green-mid); }
 [data-theme="dark"] .mic-btn.recording { color: white; background: #e53935; }
@@ -233,7 +233,7 @@
 .affinity-fill.monika { background: #3CB371; }
 
 /* === Word Picker === */
-.word-picker { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
+.word-picker { padding: 12px 16px; background: var(--bg); border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
 .word-picker-title { font-size: 15px; font-weight: 700; color: var(--green-dark); margin-bottom: 2px; text-align: center; }
 .word-picker-hint { font-size: 12px; color: var(--gray-text); margin-bottom: 10px; text-align: center; }
 .word-grid { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
@@ -273,29 +273,7 @@
 .chat-item-rename { background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; padding: 4px; border-radius: 50%; transition: color 0.2s; flex-shrink: 0; }
 .chat-item-rename:hover { color: var(--green-mid); }
 
-/* === Keyboard-open compact mode === */
-/* Hide non-essential chrome to maximize visible chat area when keyboard is open */
-.keyboard-open .header { padding: 4px 12px; gap: 8px; }
-.keyboard-open .header-avatar { display: none; }
-.keyboard-open .header-name { font-size: 14px; }
-.keyboard-open .header-sub { display: none; }
-.keyboard-open .header-actions .icon-btn { width: 28px; height: 28px; font-size: 14px; }
-.keyboard-open .context-bar { display: none; }
-.keyboard-open .affinity-panel { display: none !important; }
-.keyboard-open .adventure-status { display: none; }
-.keyboard-open .chat-area { padding: 8px 12px; gap: 4px; }
-.keyboard-open .msg-avatar, .keyboard-open .msg-avatar-letter { display: none; }
-.keyboard-open .msg-name { display: none; }
-.keyboard-open .msg-model { display: none; }
-.keyboard-open .msg-actions { display: none; }
-.keyboard-open .msg-bubble { padding: 8px 12px; font-size: 14px; }
-.keyboard-open .input-area { padding: 6px 10px; }
-.keyboard-open .input-area textarea { padding: 7px 12px; font-size: 14px; }
-.keyboard-open .send-btn { width: 36px; height: 36px; font-size: 17px; }
-.keyboard-open .cancel-btn { width: 36px; height: 36px; font-size: 17px; }
-.keyboard-open .image-attach-btn { display: none; }
-.keyboard-open .story-choices { padding: 6px 10px; gap: 4px; }
-.keyboard-open .story-choice-btn { padding: 8px 12px; font-size: 13px; }
+/* keyboard-open block removed — desktop layout */
 
 /* === Dark Mode Chat Overrides === */
 [data-theme="dark"] .message.monika .msg-bubble { background: #1a2e23; border-left-color: #48bb78; }
@@ -672,7 +650,7 @@
 .chat-panel-backdrop.open { display: block; }
 .chat-side-panel {
   position: fixed; top: 0; right: 0;
-  width: 280px; height: var(--app-height, 100dvh);
+  width: 280px; height: 100vh;
   background: linear-gradient(180deg, #1a3a28 0%, #152e20 100%);
   color: #e8f5e9; z-index: 50;
   display: flex; flex-direction: column;
@@ -863,7 +841,7 @@
 .adv-panel-backdrop.open { display: block; }
 .adv-side-panel {
   position: fixed; top: 0; right: 0;
-  width: 280px; height: var(--app-height, 100dvh);
+  width: 280px; height: 100vh;
   background: linear-gradient(180deg, #1a2a3a 0%, #152030 100%);
   color: #e0eaf5; z-index: 50;
   display: flex; flex-direction: column;
@@ -991,8 +969,7 @@
   .adv-action-btn { padding: 5px 10px; font-size: 11px; }
 }
 
-/* Keyboard-open: hide action bar to save space */
-.keyboard-open .adventure-actions { display: none !important; }
+/* keyboard-open removed — desktop layout */
 
 /* === Domain Theming === */
 #screenChat[data-domain="clubroom"] { --adv-accent: #48bb78; --adv-pale: rgba(72,187,120,0.07); }

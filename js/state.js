@@ -29,7 +29,7 @@ let ttsEndpointQwen = localStorage.getItem('moni_talk_tts_endpoint_qwen') || 'ht
 
 // ====== DOM ======
 const $ = id => document.getElementById(id);
-const screens = { chatList: $('screenChatList'), profile: $('screenProfile'), newChat: $('screenNewChat'), chat: $('screenChat') };
+const screens = { landing: $('screenLanding'), profile: $('screenProfile'), newChat: $('screenNewChat'), chat: $('screenChat') };
 const chatListBody = $('chatListBody');
 const relSlider = $('relSlider'), relLabel = $('relLabel'), relDesc = $('relDesc');
 const chatArea = $('chatArea'), typingIndicator = $('typingIndicator');

@@ -26,7 +26,7 @@ function saveProfile() {
   };
   localStorage.setItem(STORAGE.PROFILE, JSON.stringify(profile));
   queueSync();
-  showScreen('chatList');
+  showScreen('landing');
   showToast('Profile saved! Monika will remember.', 'success');
 }
 

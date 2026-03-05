@@ -87,7 +87,7 @@
 .vn-panel-backdrop.open { display: block; }
 .vn-side-panel {
   position: fixed; top: 0; right: 0;
-  width: 280px; height: var(--app-height, 100dvh);
+  width: 280px; height: 100vh;
   background: linear-gradient(180deg, #1e1633 0%, #2a1f3d 100%);
   color: #f0eef5; z-index: 50;
   display: flex; flex-direction: column;
@@ -493,10 +493,6 @@
   .vn-sprite-name { font-size: 9px; bottom: -16px; }
   .screen.vn-mode .message.narrator .msg-bubble { padding: 14px 16px; font-size: 14px; }
 }
-
-/* === Keyboard-open compact mode (VN) === */
-.keyboard-open .vn-sprites { display: none; }
-.keyboard-open .screen.vn-mode .message.narrator .msg-bubble { padding: 10px 14px; font-size: 13px; line-height: 1.6; }
 
 /* === Tablet breakpoint (VN) === */
 @media (min-width: 601px) and (max-width: 1024px) {
