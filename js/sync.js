@@ -139,11 +139,12 @@ async function syncFromCloud() {
       }
     }
 
-    // Pull memories — merge cloud + local, deduplicate
+    // Pull memories — merge cloud + local, deduplicate, respect blacklist
     const cloudMemories = parseKV(await puter.kv.get('moni_talk_memories')) || [];
     if (cloudMemories.length > 0) {
       const merged = [...memories];
       for (const cm of cloudMemories) {
+        if (isBlacklisted(cm.fact)) continue; // never re-add deleted memories
         const isDup = merged.some(m =>
           m.fact.toLowerCase().includes(cm.fact.toLowerCase()) ||
           cm.fact.toLowerCase().includes(m.fact.toLowerCase())
