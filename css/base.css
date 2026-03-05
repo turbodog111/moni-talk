@@ -362,6 +362,24 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
 .model-catalog-gguf { font-size: 10px; color: var(--gray-text); font-family: monospace;
   margin-top: 6px; opacity: 0.6; }
 
+/* === Competitions Section === */
+.comp-section { margin-top: 24px; border-top: 1.5px solid var(--gray-mid); padding-top: 18px; }
+.comp-section-header { margin-bottom: 14px; }
+.comp-section-name { font-size: 17px; font-weight: 700; color: var(--green-dark); }
+.comp-list { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 680px) { .comp-list { grid-template-columns: 1fr; } }
+.comp-card { background: var(--gray-light); border: 1.5px solid var(--gray-mid); border-radius: 10px; padding: 14px; }
+.comp-card-header { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--gray-mid); }
+.comp-card-name { display: block; font-size: 14px; font-weight: 700; color: var(--text); }
+.comp-card-date { font-size: 11px; color: var(--gray-text); }
+.comp-standings { width: 100%; border-collapse: collapse; font-size: 12px; }
+.comp-standings th { text-align: left; color: var(--gray-text); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 6px 6px; }
+.comp-standings td { padding: 5px 6px; color: var(--text); border-top: 1px solid var(--gray-mid); }
+.comp-standings td:first-child { color: var(--gray-text); font-size: 11px; width: 24px; }
+.comp-standings td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.comp-standings tr.comp-winner td { font-weight: 700; color: var(--green-dark); }
+.comp-note { font-size: 11px; color: var(--gray-text); margin-top: 8px; font-style: italic; }
+
 /* === Achievement Toast === */
 #achievementToast {
   position: fixed; bottom: 80px; left: 50%;

@@ -2050,6 +2050,7 @@ const ARBOR_ORDER = [
   'Arbor-0.1-W-Q8_0.gguf',
   'Arbor-0.1.1-Q8_0.gguf',
   'Arbor-0.2-Q8_0.gguf',
+  'Arbor-0.2b-Q8_0.gguf',
 ];
 
 function openModelsModal() {
@@ -2100,6 +2101,47 @@ function openModelsModal() {
           <span class="model-series-desc">Designed for narrative immersion \u00b7 primarily Story Mode</span>
         </div>
         ${silvaEntries.map(renderCard).join('')}
+      </div>
+    </div>
+    <div class="comp-section">
+      <div class="comp-section-header">
+        <span class="comp-section-name">Competitions</span>
+      </div>
+      <div class="comp-list">
+        <div class="comp-card">
+          <div class="comp-card-header">
+            <span class="comp-card-name">Moni-Talk Candidates</span>
+            <span class="comp-card-date">C01 \u00b7 March 2, 2026</span>
+          </div>
+          <table class="comp-standings">
+            <thead><tr><th>#</th><th>Model</th><th>Pts</th></tr></thead>
+            <tbody>
+              <tr class="comp-winner"><td>1</td><td>\uD83C\uDFC6 GPT-5.2 Thinking</td><td>10.0</td></tr>
+              <tr><td>2</td><td>Qwen3-32B</td><td>10.0*</td></tr>
+              <tr><td>3</td><td>DeepSeek-V3</td><td>9.5</td></tr>
+              <tr><td>4</td><td>Gemma 3 27B</td><td>8.5</td></tr>
+              <tr><td>5</td><td>Claude Sonnet 4.6</td><td>8.0</td></tr>
+              <tr><td>6</td><td>Arbor 0.1-E</td><td>4.5</td></tr>
+              <tr><td>7</td><td>Arbor 0.1.1</td><td>3.0</td></tr>
+              <tr><td>8</td><td>Arbor 0.2</td><td>2.5</td></tr>
+            </tbody>
+          </table>
+          <div class="comp-note">* GPT-5.2 wins tiebreak over Qwen3-32B (2.5\u20130.5)</div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-card-header">
+            <span class="comp-card-name">Moni-Talk Championship</span>
+            <span class="comp-card-date">M01 \u00b7 March 4, 2026</span>
+          </div>
+          <table class="comp-standings">
+            <thead><tr><th>#</th><th>Model</th><th>Pts</th></tr></thead>
+            <tbody>
+              <tr class="comp-winner"><td>1</td><td>\uD83C\uDFC6 Qwen3.5-35B-A3B</td><td>7.5</td></tr>
+              <tr><td>2</td><td>Qwen3-32B</td><td>5.5</td></tr>
+            </tbody>
+          </table>
+          <div class="comp-note">14-round match \u00b7 clinched at round 13</div>
+        </div>
       </div>
     </div>`;
   $('modelsModal').classList.add('open');

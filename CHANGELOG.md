@@ -7,6 +7,14 @@ Versions follow **X.Y.Z**:
 
 ---
 
+## v0.6.3 — Competitions Panel · Arbor 0.2b (2026-03-04)
+
+- **Competitions section** added to Models panel — standings for both completed tournaments: Moni-Talk Candidates (C01, March 2) and Moni-Talk Championship (M01, March 4)
+- **Arbor 0.2b** added to model registry — Qwen3-32B base (2× the parameters of every prior Arbor model), 66 curated training pairs, currently in training
+- Guide panel updated: Arbor 0.2b listed as coming soon
+
+---
+
 ## v0.6.2 — Story Mode Augmentation (2026-02-25)
 
 - **6 pre-story selectors**: Season (Spring / Autumn / Winter), How You Joined (Sayori / Monika / Yuri / Natsuki / Self), History with Club (First day / Weeks in / Old friend of Sayori), Narrative Tone (Warm / Melancholic / Humorous), MC Personality (Introspective / Outgoing / Reserved), Club Emphasis (Balanced / Literary / Baking / Poetry)
