@@ -165,6 +165,58 @@ async function extractMemoryCandidates(recentMessages) {
   });
 }
 
+// ── Memory toast — shown at top of chat when a memory is saved ────────────────
+let _memToastTimer = null;
+function showMemoryToast(fact) {
+  const chatArea = document.getElementById('chatArea');
+  if (!chatArea) return;
+
+  // Remove any existing memory toast
+  const existing = document.getElementById('memoryToast');
+  if (existing) existing.remove();
+  if (_memToastTimer) { clearTimeout(_memToastTimer); _memToastTimer = null; }
+
+  const toast = document.createElement('div');
+  toast.id = 'memoryToast';
+  toast.className = 'memory-toast';
+  // Truncate long facts for display
+  const short = fact.length > 60 ? fact.slice(0, 57) + '…' : fact;
+  toast.innerHTML = `<span class="memory-toast-icon">\uD83E\uDDE0</span><span>Monika will remember: <em>${escapeHtml(short)}</em></span>`;
+  chatArea.insertBefore(toast, chatArea.firstChild);
+
+  // Trigger slide-in on next frame
+  requestAnimationFrame(() => toast.classList.add('visible'));
+
+  _memToastTimer = setTimeout(() => {
+    toast.classList.remove('visible');
+    setTimeout(() => toast.remove(), 400);
+  }, 4000);
+}
+
+// ── LLM-driven memory write — process [REMEMBER: fact] tags ──────────────────
+function processRememberTags(reply) {
+  const pattern = /\[REMEMBER:\s*([^\]]+)\]/gi;
+  let match;
+  const extracted = [];
+  while ((match = pattern.exec(reply)) !== null) {
+    const fact = match[1].trim();
+    if (!fact || isBlacklisted(fact)) continue;
+    const isDupe = memories.some(m =>
+      m.fact.toLowerCase().includes(fact.toLowerCase().slice(0, 30)) ||
+      fact.toLowerCase().includes(m.fact.toLowerCase().slice(0, 30))
+    );
+    if (!isDupe) extracted.push({ id: _makeId(), fact, category: 'other', date: new Date().toISOString().split('T')[0] });
+  }
+  if (extracted.length > 0) {
+    saveMemories(mergeNewMemories(memories, extracted));
+    extracted.forEach(f => showMemoryToast(f.fact));
+    const chat = typeof getChat === 'function' ? getChat() : null;
+    if (chat && typeof updateChatPanel === 'function') updateChatPanel(chat);
+  }
+  // Return reply with [REMEMBER:...] tags stripped for display
+  return reply.replace(/\[REMEMBER:[^\]]*\]/gi, '').trim();
+}
+
 // Main entry point
 async function extractMemories(recentMessages) {
   try {
@@ -181,6 +233,8 @@ function approveMemories(facts) {
   if (!facts || facts.length === 0) return;
   const merged = mergeNewMemories(memories, facts);
   saveMemories(merged);
+  // Show toast for the first approved fact
+  if (facts[0]) showMemoryToast(facts[0].fact);
   const chat = typeof getChat === 'function' ? getChat() : null;
   if (chat && typeof updateChatPanel === 'function') updateChatPanel(chat);
 }
