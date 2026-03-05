@@ -89,10 +89,12 @@
 .chat-item-mode-badge.mode-adventure { background: rgba(66, 153, 225, 0.15); color: var(--mode-adventure); }
 
 /* === Chat Item Actions === */
-.chat-item-star { background: none; border: none; color: #ccc; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: color 0.2s, text-shadow 0.2s; flex-shrink: 0; }
+.chat-item-star { background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; padding: 4px; border-radius: 50%; transition: color 0.2s, text-shadow 0.2s, opacity 0.15s; flex-shrink: 0; opacity: 0; }
+.chat-item:hover .chat-item-star { opacity: 1; }
 .chat-item-star:hover { color: #f0c040; }
-.chat-item-star.starred { color: #f0c040; }
-.chat-item-delete { background: none; border: none; color: #ccc; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 50%; transition: color 0.2s; flex-shrink: 0; }
+.chat-item-star.starred { color: #f0c040; opacity: 1; }
+.chat-item-delete { background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; padding: 4px; border-radius: 50%; transition: color 0.2s, opacity 0.15s; flex-shrink: 0; opacity: 0; }
+.chat-item:hover .chat-item-delete { opacity: 1; }
 .chat-item-delete:hover { color: #c0392b; }
 
 /* === Chat Screen === */
@@ -270,8 +272,12 @@
 @keyframes choicesDotBounce { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
 
 /* === Chat Item Rename === */
-.chat-item-rename { background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; padding: 4px; border-radius: 50%; transition: color 0.2s; flex-shrink: 0; }
+.chat-item-rename { background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; padding: 4px; border-radius: 50%; transition: color 0.2s, opacity 0.15s; flex-shrink: 0; opacity: 0; }
+.chat-item:hover .chat-item-rename { opacity: 1; }
 .chat-item-rename:hover { color: var(--green-mid); }
+.chat-item-archive { background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; padding: 4px; border-radius: 50%; transition: color 0.2s, opacity 0.15s; flex-shrink: 0; opacity: 0; }
+.chat-item:hover .chat-item-archive { opacity: 1; }
+.chat-item-archive:hover { color: var(--green-mid); }
 
 /* keyboard-open block removed — desktop layout */
 
@@ -290,9 +296,9 @@
 [data-theme="dark"] .cancel-btn { background: #c0392b; }
 [data-theme="dark"] .cancel-btn:hover { background: #e74c3c; }
 [data-theme="dark"] .send-btn:hover { background: var(--green-mid); }
-[data-theme="dark"] .chat-item-delete { color: #555; }
-[data-theme="dark"] .chat-item-star { color: #555; }
-[data-theme="dark"] .chat-item-star.starred { color: #f0c040; }
+[data-theme="dark"] .chat-item-delete { color: #666; }
+[data-theme="dark"] .chat-item-star { color: #666; }
+[data-theme="dark"] .chat-item-star.starred { color: #f0c040; opacity: 1; }
 [data-theme="dark"] .chat-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 [data-theme="dark"] .chat-item.starred-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(240, 192, 64, 0.3); }
 [data-theme="dark"] .chat-section-header:hover { background: rgba(255,255,255,0.03); }
