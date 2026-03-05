@@ -506,7 +506,8 @@ async function generateGreeting(chat) {
     pushMoodHistory(chat, mood, moodIntensity, drift);
     chat.lastActiveTime = Date.now();
     // Adventure mode: parse game state tags from greeting
-    const cleanedReply0 = processRememberTags(parsedReply);
+    let cleanedReply0 = parsedReply;
+    try { cleanedReply0 = processRememberTags(parsedReply); } catch(e) { console.error('processRememberTags (greeting):', e); }
     const reply = chat.mode === 'adventure' ? processAdventureResponse(chat, cleanedReply0) : cleanedReply0;
     chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
@@ -701,7 +702,8 @@ async function regenerateLastResponse() {
     pushMoodHistory(chat, mood, moodIntensity, drift);
     chat.lastActiveTime = Date.now();
     // Adventure mode: parse game state tags
-    const cleanedReply1 = processRememberTags(parsedReply);
+    let cleanedReply1 = parsedReply;
+    try { cleanedReply1 = processRememberTags(parsedReply); } catch(e) { console.error('processRememberTags (regen):', e); }
     const reply = chat.mode === 'adventure' ? processAdventureResponse(chat, cleanedReply1) : cleanedReply1;
     chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
@@ -1007,7 +1009,8 @@ async function sendMessage() {
     pushMoodHistory(chat, mood, moodIntensity, drift);
     chat.lastActiveTime = Date.now();
     // Adventure mode: parse game state tags
-    const cleanedReply2 = processRememberTags(parsedReply);
+    let cleanedReply2 = parsedReply;
+    try { cleanedReply2 = processRememberTags(parsedReply); } catch(e) { console.error('processRememberTags (send):', e); }
     const reply = chat.mode === 'adventure' ? processAdventureResponse(chat, cleanedReply2) : cleanedReply2;
     chat.messages.push({ role: 'assistant', content: reply, timestamp: Date.now(), model: getCurrentModelKey() });
     saveChats();
