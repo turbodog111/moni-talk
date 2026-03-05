@@ -349,6 +349,21 @@ function init() {
 }
 
 // ====== MODEL SWITCHER ======
+function addSwitcherOpt(dropdown, wrap, text, isActive, onClick) {
+  const opt = document.createElement('button');
+  opt.className = 'model-switcher-option' + (isActive ? ' active' : '');
+  opt.textContent = text;
+  opt.addEventListener('click', () => {
+    onClick(opt);
+    dropdown.querySelectorAll('.model-switcher-option').forEach(o => o.classList.remove('active'));
+    opt.classList.add('active');
+    wrap.classList.remove('open');
+    updateModelSwitcherLabel();
+  });
+  dropdown.appendChild(opt);
+  return opt;
+}
+
 function initModelSwitcher() {
   const dropdown = $('modelSwitcherDropdown');
   const btn = $('modelSwitcherBtn');
@@ -357,109 +372,57 @@ function initModelSwitcher() {
 
   dropdown.innerHTML = '';
 
-  const cloudLabel = document.createElement('div');
-  cloudLabel.className = 'model-switcher-group-label';
-  cloudLabel.textContent = 'Cloud Models';
-  dropdown.appendChild(cloudLabel);
+  // ── Arbor Models ──
+  const arborLabel = document.createElement('div');
+  arborLabel.className = 'model-switcher-group-label';
+  arborLabel.textContent = 'Arbor Models';
+  dropdown.appendChild(arborLabel);
 
-  PUTER_MODELS.forEach(m => {
-    const opt = document.createElement('button');
-    opt.className = 'model-switcher-option';
-    opt.dataset.provider = 'puter';
-    opt.dataset.model = m.id;
-    opt.textContent = m.label;
-    if (provider === 'puter' && puterModel === m.id) opt.classList.add('active');
-    opt.addEventListener('click', () => {
-      provider = 'puter';
-      puterModel = m.id;
+  const releasedArbor = ARBOR_ORDER
+    .map(k => [k, KNOWN_MODELS[k]])
+    .filter(([, m]) => m && m.status === 'released');
+
+  releasedArbor.forEach(([id, m]) => {
+    const isActive = provider === 'llamacpp' && llamacppModel === id;
+    const label = m.best ? `${m.name} ⭐` : m.name;
+    addSwitcherOpt(dropdown, wrap, label, isActive, () => {
+      provider = 'llamacpp';
+      llamacppModel = id;
       localStorage.setItem(STORAGE.PROVIDER, provider);
-      localStorage.setItem(STORAGE.MODEL_PUTER, puterModel);
-      updateModelSwitcherLabel();
-      dropdown.querySelectorAll('.model-switcher-option').forEach(o => o.classList.remove('active'));
-      opt.classList.add('active');
-      wrap.classList.remove('open');
+      localStorage.setItem(STORAGE.LLAMACPP_MODEL, id);
     });
-    dropdown.appendChild(opt);
   });
 
+  // Auto-select best Arbor model on first use
+  if (provider === 'llamacpp' && !llamacppModel) {
+    const best = releasedArbor.find(([, m]) => m.best) || releasedArbor[releasedArbor.length - 1];
+    if (best) {
+      llamacppModel = best[0];
+      localStorage.setItem(STORAGE.LLAMACPP_MODEL, best[0]);
+      dropdown.querySelector('.model-switcher-option').classList.add('active');
+    }
+  }
+
+  // ── Other Local ──
   const sep = document.createElement('div');
   sep.className = 'model-switcher-sep';
   dropdown.appendChild(sep);
 
-  const localLabel = document.createElement('div');
-  localLabel.className = 'model-switcher-group-label';
-  localLabel.textContent = 'Local Models';
-  dropdown.appendChild(localLabel);
+  const otherLabel = document.createElement('div');
+  otherLabel.className = 'model-switcher-group-label';
+  otherLabel.textContent = 'Other Local';
+  dropdown.appendChild(otherLabel);
 
-  // Static Ollama fallback
-  const ollamaOpt = document.createElement('button');
-  ollamaOpt.className = 'model-switcher-option';
-  ollamaOpt.dataset.provider = 'ollama';
-  ollamaOpt.textContent = 'Ollama (local)';
-  if (provider === 'ollama') ollamaOpt.classList.add('active');
-  ollamaOpt.addEventListener('click', () => {
+  addSwitcherOpt(dropdown, wrap, 'Ollama (local)', provider === 'ollama', () => {
     provider = 'ollama';
     localStorage.setItem(STORAGE.PROVIDER, provider);
-    updateModelSwitcherLabel();
-    dropdown.querySelectorAll('.model-switcher-option').forEach(o => o.classList.remove('active'));
-    ollamaOpt.classList.add('active');
-    wrap.classList.remove('open');
   });
-  dropdown.appendChild(ollamaOpt);
 
-  // llama.cpp — populate dynamically from server, fall back to generic
-  const lcppPlaceholder = document.createElement('button');
-  lcppPlaceholder.className = 'model-switcher-option';
-  lcppPlaceholder.textContent = 'llama.cpp (local)';
-  lcppPlaceholder.disabled = true;
-  lcppPlaceholder.style.opacity = '0.5';
-  dropdown.appendChild(lcppPlaceholder);
-
-  fetchLlamaCppModels().then(models => {
-    lcppPlaceholder.remove();
-    if (models.length === 0) {
-      const fallback = document.createElement('button');
-      fallback.className = 'model-switcher-option';
-      fallback.dataset.provider = 'llamacpp';
-      fallback.textContent = 'llama.cpp (local)';
-      if (provider === 'llamacpp') fallback.classList.add('active');
-      fallback.addEventListener('click', () => {
-        provider = 'llamacpp'; llamacppModel = '';
-        localStorage.setItem(STORAGE.PROVIDER, provider);
-        localStorage.setItem(STORAGE.LLAMACPP_MODEL, '');
-        updateModelSwitcherLabel();
-        dropdown.querySelectorAll('.model-switcher-option').forEach(o => o.classList.remove('active'));
-        fallback.classList.add('active');
-        wrap.classList.remove('open');
-      });
-      dropdown.appendChild(fallback);
-    } else {
-      models.forEach(id => {
-        const opt = document.createElement('button');
-        opt.className = 'model-switcher-option';
-        opt.dataset.provider = 'llamacpp';
-        opt.dataset.model = id;
-        opt.textContent = id.replace(/-Q\d+[^.]*\.gguf$/i, '').replace(/-/g, ' ');
-        if (provider === 'llamacpp' && llamacppModel === id) opt.classList.add('active');
-        opt.addEventListener('click', () => {
-          provider = 'llamacpp'; llamacppModel = id;
-          localStorage.setItem(STORAGE.PROVIDER, provider);
-          localStorage.setItem(STORAGE.LLAMACPP_MODEL, id);
-          updateModelSwitcherLabel();
-          dropdown.querySelectorAll('.model-switcher-option').forEach(o => o.classList.remove('active'));
-          opt.classList.add('active');
-          wrap.classList.remove('open');
-        });
-        dropdown.appendChild(opt);
-      });
-      // Auto-select first local model if currently on llamacpp with no model set
-      if (provider === 'llamacpp' && !llamacppModel) {
-        llamacppModel = models[0];
-        localStorage.setItem(STORAGE.LLAMACPP_MODEL, models[0]);
-        dropdown.querySelector('[data-provider="llamacpp"]').classList.add('active');
-        updateModelSwitcherLabel();
-      }
-    }
+  addSwitcherOpt(dropdown, wrap, 'llama.cpp (generic)', provider === 'llamacpp' && !KNOWN_MODELS[llamacppModel], () => {
+    provider = 'llamacpp';
+    llamacppModel = '';
+    localStorage.setItem(STORAGE.PROVIDER, provider);
+    localStorage.setItem(STORAGE.LLAMACPP_MODEL, '');
   });
 
   btn.addEventListener('click', (e) => {
@@ -483,10 +446,8 @@ function updateModelSwitcherLabel() {
   } else if (provider === 'ollama') {
     label.textContent = `Ollama · ${ollamaModel || 'local'}`;
   } else if (provider === 'llamacpp') {
-    const shortName = llamacppModel
-      ? llamacppModel.replace(/-Q\d+[^.]*\.gguf$/i, '').replace(/-/g, ' ')
-      : 'local';
-    label.textContent = `llama.cpp · ${shortName}`;
+    const known = llamacppModel && KNOWN_MODELS[llamacppModel];
+    label.textContent = known ? known.name : (llamacppModel ? llamacppModel.replace(/-Q\d+[^.]*\.gguf$/i, '') : 'llama.cpp');
   }
 }
 

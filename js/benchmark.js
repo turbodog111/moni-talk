@@ -8,6 +8,20 @@ const SUITE_VERSIONS = { petal: '0.1', bloom: '0.1' };
 
 const CHANGELOG_ENTRIES = [
   {
+    label: 'v0.7.0 — DDLC Aesthetic \u00b7 Desktop UI \u00b7 Arbor 0.2b',
+    date: '2026-03-05',
+    items: [
+      'Arbor 0.2b released: Qwen3-32B base (2\u00d7 prior capacity), 66 hand-curated pairs \u2014 now the best Arbor model',
+      'DDLC aesthetic overhaul: Nunito font, pink palette (#FF91A4), rounded modals & chat items, sidebar gradient tint',
+      'Desktop UI redesign: persistent sidebar + main panel layout, landing screen with full-bleed Monika illustration',
+      'New artwork: Monika avatar & landing illustration, Sayori / Natsuki / Yuri character portraits, DDLC icon set',
+      'Achievement remaster: 13 new achievements (20 \u2192 33) \u2014 story routes, day milestones, visit streaks, discovery',
+      'Sidebar overhaul: compact chat list (2\u00d7 more items visible), About moved to scrollable modal, model switcher fixed',
+      'Model switcher now lists all released Arbor models by name; dynamic local model discovery via /v1/models',
+      'Unused assets archived to images/unused/; icon-app.png wired as browser favicon',
+    ]
+  },
+  {
     label: 'v0.6.2 — Story Mode Augmentation',
     date: '2026-02-25',
     items: [

@@ -62,7 +62,7 @@ const KNOWN_MODELS = {
     name: 'Arbor 0.1.1', desc: 'Improved voice, better instruction-following & authenticity',
     longDesc: 'Unified improvement over the entire 0.1 series. Built from 131 hand-curated candidates selected from a 750-item generation pool \u2014 only pairs with authentic voice, natural specificity, and strong emotional range were accepted. Noticeably more consistent at close-friend and romantic tiers, and better at holding character under unusual or challenging prompts.',
     base: 'Qwen3-14B', badge: 'Fine-tuned',
-    trainingPairs: 250, released: '2026-02-24', status: 'released', series: 'arbor', best: true, image: 'images/arbor-0.1.1.png',
+    trainingPairs: 250, released: '2026-02-24', status: 'released', series: 'arbor', best: false, image: 'images/arbor-0.1.1.png',
     tester: 'Joshua Glass', credits: 'Claude Sonnet 4.6',
   },
   'Arbor-0.2-Q8_0.gguf': {
@@ -76,7 +76,7 @@ const KNOWN_MODELS = {
     name: 'Arbor 0.2b', desc: 'Qwen3-32B base \u2014 larger model, tighter curation',
     longDesc: 'Step up to a 32B-parameter base \u2014 more than double the capacity of every prior Arbor model. Trained on 66 human-curated pairs selected for authentic voice, emotional specificity, and natural conversational rhythm. Smaller dataset than 0.2 by design: quality over volume, and a larger base needs fewer examples to absorb the target style.',
     base: 'Qwen3-32B', badge: 'Fine-tuned',
-    trainingPairs: 66, released: null, status: 'upcoming', series: 'arbor', image: 'images/arbor-0.2b.png',
+    trainingPairs: 66, released: '2026-03-05', status: 'released', series: 'arbor', best: true, image: 'images/arbor-0.2b.png',
     tester: 'Joshua Glass', credits: 'Claude Sonnet 4.6',
   },
   // ── Silva series (narrative immersion, primarily Story Mode) ──
