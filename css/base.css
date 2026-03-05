@@ -230,29 +230,29 @@ body {
   justify-content: center;
   align-items: center;
 }
-.landing-hero {
-  width: 100%; max-height: 300px; overflow: hidden; flex-shrink: 0;
-}
-.landing-illustration {
-  width: 100%; height: 300px; object-fit: cover; object-position: center 30%;
-  display: block;
+#screenLanding {
+  background: url('images/monika-landing.png') center 30% / cover no-repeat;
+  position: relative;
 }
 .landing-body {
+  position: absolute; bottom: 0; left: 0; right: 0;
   display: flex; flex-direction: column; align-items: center;
-  text-align: center; padding: 28px 20px; flex: 1; justify-content: center;
+  text-align: center; padding: 40px 20px 48px;
+  background: linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.55) 55%, transparent 100%);
 }
 .landing-avatar {
-  width: 90px; height: 90px; border-radius: 50%;
+  width: 80px; height: 80px; border-radius: 50%;
   object-fit: cover; object-position: center top;
-  border: 3px solid var(--pink-mid);
-  box-shadow: 0 0 0 6px var(--pink-pale), 0 6px 20px rgba(199,87,122,0.2);
-  margin-bottom: 20px;
+  border: 3px solid rgba(255,255,255,0.6);
+  box-shadow: 0 0 0 5px rgba(199,87,122,0.35), 0 6px 20px rgba(0,0,0,0.4);
+  margin-bottom: 16px;
 }
 .landing-title {
-  font-size: 32px; font-weight: 700; color: var(--text); margin-bottom: 8px;
+  font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 8px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
 .landing-sub {
-  font-size: 15px; color: var(--gray-text); margin-bottom: 28px; line-height: 1.5;
+  font-size: 15px; color: rgba(255,255,255,0.8); margin-bottom: 28px; line-height: 1.5;
 }
 .landing-new-btn {
   padding: 12px 32px;
