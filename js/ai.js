@@ -676,10 +676,24 @@ async function fetchLlamaCppModels() {
     const ids = (data.data || []).map(m => m.id).filter(Boolean);
     // Filter out split GGUF continuation parts (e.g. -00002-of-00003.gguf)
     // Only keep part 1 (which auto-loads the rest) and non-split models
-    return ids.filter(id => {
+    const filtered = ids.filter(id => {
       const splitMatch = id.match(/-(\d+)-of-(\d+)(\.gguf)?$/i);
       return !splitMatch || parseInt(splitMatch[1]) === 1;
     });
+    // Sort newest first: extract version tuple from name (e.g. Arbor-0.2b → [0,2,'b'])
+    const versionKey = id => {
+      const m = id.match(/(\d+)\.(\d+)([a-z]?)/i);
+      if (!m) return [-1, -1, ''];
+      return [parseInt(m[1]), parseInt(m[2]), m[3].toLowerCase()];
+    };
+    filtered.sort((a, b) => {
+      const [amaj, amin, asuf] = versionKey(a);
+      const [bmaj, bmin, bsuf] = versionKey(b);
+      if (bmaj !== amaj) return bmaj - amaj;
+      if (bmin !== amin) return bmin - amin;
+      return bsuf.localeCompare(asuf); // 'b' > 'a' > ''
+    });
+    return filtered;
   } catch {}
   return [];
 }

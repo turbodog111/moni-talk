@@ -442,8 +442,9 @@ function updateModelSwitcherLabel() {
   } else if (provider === 'ollama') {
     label.textContent = `Ollama · ${ollamaModel || 'local'}`;
   } else if (provider === 'llamacpp') {
-    const known = llamacppModel && KNOWN_MODELS[llamacppModel];
-    label.textContent = known ? known.name : (llamacppModel ? llamacppModel.replace(/-Q\d+[^.]*\.gguf$/i, '') : 'llama.cpp');
+    const activeModel = _confirmedLlamaCppModel || llamacppModel;
+    const known = activeModel && KNOWN_MODELS[activeModel];
+    label.textContent = known ? known.name : (activeModel ? activeModel.replace(/-Q\d+[^.]*\.gguf$/i, '') : 'llama.cpp');
   }
 }
 

@@ -15,8 +15,11 @@ const CHANGELOG_ENTRIES = [
       'Memory delete fixed: cloud sync no longer re-adds deleted memories; stable IDs back-filled on all existing memories',
       'Archived chat sync fixed: archive/unarchive actions now timestamped and respected across devices during merge',
       'Benchmark results now synced to cloud — survive device switches and localStorage clears',
-      'Portrait loading fixed in story and adventure mode after image reorganization',
+      'Portrait loading fixed in story and adventure mode — all four girls now use correct avatar filenames',
       'Sidebar action menu: four buttons (star, rename, archive, delete) collapsed into a single \u22ee menu per chat item',
+      'Model attribution now reads server-confirmed model from API response, not just the UI selection',
+      'New chats appear in sidebar immediately without requiring a page refresh',
+      'Latest Arbor models sort to top of the model selector dropdown',
     ]
   },
   {
