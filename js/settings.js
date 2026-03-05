@@ -238,6 +238,7 @@ async function refreshLlamaCppModels() {
   llamacppModelSelect.innerHTML = '';
   const el = $('llamacppModelInfo');
   if (el) { el.textContent = 'Connecting...'; el.classList.add('visible'); }
+  fetchLlamaCppProps(); // fire-and-forget: populate _contextWindowSize for context inspector
   const models = await fetchLlamaCppModels();
   if (models.length === 0) {
     const o = document.createElement('option');

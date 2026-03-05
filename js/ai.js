@@ -431,6 +431,7 @@ async function callLlamaCpp(chat) {
     }
     const data = await res.json();
     if (data.model) _confirmedLlamaCppModel = data.model;
+    if (data.usage) { _lastPromptTokens = data.usage.prompt_tokens || 0; _lastCompletionTokens = data.usage.completion_tokens || 0; }
     return data.choices?.[0]?.message?.content?.trim() || '';
   } catch (err) {
     if (err.name === 'AbortError') throw new Error('llama.cpp request timed out.');
@@ -506,6 +507,7 @@ async function callOllama(chat) {
     throw new Error(data?.error?.message || `Ollama error (${res.status})`);
   }
   const data = await res.json();
+  if (data.prompt_eval_count) { _lastPromptTokens = data.prompt_eval_count; _lastCompletionTokens = data.eval_count || 0; }
   return data.message?.content?.trim() || '';
 }
 
@@ -562,11 +564,11 @@ async function streamOllama(chat, onChunk, externalSignal) {
     buf = lines.pop();
     for (const line of lines) {
       if (!line.trim()) continue;
-      try { const j = JSON.parse(line); const c = j.message?.content || ''; if (c) { full += c; onChunk(c); } } catch {}
+      try { const j = JSON.parse(line); const c = j.message?.content || ''; if (c) { full += c; onChunk(c); } if (j.done) { if (j.prompt_eval_count) _lastPromptTokens = j.prompt_eval_count; if (j.eval_count) _lastCompletionTokens = j.eval_count; } } catch {}
     }
   }
   if (buf.trim()) {
-    try { const j = JSON.parse(buf); const c = j.message?.content || ''; if (c) { full += c; onChunk(c); } } catch {}
+    try { const j = JSON.parse(buf); const c = j.message?.content || ''; if (c) { full += c; onChunk(c); } if (j.done) { if (j.prompt_eval_count) _lastPromptTokens = j.prompt_eval_count; if (j.eval_count) _lastCompletionTokens = j.eval_count; } } catch {}
   }
   return full.trim() || '';
 }
@@ -593,7 +595,7 @@ async function streamSSE(url, headers, body, onChunk, signal) {
       if (!line.startsWith('data: ')) continue;
       const payload = line.slice(6).trim();
       if (payload === '[DONE]') continue;
-      try { const j = JSON.parse(payload); if (j.model && provider === 'llamacpp') _confirmedLlamaCppModel = j.model; const c = j.choices?.[0]?.delta?.content || ''; if (c) { full += c; onChunk(c); } } catch {}
+      try { const j = JSON.parse(payload); if (j.model && provider === 'llamacpp') _confirmedLlamaCppModel = j.model; if (j.usage && provider === 'llamacpp') { _lastPromptTokens = j.usage.prompt_tokens || 0; _lastCompletionTokens = j.usage.completion_tokens || 0; } const c = j.choices?.[0]?.delta?.content || ''; if (c) { full += c; onChunk(c); } } catch {}
     }
   }
   return full.trim() || '';
@@ -604,7 +606,7 @@ async function streamLlamaCpp(chat, onChunk, signal) {
   return await streamSSE(
     `${llamacppEndpoint}/v1/chat/completions`,
     { 'Content-Type': 'application/json' },
-    { ...(llamacppModel ? { model: llamacppModel } : {}), messages: buildMessages(chat), max_tokens: isStory ? 2048 : 1000, temperature: isStory ? 0.8 : 0.75, top_p: 0.92, repeat_penalty: 1.18, chat_template_kwargs: { enable_thinking: false } },
+    { ...(llamacppModel ? { model: llamacppModel } : {}), messages: buildMessages(chat), max_tokens: isStory ? 2048 : 1000, temperature: isStory ? 0.8 : 0.75, top_p: 0.92, repeat_penalty: 1.18, chat_template_kwargs: { enable_thinking: false }, stream_options: { include_usage: true } },
     onChunk, signal
   );
 }
@@ -665,6 +667,17 @@ function prettifyFamily(raw) {
   }
   // Capitalize first letter of each word
   return raw.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ====== FETCH LLAMA.CPP PROPS (n_ctx, etc.) ======
+async function fetchLlamaCppProps() {
+  try {
+    const res = await fetch(`${llamacppEndpoint}/props`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const nCtx = data?.default_generation_settings?.n_ctx;
+    if (nCtx) _contextWindowSize = nCtx;
+  } catch {}
 }
 
 // ====== FETCH LLAMA.CPP MODELS ======

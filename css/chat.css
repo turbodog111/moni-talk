@@ -207,6 +207,24 @@
 }
 .context-bar button:hover { border-color: var(--green-mid); color: var(--green-dark); }
 
+/* === Context Inspector === */
+.ctx-inspector-modal { max-width: 360px; width: 100%; }
+.ctx-rows { display: flex; flex-direction: column; gap: 2px; }
+.ctx-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--gray-light); font-size: 13px; }
+.ctx-row:last-child { border-bottom: none; }
+.ctx-row-sep { border-bottom: 2px solid var(--pink-mid) !important; padding: 0 !important; margin: 4px 0; }
+.ctx-row-label { color: var(--gray-text); }
+.ctx-row-val { font-weight: 600; color: var(--text); }
+.ctx-inspector-bar-wrap { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.ctx-inspector-bar { flex: 1; height: 8px; background: var(--gray-mid); border-radius: 4px; overflow: hidden; }
+.ctx-inspector-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.ctx-inspector-pct { font-size: 12px; color: var(--gray-text); white-space: nowrap; flex-shrink: 0; }
+.ctx-inspector-actions { display: flex; gap: 8px; margin-top: 16px; }
+.ctx-inspector-actions button { flex: 1; padding: 8px; border-radius: 8px; font-size: 13px; cursor: pointer; border: 1px solid var(--gray-mid); background: var(--bg); color: var(--text); transition: all 0.2s; }
+.ctx-inspector-actions button:hover { border-color: var(--pink-mid); background: var(--pink-pale); }
+.ctx-inspector-actions button.danger-btn { border-color: #e74c3c; color: #e74c3c; }
+.ctx-inspector-actions button.danger-btn:hover { background: #fdf0f0; }
+
 /* === New Chat Screen === */
 .new-chat-header {
   flex-shrink: 0;

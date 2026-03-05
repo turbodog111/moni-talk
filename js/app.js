@@ -134,6 +134,9 @@ function init() {
     showScreen('landing');
   });
   $('trimBtn').addEventListener('click', trimContext);
+  $('ctxInfoBtn').addEventListener('click', openContextInspector);
+  $('ctxInspectorClose').addEventListener('click', () => { $('ctxInspectorOverlay').style.display = 'none'; });
+  $('ctxInspectorOverlay').addEventListener('click', e => { if (e.target === $('ctxInspectorOverlay')) $('ctxInspectorOverlay').style.display = 'none'; });
   $('regenBtn').addEventListener('click', regenerateLastResponse);
   $('cancelBtn').addEventListener('click', () => { if (activeAbortController) activeAbortController.abort(); });
   $('storyRetryBtn').addEventListener('click', forceStoryRetry);

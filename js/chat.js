@@ -619,10 +619,29 @@ function updateContextBar() {
   const chat = getChat();
   if (!chat) return;
   const count = chat.messages.length;
-  const pct = Math.min(100, (count / MAX_CONTEXT_MSGS) * 100);
-  contextLabel.textContent = `${count} message${count !== 1 ? 's' : ''}`;
-  contextFill.style.width = pct + '%';
-  contextFill.style.background = pct > 80 ? '#e67e22' : pct > 60 ? '#f1c40f' : 'var(--green-mid)';
+
+  // Prefer actual token data when available
+  if (_lastPromptTokens > 0) {
+    const limit = _contextWindowSize || 0;
+    if (limit > 0) {
+      const pct = Math.min(100, (_lastPromptTokens / limit) * 100);
+      contextLabel.textContent = `${_lastPromptTokens.toLocaleString()} / ${limit.toLocaleString()} tokens`;
+      contextFill.style.width = pct + '%';
+      contextFill.style.background = pct > 80 ? '#e67e22' : pct > 60 ? '#f1c40f' : 'var(--green-mid)';
+    } else {
+      contextLabel.textContent = `${_lastPromptTokens.toLocaleString()} tokens`;
+      const pct = Math.min(100, (count / MAX_CONTEXT_MSGS) * 100);
+      contextFill.style.width = pct + '%';
+      contextFill.style.background = pct > 80 ? '#e67e22' : pct > 60 ? '#f1c40f' : 'var(--green-mid)';
+    }
+  } else {
+    // Fallback: message count
+    const pct = Math.min(100, (count / MAX_CONTEXT_MSGS) * 100);
+    contextLabel.textContent = `${count} message${count !== 1 ? 's' : ''}`;
+    contextFill.style.width = pct + '%';
+    contextFill.style.background = pct > 80 ? '#e67e22' : pct > 60 ? '#f1c40f' : 'var(--green-mid)';
+  }
+
   // Show/hide regenerate button
   const regenBtn = $('regenBtn');
   if (regenBtn) {
@@ -632,6 +651,62 @@ function updateContextBar() {
   }
   updateEditButton();
   updateChatPanel(chat);
+}
+
+function openContextInspector() {
+  const chat = getChat();
+  if (!chat) return;
+  const overlay = $('ctxInspectorOverlay');
+  const body = $('ctxInspectorBody');
+  if (!overlay || !body) return;
+
+  const msgLimit = chat.mode === 'story' ? STORY_MSG_LIMIT : CHAT_MSG_LIMIT;
+  const sentCount = Math.min(chat.messages.length, msgLimit);
+  const totalCount = chat.messages.length;
+  const pt = _lastPromptTokens;
+  const ct = _lastCompletionTokens;
+  const wnd = _contextWindowSize;
+  const free = (wnd > 0 && pt > 0) ? Math.max(0, wnd - pt) : null;
+  const pct = (wnd > 0 && pt > 0) ? Math.min(100, (pt / wnd) * 100).toFixed(1) : null;
+
+  const fmt = n => n > 0 ? n.toLocaleString() : '—';
+
+  body.innerHTML = `
+    <div class="ctx-rows">
+      <div class="ctx-row"><span class="ctx-row-label">Prompt tokens</span><span class="ctx-row-val">${fmt(pt)}</span></div>
+      <div class="ctx-row"><span class="ctx-row-label">Last response</span><span class="ctx-row-val">${fmt(ct)}</span></div>
+      <div class="ctx-row ctx-row-sep"></div>
+      <div class="ctx-row"><span class="ctx-row-label">Context window (n_ctx)</span><span class="ctx-row-val">${wnd > 0 ? wnd.toLocaleString() : 'Unknown'}</span></div>
+      <div class="ctx-row"><span class="ctx-row-label">Free space</span><span class="ctx-row-val">${free !== null ? free.toLocaleString() + ' tokens' : '—'}</span></div>
+    </div>
+    ${pct !== null ? `
+    <div class="ctx-inspector-bar-wrap">
+      <div class="ctx-inspector-bar">
+        <div class="ctx-inspector-fill" style="width:${pct}%;background:${pct>80?'#e67e22':pct>60?'#f1c40f':'var(--pink)'}"></div>
+      </div>
+      <span class="ctx-inspector-pct">${pct}% used</span>
+    </div>` : ''}
+    <div class="ctx-rows" style="margin-top:12px;">
+      <div class="ctx-row"><span class="ctx-row-label">Messages stored</span><span class="ctx-row-val">${totalCount}</span></div>
+      <div class="ctx-row"><span class="ctx-row-label">Sent per request</span><span class="ctx-row-val">${sentCount} / ${msgLimit} limit</span></div>
+    </div>
+    <div class="ctx-inspector-actions">
+      <button id="ciTrimBtn">Trim Context</button>
+      <button id="ciClearBtn" class="danger-btn">Clear All Messages</button>
+    </div>`;
+
+  // Wire up buttons
+  body.querySelector('#ciTrimBtn').addEventListener('click', () => { overlay.style.display = 'none'; trimContext(); });
+  body.querySelector('#ciClearBtn').addEventListener('click', () => {
+    if (!confirm('Clear all messages in this chat? This cannot be undone.')) return;
+    chat.messages = [];
+    saveChats(); renderMessages(); updateContextBar();
+    _lastPromptTokens = 0; _lastCompletionTokens = 0;
+    overlay.style.display = 'none';
+    showToast('Messages cleared.', 'success');
+  });
+
+  overlay.style.display = '';
 }
 
 async function trimContext() {
