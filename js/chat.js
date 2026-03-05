@@ -351,7 +351,7 @@ function createChat() {
       flags: {}
     };
   }
-  chats.push(chat); saveChats(); openChat(chat.id);
+  chats.push(chat); saveChats(); renderChatList(); openChat(chat.id);
 }
 
 function openChat(id) {
