@@ -970,6 +970,17 @@
 <div id="achievementToast"></div>
 <div class="toast" id="toast"></div>
 
+<!-- Context Inspector Modal -->
+<div class="modal-overlay" id="ctxInspectorOverlay" style="display:none;">
+  <div class="modal ctx-inspector-modal">
+    <div class="modal-header">
+      <span class="modal-title">&#8505; Context Inspector</span>
+      <button class="modal-close" id="ctxInspectorClose">&times;</button>
+    </div>
+    <div class="modal-body" id="ctxInspectorBody"></div>
+  </div>
+</div>
+
 <!-- JS (order matters — dependencies flow top to bottom) -->
 <script src="js/config.js"></script>
 <script src="js/state.js"></script>
@@ -991,15 +1002,5 @@
 <script src="js/effects.js"></script>
 <div class="adv-vignette" id="advVignette"></div>
 
-<!-- Context Inspector Modal -->
-<div class="modal-overlay" id="ctxInspectorOverlay" style="display:none;">
-  <div class="modal ctx-inspector-modal">
-    <div class="modal-header">
-      <span class="modal-title">&#8505; Context Inspector</span>
-      <button class="modal-close" id="ctxInspectorClose">&times;</button>
-    </div>
-    <div class="modal-body" id="ctxInspectorBody"></div>
-  </div>
-</div>
 </body>
 </html>
