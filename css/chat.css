@@ -264,6 +264,80 @@
   flex: 1; overflow-y: auto; padding: 16px 20px 32px;
   display: flex; flex-direction: column; align-items: center;
 }
+
+/* === New Chat Screen — DDLC Aesthetic Overlay === */
+#screenNewChat {
+  background: url('../images/monika-landing.png') center 30% / cover no-repeat;
+}
+#screenNewChat .new-chat-header {
+  padding-top: 32px;
+  background: rgba(5, 0, 3, 0.62);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 145, 164, 0.12);
+}
+#screenNewChat .new-chat-header h2 {
+  color: #fff;
+  font-size: 24px;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+}
+#screenNewChat .mode-card-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+#screenNewChat .mode-card-btn:hover {
+  background: rgba(199, 87, 122, 0.22);
+  border-color: var(--pink-mid);
+}
+#screenNewChat .mode-card-btn.active {
+  background: rgba(199, 87, 122, 0.30);
+  border-color: var(--pink);
+}
+#screenNewChat .mode-card-name { color: rgba(255, 255, 255, 0.88); }
+#screenNewChat .mode-card-tag  { color: rgba(255, 255, 255, 0.50); }
+#screenNewChat .mode-card-btn.active .mode-card-name { color: var(--pink); }
+#screenNewChat .new-chat-body {
+  background: rgba(5, 0, 3, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+#screenNewChat .subtitle           { color: rgba(255, 255, 255, 0.68); }
+#screenNewChat .rel-display .rel-label { color: var(--pink); }
+#screenNewChat .rel-display .rel-desc  { color: rgba(255, 255, 255, 0.60); }
+#screenNewChat .slider-labels          { color: rgba(255, 255, 255, 0.50); }
+#screenNewChat .form-section label     { color: rgba(255, 255, 255, 0.68); }
+#screenNewChat .form-hint              { color: rgba(255, 255, 255, 0.40); }
+#screenNewChat .story-opt-label        { color: rgba(255, 255, 255, 0.50); }
+#screenNewChat .story-opt-section-desc,
+#screenNewChat .story-opt-hint         { color: rgba(255, 255, 255, 0.55); }
+#screenNewChat .form-section input {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.20);
+  color: #fff;
+}
+#screenNewChat .form-section input::placeholder { color: rgba(255, 255, 255, 0.35); }
+#screenNewChat .form-section input:focus {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 3px rgba(255, 145, 164, 0.20);
+  background: rgba(255, 255, 255, 0.11);
+}
+#screenNewChat .story-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.75);
+}
+#screenNewChat .story-chip:hover {
+  border-color: var(--pink-mid);
+  background: rgba(199, 87, 122, 0.18);
+  color: #fff;
+}
+#screenNewChat .story-chip.selected {
+  border-color: var(--pink);
+  background: rgba(199, 87, 122, 0.30);
+  color: #fff;
+}
+#screenNewChat .story-toggle-row { color: rgba(255, 255, 255, 0.65); }
+
 /* === Story Mode === */
 .story-choices { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; background: var(--bg); border-top: 1px solid var(--gray-mid); flex-shrink: 0; }
 .story-choice-btn { padding: 12px 16px; border: 2px solid var(--green-mid); border-radius: 12px; background: var(--bg); font-size: 14px; font-family: inherit; cursor: pointer; text-align: left; transition: all 0.2s; line-height: 1.4; color: var(--text); }
