@@ -594,11 +594,6 @@
           <div class="hint">Color of the cursor trail and click sparkles.</div>
           <div class="field-gap"></div>
 
-          <label for="effectsTrailSlider">Trail Density &mdash; <span id="effectsTrailVal">60</span> dots</label>
-          <input type="range" id="effectsTrailSlider" min="15" max="100" step="5" value="60">
-          <div class="hint">How many dots follow the cursor.</div>
-          <div class="field-gap"></div>
-
           <label for="effectsClickSelect">Click Effect</label>
           <select id="effectsClickSelect">
             <option value="ripple">Ripple (water drop)</option>
@@ -606,20 +601,24 @@
             <option value="lightning">Lightning</option>
           </select>
           <div class="hint">Visual burst that appears on mouse click.</div>
-          <div class="field-gap"></div>
 
-          <label for="effectsHeartsSlider">Hearts per Click &mdash; <span id="effectsHeartsVal">7</span></label>
-          <input type="range" id="effectsHeartsSlider" min="3" max="15" step="1" value="7">
-          <div class="hint">Number of hearts that burst out. Only applies when Click Effect is Hearts.</div>
-          <div class="field-gap"></div>
+          <div id="effectsHeartsGroup" style="display:none;">
+            <div class="field-gap"></div>
+            <label for="effectsHeartsSlider">Hearts per Click &mdash; <span id="effectsHeartsVal">7</span></label>
+            <input type="range" id="effectsHeartsSlider" min="3" max="15" step="1" value="7">
+            <div class="hint">Number of hearts that burst out.</div>
+          </div>
 
-          <label for="effectsLightningSize">Lightning Size</label>
-          <select id="effectsLightningSize">
-            <option value="small">Small</option>
-            <option value="medium">Medium</option>
-            <option value="large">Large</option>
-          </select>
-          <div class="hint">Bolt length and count. Only applies when Click Effect is Lightning.</div>
+          <div id="effectsLightningGroup" style="display:none;">
+            <div class="field-gap"></div>
+            <label for="effectsLightningSize">Lightning Size</label>
+            <select id="effectsLightningSize">
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+            <div class="hint">Bolt length and count.</div>
+          </div>
           <div class="field-gap"></div>
 
           <label for="effectsTrailWidthSlider">Trail Width &mdash; <span id="effectsTrailWidthVal">1.0</span>&times;</label>

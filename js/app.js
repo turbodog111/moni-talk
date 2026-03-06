@@ -254,28 +254,21 @@ function init() {
     });
   }
 
-  // Cursor effects — Trail density
-  const effectsTrailSlider = $('effectsTrailSlider');
-  const effectsTrailVal = $('effectsTrailVal');
-  if (effectsTrailSlider) {
-    const v = parseInt(localStorage.getItem('moni_effects_trail')) || 60;
-    effectsTrailSlider.value = v;
-    if (effectsTrailVal) effectsTrailVal.textContent = v;
-    effectsTrailSlider.addEventListener('input', () => {
-      const n = parseInt(effectsTrailSlider.value);
-      if (effectsTrailVal) effectsTrailVal.textContent = n;
-      localStorage.setItem('moni_effects_trail', n);
-      window.updateEffectsSettings?.({ trailLen: n });
-    });
-  }
-
-  // Cursor effects — Click effect
+  // Cursor effects — Click effect + conditional sub-settings visibility
   const effectsClickSel = $('effectsClickSelect');
+  function syncClickSubSettings(val) {
+    const hg = $('effectsHeartsGroup');
+    const lg = $('effectsLightningGroup');
+    if (hg) hg.style.display = val === 'hearts'    ? '' : 'none';
+    if (lg) lg.style.display = val === 'lightning' ? '' : 'none';
+  }
   if (effectsClickSel) {
     effectsClickSel.value = localStorage.getItem('moni_effects_click') || 'ripple';
+    syncClickSubSettings(effectsClickSel.value);
     effectsClickSel.addEventListener('change', () => {
       localStorage.setItem('moni_effects_click', effectsClickSel.value);
       window.updateEffectsSettings?.({ clickEffect: effectsClickSel.value });
+      syncClickSubSettings(effectsClickSel.value);
     });
   }
 

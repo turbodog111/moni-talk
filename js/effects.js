@@ -13,11 +13,12 @@
   resize();
   window.addEventListener('resize', resize);
 
+  const TRAIL_LEN = 60; // hardcoded — no UI control
+
   // --- Settings ---
   const S = {
     enabled:       localStorage.getItem('moni_effects_enabled') !== 'false',
     color:         localStorage.getItem('moni_effects_color')         || 'pink',
-    trailLen:      parseInt(localStorage.getItem('moni_effects_trail'))        || 60,
     trailWidth:    parseFloat(localStorage.getItem('moni_effects_trail_width')) || 1.0,
     clickEffect:   localStorage.getItem('moni_effects_click')         || 'ripple',
     heartsCount:   parseInt(localStorage.getItem('moni_effects_hearts_count')) || 7,
@@ -46,7 +47,7 @@
   document.addEventListener('mousemove', e => {
     if (!S.enabled) return;
     trail.push({ x: e.clientX, y: e.clientY, t: Date.now() });
-    if (trail.length > S.trailLen) trail.shift();
+    if (trail.length > TRAIL_LEN) trail.shift();
   });
 
   // --- Ripples ---
@@ -126,7 +127,7 @@
     const now = Date.now();
 
     // ---- Trail: fluid gradient line ----
-    while (trail.length > S.trailLen) trail.shift();
+    while (trail.length > TRAIL_LEN) trail.shift();
     while (trail.length > 0 && now - trail[0].t > TRAIL_MAX_AGE) trail.shift();
     const n = trail.length;
 
