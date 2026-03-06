@@ -529,6 +529,8 @@ async function generateGreeting(chat) {
     const { mood, moodIntensity, drift, text: parsedReply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
     chat.mood = mood; chat.moodIntensity = moodIntensity; chat.drift = drift;
     pushMoodHistory(chat, mood, moodIntensity, drift);
+    trackMoodSeen(mood, moodIntensity);
+    if (moodIntensity === 'strong') showMoodFloat(mood);
     chat.lastActiveTime = Date.now();
     // Adventure mode: parse game state tags from greeting
     let cleanedReply0 = parsedReply;
@@ -800,6 +802,8 @@ async function regenerateLastResponse() {
     const { mood, moodIntensity, drift, text: parsedReply } = parseStateTags(rawReply, chat.mood || 'cheerful', chat.moodIntensity || 'moderate', chat.drift || 'casual');
     chat.mood = mood; chat.moodIntensity = moodIntensity; chat.drift = drift;
     pushMoodHistory(chat, mood, moodIntensity, drift);
+    trackMoodSeen(mood, moodIntensity);
+    if (moodIntensity === 'strong') showMoodFloat(mood);
     chat.lastActiveTime = Date.now();
     // Adventure mode: parse game state tags
     let cleanedReply1 = parsedReply;
@@ -1107,6 +1111,8 @@ async function sendMessage() {
     chat.moodIntensity = moodIntensity;
     chat.drift = drift;
     pushMoodHistory(chat, mood, moodIntensity, drift);
+    trackMoodSeen(mood, moodIntensity);
+    if (moodIntensity === 'strong') showMoodFloat(mood);
     chat.lastActiveTime = Date.now();
     // Adventure mode: parse game state tags
     let cleanedReply2 = parsedReply;
@@ -1249,6 +1255,24 @@ function startEditMessage(msgEl) {
   });
 }
 
+// ====== MOOD FLOAT PORTRAIT ======
+const STRONG_MOOD_IMGS = new Set(['flustered','tender','melancholic','excited','passionate']);
+let _moodFloatTimer = null;
+
+function showMoodFloat(mood) {
+  if (!STRONG_MOOD_IMGS.has(mood)) return;
+  const el = $('moodFloat');
+  if (!el) return;
+  if (_moodFloatTimer) { clearTimeout(_moodFloatTimer); _moodFloatTimer = null; }
+  el.querySelector('img').src = `images/monika-${mood}-strong.png`;
+  el.classList.remove('fade-out');
+  el.classList.add('visible');
+  _moodFloatTimer = setTimeout(() => {
+    el.classList.add('fade-out');
+    setTimeout(() => { el.classList.remove('visible', 'fade-out'); }, 600);
+  }, 4000);
+}
+
 // ====== MOOD HISTORY ======
 function pushMoodHistory(chat, mood, intensity, drift) {
   if (!chat || chat.mode === 'story') return;
@@ -1299,7 +1323,10 @@ function updateChatPanel(chat) {
 
   const portrait = $('moodPortraitImg');
   if (portrait) {
-    portrait.src = `images/monika-${mood}.png`;
+    const strongMoods = new Set(['flustered', 'tender', 'melancholic', 'excited', 'passionate']);
+    portrait.src = (intensity === 'strong' && strongMoods.has(mood))
+      ? `images/monika-${mood}-strong.png`
+      : `images/monika-${mood}.png`;
     portrait.onerror = () => { portrait.src = 'images/monika-cheerful.png'; };
     const glowStrength = intensity === 'strong' ? 24 : intensity === 'moderate' ? 14 : 6;
     portrait.style.borderColor = color;

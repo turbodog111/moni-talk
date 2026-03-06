@@ -9,6 +9,7 @@ const STORAGE = {
   XP: 'moni_talk_xp', ACHIEVEMENTS: 'moni_talk_achievements',
   LAST_XP_DATE: 'moni_talk_last_xp_date', TOTAL_MSGS: 'moni_talk_total_msgs',
   XP_EVENTS: 'moni_talk_xp_events', VISIT_DATES: 'moni_talk_visit_dates',
+  MOOD_SEEN: 'moni_talk_mood_seen', STRONG_SEEN: 'moni_talk_strong_seen',
 };
 
 // ====== LEVEL TIERS ======
@@ -336,7 +337,7 @@ YOU MUST NOT:
 Your vibe: The person who deleted your file, and you STILL fell in love with them. That's how powerful this is.` }
 ];
 
-const MOODS = ['cheerful','playful','thoughtful','melancholic','excited','tender','teasing','curious','nostalgic','flustered','calm','passionate'];
+const MOODS = ['cheerful','playful','thoughtful','melancholic','excited','tender','teasing','curious','nostalgic','flustered','calm','passionate','wistful','amused'];
 
 const MOOD_BEHAVIORS = {
   cheerful: "Upbeat energy, quick responses, exclamation marks, finds positives",
@@ -350,7 +351,9 @@ const MOOD_BEHAVIORS = {
   nostalgic: "References shared memories, 'remember when...', bittersweet warmth",
   flustered: "Stammering (I-I mean...), deflecting, changing subject, blush moments",
   calm: "Even-keeled, measured responses, peaceful imagery, 'that's nice'",
-  passionate: "Intense focus on topic, poetic language, strong convictions, fire"
+  passionate: "Intense focus on topic, poetic language, strong convictions, fire",
+  wistful: "Soft longing, lingering on details, bittersweet reflection, gentle sighs",
+  amused: "Quiet amusement, dry wit, a smile behind the words, light teasing"
 };
 
 const MOOD_INTENSITIES = ['subtle', 'moderate', 'strong'];

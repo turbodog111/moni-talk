@@ -597,6 +597,45 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
 .progress-ach-name { font-weight: 700; color: var(--text); margin-bottom: 2px; }
 .progress-ach-desc { color: var(--gray-text); font-size: 11px; }
 
+/* === Mood Gallery === */
+.mood-gallery-sub { font-size: 11px; color: var(--gray-text); margin-bottom: 8px; }
+.mood-gallery-strong-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.6px; color: var(--pink-dark); margin: 14px 0 6px;
+}
+.mood-gallery-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 4px;
+}
+.mood-gallery-grid.strong-grid { grid-template-columns: repeat(5, 1fr); }
+.mood-gallery-card {
+  border-radius: 10px; overflow: hidden; border: 1.5px solid var(--gray-mid);
+  background: var(--bg); text-align: center;
+}
+.mood-gallery-card img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
+.mood-gallery-card.unseen img { filter: grayscale(1) brightness(0.4); }
+.mood-gallery-card.seen { border-color: var(--pink-mid); }
+.mood-gallery-card.strong.seen { border-color: #c7577a; box-shadow: 0 0 8px rgba(199,87,122,0.4); }
+.mood-gallery-label {
+  font-size: 9px; font-weight: 600; color: var(--gray-text);
+  padding: 3px 2px; text-transform: capitalize; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.mood-gallery-card.seen .mood-gallery-label { color: var(--pink-dark); }
+
+/* === Mood Float Portrait === */
+.mood-float {
+  position: absolute; bottom: 80px; right: 16px; z-index: 50;
+  width: 140px; border-radius: 16px; overflow: hidden;
+  border: 2px solid rgba(199,87,122,0.6);
+  box-shadow: 0 8px 32px rgba(199,87,122,0.35);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.4s ease;
+  display: none;
+}
+.mood-float.visible { display: block; opacity: 1; }
+.mood-float.fade-out { opacity: 0; }
+.mood-float img { width: 100%; display: block; }
+
 /* === Sync === */
 .sync-dot {
   display: inline-block; width: 8px; height: 8px;

@@ -38,7 +38,33 @@ const ACHIEVEMENTS = [
   { id: 'benchmark_run',  name: 'Benchmark Runner', desc: 'Put the model to the test',       group: 'Misc' },
   { id: 'changelog',      name: 'Patch Notes',      desc: 'Open the changelog',              group: 'Misc' },
   { id: 'models_open',    name: 'Under the Hood',   desc: 'Open the models panel',           group: 'Misc' },
+  // Mood Gallery
+  { id: 'mood_all_14',   name: 'Full Spectrum',    desc: 'Experience all 14 of her moods',  group: 'Moods' },
+  { id: 'mood_all_strong', name: 'Overwhelmed',    desc: 'Witness all 5 strong mood moments', group: 'Moods' },
 ];
+
+// --- Mood seen state ---
+const STRONG_MOODS = ['flustered','tender','melancholic','excited','passionate'];
+let _moodSeen   = new Set(JSON.parse(localStorage.getItem(STORAGE.MOOD_SEEN)   || '[]'));
+let _strongSeen = new Set(JSON.parse(localStorage.getItem(STORAGE.STRONG_SEEN) || '[]'));
+
+function trackMoodSeen(mood, intensity) {
+  let changed = false;
+  if (MOODS.includes(mood) && !_moodSeen.has(mood)) {
+    _moodSeen.add(mood);
+    localStorage.setItem(STORAGE.MOOD_SEEN, JSON.stringify([..._moodSeen]));
+    changed = true;
+  }
+  if (intensity === 'strong' && STRONG_MOODS.includes(mood) && !_strongSeen.has(mood)) {
+    _strongSeen.add(mood);
+    localStorage.setItem(STORAGE.STRONG_SEEN, JSON.stringify([..._strongSeen]));
+    changed = true;
+  }
+  if (changed) {
+    if (_moodSeen.size >= 14) checkAchievement('mood_all_14');
+    if (_strongSeen.size >= 5) checkAchievement('mood_all_strong');
+  }
+}
 
 // --- Core state ---
 let _xp = parseInt(localStorage.getItem(STORAGE.XP) || '0');
@@ -136,11 +162,35 @@ function renderProgressTab() {
   const unlockCount = _unlockedIds.size;
   const groups = ['Chat', 'Story', 'Adventure', 'Misc'];
 
+  const moodGalleryHtml = () => {
+    const regularRows = MOODS.map(m => {
+      const seen = _moodSeen.has(m);
+      return `<div class="mood-gallery-card ${seen ? 'seen' : 'unseen'}">
+        <img src="images/monika-${m}.png" alt="${m}" onerror="this.src='images/monika-cheerful.png'">
+        <div class="mood-gallery-label">${seen ? m : '?'}</div>
+      </div>`;
+    }).join('');
+    const strongRows = STRONG_MOODS.map(m => {
+      const seen = _strongSeen.has(m);
+      return `<div class="mood-gallery-card strong ${seen ? 'seen' : 'unseen'}">
+        <img src="images/monika-${m}-strong.png" alt="${m} strong" onerror="this.src='images/monika-cheerful.png'">
+        <div class="mood-gallery-label">${seen ? m + ' ✦' : '?'}</div>
+      </div>`;
+    }).join('');
+    return `
+      <div class="progress-section-label">&mdash; MOOD GALLERY &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;</div>
+      <div class="mood-gallery-sub">${_moodSeen.size} / 14 moods &nbsp;·&nbsp; ${_strongSeen.size} / 5 strong</div>
+      <div class="mood-gallery-grid">${regularRows}</div>
+      <div class="mood-gallery-strong-label">Strong moments</div>
+      <div class="mood-gallery-grid strong-grid">${strongRows}</div>`;
+  };
+
   el.innerHTML = `
     <div class="progress-level-label">Level ${level.idx} &mdash; ${level.name}</div>
     <div class="progress-xp-bar-wrap"><div class="progress-xp-bar-fill" style="width:${pct}%"></div></div>
     <div class="progress-xp-label">${xpInLevel} / ${xpNeeded} XP to next level</div>
     <div class="progress-ach-count">${unlockCount} / ${ACHIEVEMENTS.length} Achievements Unlocked</div>
+    ${moodGalleryHtml()}
     ${groups.map(g => {
       const achs = ACHIEVEMENTS.filter(a => a.group === g);
       return `

@@ -8,6 +8,18 @@ const SUITE_VERSIONS = { petal: '0.1', bloom: '0.1' };
 
 const CHANGELOG_ENTRIES = [
   {
+    label: 'v0.7.2 — Mood Gallery \u00b7 Strong Portraits \u00b7 Cursor Effects',
+    date: '2026-03-06',
+    items: [
+      'Mood Gallery added to Achievements tab — 14 regular moods + 5 strong moments, unlocked as you encounter them',
+      'Strong mood portraits — flustered, tender, melancholic, excited, passionate now show unique AI-generated images at :strong intensity',
+      'Floating portrait — strong mood image appears in chat area when triggered, fades after 4 seconds',
+      'Two new achievements: Full Spectrum (all 14 moods) and Overwhelmed (all 5 strong moments)',
+      'Cursor effects settings added to Appearance tab — trail color, trail width, click effect (Ripple/Hearts/Lightning)',
+      'wistful and amused moods added to active mood system (images were already present)',
+    ],
+  },
+  {
     label: 'v0.7.1 — Memory Overhaul \u00b7 Sync Fixes \u00b7 Sidebar Polish',
     date: '2026-03-05',
     items: [
