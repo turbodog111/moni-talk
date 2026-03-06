@@ -240,15 +240,8 @@ body {
 .landing-body {
   position: absolute; bottom: 0; left: 0; right: 0;
   display: flex; flex-direction: column; align-items: center;
-  text-align: center; padding: 40px 20px 48px;
-  background: linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.55) 55%, transparent 100%);
-}
-.landing-avatar {
-  width: 80px; height: 80px; border-radius: 50%;
-  object-fit: cover; object-position: center top;
-  border: 3px solid rgba(255,255,255,0.6);
-  box-shadow: 0 0 0 5px rgba(199,87,122,0.35), 0 6px 20px rgba(0,0,0,0.4);
-  margin-bottom: 16px;
+  text-align: center; padding: 32px 20px 48px;
+  background: linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.45) 50%, transparent 100%);
 }
 .landing-title {
   font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 8px;
