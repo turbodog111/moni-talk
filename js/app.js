@@ -373,24 +373,34 @@ function initModelSwitcher() {
   arborLabel.textContent = 'Arbor Models';
   dropdown.appendChild(arborLabel);
 
-  const releasedArbor = ARBOR_ORDER
+  const arborModels = ARBOR_ORDER
     .map(k => [k, KNOWN_MODELS[k]])
-    .filter(([, m]) => m && m.status === 'released');
+    .filter(([, m]) => m && (m.status === 'released' || m.status === 'active' || m.status === 'inactive'));
 
-  releasedArbor.forEach(([id, m]) => {
-    const isActive = provider === 'llamacpp' && llamacppModel === id;
-    const label = m.best ? `${m.name} ⭐` : m.name;
-    addSwitcherOpt(dropdown, wrap, label, isActive, () => {
-      provider = 'llamacpp';
-      llamacppModel = id;
-      localStorage.setItem(STORAGE.PROVIDER, provider);
-      localStorage.setItem(STORAGE.LLAMACPP_MODEL, id);
-    });
+  arborModels.forEach(([id, m]) => {
+    const isSelected = provider === 'llamacpp' && llamacppModel === id;
+    const isInactive = m.status === 'inactive';
+    const label = m.status === 'active' ? `${m.name} ⭐` : m.name;
+    if (isInactive) {
+      const opt = document.createElement('button');
+      opt.className = 'model-switcher-option inactive';
+      opt.textContent = label;
+      opt.disabled = true;
+      dropdown.appendChild(opt);
+    } else {
+      addSwitcherOpt(dropdown, wrap, label, isSelected, () => {
+        provider = 'llamacpp';
+        llamacppModel = id;
+        localStorage.setItem(STORAGE.PROVIDER, provider);
+        localStorage.setItem(STORAGE.LLAMACPP_MODEL, id);
+      });
+    }
   });
 
   // Auto-select best Arbor model on first use
   if (provider === 'llamacpp' && !llamacppModel) {
-    const best = releasedArbor.find(([, m]) => m.best) || releasedArbor[releasedArbor.length - 1];
+    const selectableArbor = arborModels.filter(([, m]) => m.status !== 'inactive');
+    const best = selectableArbor.find(([, m]) => m.best) || selectableArbor[selectableArbor.length - 1];
     if (best) {
       llamacppModel = best[0];
       localStorage.setItem(STORAGE.LLAMACPP_MODEL, best[0]);

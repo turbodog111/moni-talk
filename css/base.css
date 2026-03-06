@@ -224,6 +224,8 @@ body {
 }
 .model-switcher-option:hover { background: var(--pink-pale); }
 .model-switcher-option.active { background: var(--pink-pale); color: var(--pink-dark); font-weight: 700; }
+.model-switcher-option.inactive { opacity: 0.4; cursor: not-allowed; }
+.model-switcher-option.inactive:hover { background: transparent; }
 .model-switcher-sep { height: 1px; background: var(--gray-mid); margin: 4px 0; }
 
 /* === Landing Screen === */
@@ -515,6 +517,8 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
 [data-theme="dark"] .model-catalog-img {
   border-bottom: 1px solid var(--gray-mid);
 }
+.model-catalog-card.model-status-active   { border-color: var(--pink); background: var(--pink-pale); }
+.model-catalog-card.model-status-inactive { border-color: var(--gray-mid); background: var(--bg); opacity: 0.6; }
 .model-catalog-card.model-status-released { border-color: var(--green-mid); background: var(--green-pale); }
 .model-catalog-card.model-status-upcoming { border-color: #f6ad55; background: rgba(246,173,85,0.08); }
 .model-catalog-card.model-status-skipped  { opacity: 0.45; }
@@ -523,9 +527,12 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
 .model-catalog-badge { font-size: 10px; background: var(--gray-mid); color: var(--gray-text);
   border-radius: 4px; padding: 2px 6px; }
 .model-catalog-status { font-size: 10px; font-weight: 700; border-radius: 4px; padding: 2px 7px; margin-left: auto; }
+.model-status-active   .model-catalog-status { background: var(--pink); color: #fff; }
+.model-status-inactive .model-catalog-status { background: var(--gray-mid); color: var(--gray-text); }
 .model-status-released .model-catalog-status { background: var(--green-mid); color: #fff; }
 .model-status-upcoming .model-catalog-status { background: #f6ad55; color: #1a1a1a; }
 .model-status-skipped  .model-catalog-status { background: var(--gray-mid); color: var(--gray-text); }
+.model-server-badge { font-size: 10px; font-weight: 700; color: var(--pink); }
 .model-catalog-desc { font-size: 13px; color: var(--gray-text); margin-bottom: 8px; line-height: 1.6; }
 .model-catalog-attr { font-size: 11px; color: var(--gray-text); margin-top: 8px; padding-top: 7px;
   border-top: 1px solid var(--gray-mid); display: flex; gap: 10px; flex-wrap: wrap; }

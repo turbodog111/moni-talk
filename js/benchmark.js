@@ -2074,6 +2074,8 @@ function compareRow(label, alphaVal, currentVal, suffix) {
 // --- Changelog Modal ---
 // ====== MODELS MODAL ======
 const STATUS_LABELS = {
+  active:        { text: 'Active',         cls: 'model-status-active'     },
+  inactive:      { text: 'Inactive',       cls: 'model-status-inactive'   },
   released:      { text: 'Released',       cls: 'model-status-released'   },
   upcoming:      { text: 'In Development', cls: 'model-status-upcoming'   },
   in_development:{ text: 'In Dev',         cls: 'model-status-indev'      },
@@ -2103,6 +2105,7 @@ function openModelsModal() {
     if (m.trainingPairs) meta.push(`<span>${escapeHtml(String(m.trainingPairs))} training pairs</span>`);
     if (m.released) meta.push(`<span>Released ${escapeHtml(m.released)}</span>`);
     const bestBadge = m.best ? `<span class="model-best-badge">\u2b50 Best</span>` : '';
+    const serverBadge = m.status === 'active' ? `<span class="model-server-badge">\u25cf On Server</span>` : '';
     const attrParts = [];
     if (m.tester)  attrParts.push(`<span class="model-attr-item"><span class="model-attr-label">Tester</span> ${escapeHtml(m.tester)}</span>`);
     if (m.credits) attrParts.push(`<span class="model-attr-item"><span class="model-attr-label">Tooling</span> ${escapeHtml(m.credits)}</span>`);
@@ -2113,6 +2116,7 @@ function openModelsModal() {
         <div class="model-catalog-top">
           <span class="model-catalog-name">${escapeHtml(m.name)}</span>
           ${bestBadge}
+          ${serverBadge}
           <span class="model-catalog-badge">${escapeHtml(m.badge)}</span>
           <span class="model-catalog-status ${s.cls}">${s.text}</span>
         </div>
