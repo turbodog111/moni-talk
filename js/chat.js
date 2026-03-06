@@ -1298,16 +1298,16 @@ function updateChatPanel(chat) {
   const emoji = getMoodEmoji(mood);
   const driftEmoji = DRIFT_EMOJIS[drift] || '\u2615';
 
-  const ring = $('moodRing');
-  if (ring) {
-    ring.style.borderColor = color;
-    const glowStrength = intensity === 'strong' ? 20 : intensity === 'moderate' ? 12 : 6;
-    ring.style.boxShadow = `0 0 ${glowStrength}px ${color}40`;
+  const portrait = $('moodPortraitImg');
+  if (portrait) {
+    portrait.src = `images/monika-${mood}.png`;
+    portrait.onerror = () => { portrait.src = 'images/monika-cheerful.png'; };
+    const glowStrength = intensity === 'strong' ? 24 : intensity === 'moderate' ? 14 : 6;
+    portrait.style.borderColor = color;
+    portrait.style.boxShadow = `0 0 ${glowStrength}px ${color}60`;
   }
-  const ringEmoji = $('moodRingEmoji');
-  if (ringEmoji) ringEmoji.textContent = emoji;
   const ringLabel = $('moodRingLabel');
-  if (ringLabel) ringLabel.textContent = `${mood} (${intensity})`;
+  if (ringLabel) ringLabel.textContent = `${mood} · ${intensity}`;
   const ringDrift = $('moodRingDrift');
   if (ringDrift) ringDrift.textContent = `${driftEmoji} ${drift}`;
 
