@@ -606,6 +606,32 @@
             <option value="lightning">Lightning</option>
           </select>
           <div class="hint">Visual burst that appears on mouse click.</div>
+          <div class="field-gap"></div>
+
+          <label for="effectsHeartsSlider">Hearts per Click &mdash; <span id="effectsHeartsVal">7</span></label>
+          <input type="range" id="effectsHeartsSlider" min="3" max="15" step="1" value="7">
+          <div class="hint">Number of hearts that burst out. Only applies when Click Effect is Hearts.</div>
+          <div class="field-gap"></div>
+
+          <label for="effectsLightningSize">Lightning Size</label>
+          <select id="effectsLightningSize">
+            <option value="small">Small</option>
+            <option value="medium">Medium</option>
+            <option value="large">Large</option>
+          </select>
+          <div class="hint">Bolt length and count. Only applies when Click Effect is Lightning.</div>
+          <div class="field-gap"></div>
+
+          <label for="effectsTrailWidthSlider">Trail Width &mdash; <span id="effectsTrailWidthVal">1.0</span>&times;</label>
+          <input type="range" id="effectsTrailWidthSlider" min="0.5" max="3" step="0.5" value="1">
+          <div class="hint">Thickness multiplier for the cursor trail.</div>
+          <div class="field-gap"></div>
+
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+            <input type="checkbox" id="effectsEnabledCheck" checked style="width:15px;height:15px;accent-color:var(--pink-mid,#c7576a);cursor:pointer;">
+            Enable cursor effects
+          </label>
+          <div class="hint">Uncheck to disable the trail and all click effects.</div>
         </div>
 
         <!-- ARCHIVE TAB -->

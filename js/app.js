@@ -279,6 +279,56 @@ function init() {
     });
   }
 
+  // Cursor effects — Hearts count
+  const effectsHeartsSlider = $('effectsHeartsSlider');
+  const effectsHeartsVal = $('effectsHeartsVal');
+  if (effectsHeartsSlider) {
+    const v = parseInt(localStorage.getItem('moni_effects_hearts_count')) || 7;
+    effectsHeartsSlider.value = v;
+    if (effectsHeartsVal) effectsHeartsVal.textContent = v;
+    effectsHeartsSlider.addEventListener('input', () => {
+      const n = parseInt(effectsHeartsSlider.value);
+      if (effectsHeartsVal) effectsHeartsVal.textContent = n;
+      localStorage.setItem('moni_effects_hearts_count', n);
+      window.updateEffectsSettings?.({ heartsCount: n });
+    });
+  }
+
+  // Cursor effects — Lightning size
+  const effectsLightningSz = $('effectsLightningSize');
+  if (effectsLightningSz) {
+    effectsLightningSz.value = localStorage.getItem('moni_effects_lightning_size') || 'medium';
+    effectsLightningSz.addEventListener('change', () => {
+      localStorage.setItem('moni_effects_lightning_size', effectsLightningSz.value);
+      window.updateEffectsSettings?.({ lightningSize: effectsLightningSz.value });
+    });
+  }
+
+  // Cursor effects — Trail width
+  const effectsTrailWidthSlider = $('effectsTrailWidthSlider');
+  const effectsTrailWidthVal = $('effectsTrailWidthVal');
+  if (effectsTrailWidthSlider) {
+    const v = parseFloat(localStorage.getItem('moni_effects_trail_width')) || 1.0;
+    effectsTrailWidthSlider.value = v;
+    if (effectsTrailWidthVal) effectsTrailWidthVal.textContent = v.toFixed(1);
+    effectsTrailWidthSlider.addEventListener('input', () => {
+      const n = parseFloat(effectsTrailWidthSlider.value);
+      if (effectsTrailWidthVal) effectsTrailWidthVal.textContent = n.toFixed(1);
+      localStorage.setItem('moni_effects_trail_width', n);
+      window.updateEffectsSettings?.({ trailWidth: n });
+    });
+  }
+
+  // Cursor effects — Enable/disable
+  const effectsEnabledCheck = $('effectsEnabledCheck');
+  if (effectsEnabledCheck) {
+    effectsEnabledCheck.checked = localStorage.getItem('moni_effects_enabled') !== 'false';
+    effectsEnabledCheck.addEventListener('change', () => {
+      localStorage.setItem('moni_effects_enabled', effectsEnabledCheck.checked);
+      window.updateEffectsSettings?.({ enabled: effectsEnabledCheck.checked });
+    });
+  }
+
   // TTS toggle button — mute/unmute (not full disable)
   $('ttsToggleBtn').addEventListener('click', () => {
     if (ttsPlaying) { stopTTS(); return; }
