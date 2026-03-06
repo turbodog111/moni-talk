@@ -2096,6 +2096,7 @@ const STATUS_LABELS = {
 };
 
 const ARBOR_ORDER = [
+  'Arbor-0.2.1-Q8_0.gguf',
   'Arbor-0.2b-Q8_0.gguf',
   'Arbor-0.2-Q8_0.gguf',
   'Arbor-0.1.1-Q8_0.gguf',
