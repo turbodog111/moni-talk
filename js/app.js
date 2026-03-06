@@ -244,6 +244,41 @@ function init() {
     });
   }
 
+  // Cursor effects — Color
+  const effectsColorSel = $('effectsColorSelect');
+  if (effectsColorSel) {
+    effectsColorSel.value = localStorage.getItem('moni_effects_color') || 'pink';
+    effectsColorSel.addEventListener('change', () => {
+      localStorage.setItem('moni_effects_color', effectsColorSel.value);
+      window.updateEffectsSettings?.({ color: effectsColorSel.value });
+    });
+  }
+
+  // Cursor effects — Trail density
+  const effectsTrailSlider = $('effectsTrailSlider');
+  const effectsTrailVal = $('effectsTrailVal');
+  if (effectsTrailSlider) {
+    const v = parseInt(localStorage.getItem('moni_effects_trail')) || 60;
+    effectsTrailSlider.value = v;
+    if (effectsTrailVal) effectsTrailVal.textContent = v;
+    effectsTrailSlider.addEventListener('input', () => {
+      const n = parseInt(effectsTrailSlider.value);
+      if (effectsTrailVal) effectsTrailVal.textContent = n;
+      localStorage.setItem('moni_effects_trail', n);
+      window.updateEffectsSettings?.({ trailLen: n });
+    });
+  }
+
+  // Cursor effects — Click effect
+  const effectsClickSel = $('effectsClickSelect');
+  if (effectsClickSel) {
+    effectsClickSel.value = localStorage.getItem('moni_effects_click') || 'ripple';
+    effectsClickSel.addEventListener('change', () => {
+      localStorage.setItem('moni_effects_click', effectsClickSel.value);
+      window.updateEffectsSettings?.({ clickEffect: effectsClickSel.value });
+    });
+  }
+
   // TTS toggle button — mute/unmute (not full disable)
   $('ttsToggleBtn').addEventListener('click', () => {
     if (ttsPlaying) { stopTTS(); return; }
@@ -300,15 +335,6 @@ function init() {
   // STT (voice input)
   if (typeof initSTT === 'function') initSTT();
   $('micBtn').addEventListener('click', toggleSTT);
-
-  // Free GPU memory (llama.cpp)
-  $('llamaFreeMemBtn').addEventListener('click', () => {
-    navigator.clipboard.writeText('pkill -f llama-server').then(() => {
-      showToast('Copied! Paste in your Spark terminal to stop llama-server.', 'success');
-    }).catch(() => {
-      showToast('pkill -f llama-server — run this in your Spark terminal.', '');
-    });
-  });
 
   // Models
   $('modelsBtn').addEventListener('click', openModelsModal);

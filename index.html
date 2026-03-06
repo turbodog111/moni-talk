@@ -521,8 +521,6 @@
             <input type="text" id="llamacppEndpointInput" placeholder="http://spark-0af9:8080" autocomplete="off">
             <div class="hint">URL where llama-server is running.</div>
             <div class="field-gap"></div>
-            <button class="btn btn-secondary" id="llamaFreeMemBtn" style="width:100%;">&#128190; Free GPU Memory</button>
-            <div class="hint">Copies the kill command to your clipboard &mdash; paste it in a Spark terminal to stop llama-server and release GPU memory.</div>
           </div>
           <div id="ollamaFields" style="display:none;">
             <label for="ollamaModelSelect">Model</label>
@@ -585,6 +583,29 @@
             <option value="dark">Dark</option>
           </select>
           <div class="hint">Choose your preferred color theme.</div>
+          <div class="field-gap"></div>
+          <div class="progress-section-label">Cursor Effects</div>
+
+          <label for="effectsColorSelect">Trail Color</label>
+          <select id="effectsColorSelect">
+            <option value="pink">Pink (DDLC)</option>
+            <option value="green">Green (classic)</option>
+          </select>
+          <div class="hint">Color of the cursor trail and click sparkles.</div>
+          <div class="field-gap"></div>
+
+          <label for="effectsTrailSlider">Trail Density &mdash; <span id="effectsTrailVal">60</span> dots</label>
+          <input type="range" id="effectsTrailSlider" min="15" max="100" step="5" value="60">
+          <div class="hint">How many dots follow the cursor.</div>
+          <div class="field-gap"></div>
+
+          <label for="effectsClickSelect">Click Effect</label>
+          <select id="effectsClickSelect">
+            <option value="ripple">Ripple (water drop)</option>
+            <option value="hearts">Hearts</option>
+            <option value="lightning">Lightning</option>
+          </select>
+          <div class="hint">Visual burst that appears on mouse click.</div>
         </div>
 
         <!-- ARCHIVE TAB -->
