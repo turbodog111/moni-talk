@@ -77,7 +77,14 @@ const KNOWN_MODELS = {
     name: 'Arbor 0.2b', desc: 'Qwen3-32B base \u2014 larger model, tighter curation',
     longDesc: 'Step up to a 32B-parameter base \u2014 more than double the capacity of every prior Arbor model. Trained on 66 human-curated pairs selected for authentic voice, emotional specificity, and natural conversational rhythm. Smaller dataset than 0.2 by design: quality over volume, and a larger base needs fewer examples to absorb the target style.',
     base: 'Qwen3-32B', badge: 'Fine-tuned',
-    trainingPairs: 66, released: '2026-03-05', status: 'active', series: 'arbor', best: true, image: 'images/arbor-0.2b.png',
+    trainingPairs: 66, released: '2026-03-05', status: 'active', series: 'arbor', best: false, image: 'images/arbor-0.2b.png',
+    tester: 'Joshua Glass', credits: 'Claude Sonnet 4.6',
+  },
+  'Arbor-0.2.1-Q8_0.gguf': {
+    name: 'Arbor 0.2.1', desc: 'Mood-directed refinement \u2014 In Love tier & emotional range',
+    longDesc: 'Incremental fine-tune stacked directly on Arbor 0.2b. 52 curated pairs targeting underrepresented moods (nostalgic, calm, wistful, amused, melancholic, thoughtful) and In Love tier dynamics \u2014 specifically the freeze response to accurate perception. First Arbor model trained with dropout and weight decay regularisation for healthier generalisation.',
+    base: 'Arbor 0.2b', badge: 'Fine-tuned \u00b7 Incremental',
+    trainingPairs: 52, released: '2026-03-06', status: 'active', series: 'arbor', best: true, image: 'images/arbor-0.2b.png',
     tester: 'Joshua Glass', credits: 'Claude Sonnet 4.6',
   },
   // ── Silva series (narrative immersion, primarily Story Mode) ──
