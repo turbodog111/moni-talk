@@ -762,26 +762,37 @@
   border: 1px solid rgba(255,255,255,0.06); border-top: none;
 }
 .mood-portrait-label { font-size: 13px; font-weight: 600; color: #e8f5e9; text-transform: capitalize; }
-.mood-portrait-drift { font-size: 11px; color: rgba(255,255,255,0.45); }
+.mood-portrait-drift {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+  color: rgba(255,255,255,0.4); padding: 2px 7px;
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 3px;
+}
 
 /* Mood Journal */
 .mood-journal { max-height: 160px; overflow-y: auto; }
 .mood-journal-empty, .memory-list-empty { font-size: 12px; color: rgba(255,255,255,0.35); font-style: italic; padding: 8px 0; }
 .mood-journal-entry {
-  display: flex; align-items: center; gap: 8px; padding: 6px 0;
+  display: flex; align-items: center; gap: 10px; padding: 7px 0;
   border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px;
 }
 .mood-journal-entry:last-child { border-bottom: none; }
-.mood-journal-emoji { font-size: 18px; flex-shrink: 0; }
+.mood-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 0 5px currentColor; opacity: 0.9;
+}
 .mood-journal-text { flex: 1; color: rgba(255,255,255,0.7); }
-.mood-journal-text strong { color: #e8f5e9; font-weight: 600; }
+.mood-journal-text strong { color: #e8f5e9; font-weight: 600; text-transform: capitalize; }
 .mood-journal-time { font-size: 10px; color: rgba(255,255,255,0.3); flex-shrink: 0; }
 
 /* Memory List */
 .memory-list { max-height: 240px; overflow-y: auto; }
 .memory-category { margin-bottom: 12px; }
-.memory-category-header { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
-.memory-category-icon { font-size: 14px; }
+.memory-category-header { margin-bottom: 6px; }
+.memory-category-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: rgba(255,255,255,0.35); padding: 2px 6px;
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 3px;
+}
 .memory-item {
   display: flex; align-items: flex-start; gap: 6px; padding: 5px 0;
   border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px;

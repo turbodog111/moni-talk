@@ -2,7 +2,8 @@
 const MOOD_COLORS = {
   cheerful: '#4CAF50', playful: '#FF9800', thoughtful: '#5C6BC0', melancholic: '#5B8DEE',
   excited: '#FFD700', tender: '#F48FB1', teasing: '#FF7043', curious: '#26C6DA',
-  nostalgic: '#CE93D8', flustered: '#EF5350', calm: '#81C784', passionate: '#D32F2F'
+  nostalgic: '#CE93D8', flustered: '#EF5350', calm: '#81C784', passionate: '#D32F2F',
+  wistful: '#9C8FD4', amused: '#FFA040'
 };
 
 // ====== STREAMING DISPLAY HELPER ======
@@ -1290,13 +1291,11 @@ function updateChatPanel(chat) {
   const panel = $('chatSidePanel');
   if (!panel) return;
 
-  // --- Mood Ring ---
+  // --- Portrait ---
   const mood = chat.mood || 'cheerful';
   const intensity = chat.moodIntensity || 'moderate';
   const drift = chat.drift || 'casual';
   const color = MOOD_COLORS[mood] || '#4CAF50';
-  const emoji = getMoodEmoji(mood);
-  const driftEmoji = DRIFT_EMOJIS[drift] || '\u2615';
 
   const portrait = $('moodPortraitImg');
   if (portrait) {
@@ -1309,7 +1308,7 @@ function updateChatPanel(chat) {
   const ringLabel = $('moodRingLabel');
   if (ringLabel) ringLabel.textContent = `${mood} · ${intensity}`;
   const ringDrift = $('moodRingDrift');
-  if (ringDrift) ringDrift.textContent = `${driftEmoji} ${drift}`;
+  if (ringDrift) ringDrift.textContent = drift;
 
   // --- Mood Journal ---
   const journal = $('moodJournal');
@@ -1319,9 +1318,9 @@ function updateChatPanel(chat) {
       journal.innerHTML = '<div class="mood-journal-empty">No mood changes yet</div>';
     } else {
       journal.innerHTML = history.slice(-10).reverse().map(h => {
-        const e = getMoodEmoji(h.mood);
+        const c = MOOD_COLORS[h.mood] || '#4CAF50';
         const t = new Date(h.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-        return `<div class="mood-journal-entry"><span class="mood-journal-emoji">${e}</span><span class="mood-journal-text"><strong>${h.mood}</strong> ${h.intensity}</span><span class="mood-journal-time">${t}</span></div>`;
+        return `<div class="mood-journal-entry"><span class="mood-dot" style="background:${c}"></span><span class="mood-journal-text"><strong>${h.mood}</strong> ${h.intensity}</span><span class="mood-journal-time">${t}</span></div>`;
       }).join('');
     }
   }
@@ -1340,8 +1339,7 @@ function updateChatPanel(chat) {
       });
       let html = '';
       for (const [cat, mems] of Object.entries(grouped)) {
-        const icon = MEMORY_CATEGORY_ICONS[cat] || '\u{1F4DD}';
-        html += `<div class="memory-category"><div class="memory-category-header"><span class="memory-category-icon">${icon}</span>${cat}</div>`;
+        html += `<div class="memory-category"><div class="memory-category-header"><span class="memory-category-label">${escapeHtml(cat)}</span></div>`;
         mems.forEach(m => {
           html += `<div class="memory-item"><span class="memory-fact">${escapeHtml(m.fact)}</span><span class="memory-date">${m.date || ''}</span><button class="memory-delete" data-id="${escapeHtml(m.id || '')}" title="Forget">&times;</button></div>`;
         });
