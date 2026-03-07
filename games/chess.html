@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess — Moni-Talk</title>
+<link rel="icon" type="image/png" href="../images/icon-app.png">
+<script>
+  (function(){
+    var t = localStorage.getItem('moni_talk_theme') || 'system';
+    var e = t === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : t;
+    document.documentElement.dataset.theme = e;
+    var a = localStorage.getItem('moni_accent') || 'pink';
+    document.documentElement.dataset.accent = a;
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&family=Reenie+Beanie&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/chess.css">
+</head>
+<body class="chess-page">
+
+<!-- ═══════════════════════════════════════════════════
+     SETUP VIEW
+══════════════════════════════════════════════════ -->
+<div id="setupView" class="chess-view">
+  <div class="setup-container">
+
+    <header class="setup-header">
+      <a class="back-link" href="../index.html">&#8592; Back to Moni-Talk</a>
+      <h1 class="setup-title">&#9823; Chess</h1>
+      <p class="setup-subtitle">Play against Monika — powered by Stockfish</p>
+    </header>
+
+    <!-- Time Control -->
+    <section class="setup-section">
+      <h2 class="setup-section-title">Time Control</h2>
+      <div id="segmentList" class="segment-list"></div>
+      <button class="add-segment-btn" id="addSegmentBtn">+ Add Segment</button>
+    </section>
+
+    <!-- Color Picker -->
+    <section class="setup-section">
+      <h2 class="setup-section-title">Play As</h2>
+      <div class="pill-group">
+        <button class="color-pill active" data-color="white">&#9812; White</button>
+        <button class="color-pill" data-color="black">&#9818; Black</button>
+        <button class="color-pill" data-color="random">? Random</button>
+      </div>
+    </section>
+
+    <!-- Difficulty -->
+    <section class="setup-section">
+      <h2 class="setup-section-title">Difficulty</h2>
+      <div class="pill-group difficulty-pills">
+        <button class="difficulty-pill" data-skill="3">Beginner</button>
+        <button class="difficulty-pill" data-skill="8">Casual</button>
+        <button class="difficulty-pill" data-skill="13">Club</button>
+        <button class="difficulty-pill" data-skill="17">Strong</button>
+        <button class="difficulty-pill active" data-skill="20">Monika</button>
+      </div>
+      <div class="slider-row">
+        <input type="range" id="skillSlider" class="skill-slider" min="0" max="20" value="20">
+        <div class="skill-label" id="skillLabel">Skill Level 20 — ~3200 ELO</div>
+      </div>
+    </section>
+
+    <button class="start-game-btn" id="startGameBtn">Start Game</button>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     GAME VIEW
+══════════════════════════════════════════════════ -->
+<div id="gameView" class="chess-view" style="display:none;">
+  <div class="game-layout">
+
+    <!-- Left: Board -->
+    <div class="board-column">
+      <div class="board-container" id="boardContainer">
+        <canvas id="chessCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Right: Panel -->
+    <div class="game-panel">
+
+      <!-- Monika status -->
+      <div class="monika-status">
+        <img class="monika-portrait" src="../images/monika-avatar.png" alt="Monika">
+        <div class="status-text" id="statusText">Your turn</div>
+      </div>
+
+      <!-- Opponent clock (top) -->
+      <div class="clock-block" id="opponentClockBlock">
+        <div class="clock-label" id="opponentClockLabel">Monika</div>
+        <div class="clock-display" id="opponentClockDisplay">0:10:00</div>
+        <div class="delay-bar-wrap" id="opponentDelayWrap" style="display:none;">
+          <div class="delay-bar-fill" id="opponentDelayBar" style="width:100%;"></div>
+        </div>
+      </div>
+
+      <!-- Commentary panel -->
+      <div class="commentary-panel" id="commentaryPanel">
+        <div class="commentary-header">&#10022; Monika's Analysis</div>
+        <div class="commentary-body coming-soon" id="commentaryBody">
+          Coming soon — Monika will analyze your moves here once the Spark is back online. &#10022;
+        </div>
+      </div>
+
+      <!-- Move history -->
+      <div class="move-history">
+        <div class="move-history-inner" id="moveHistoryInner">
+          <div class="move-history-empty">No moves yet.</div>
+        </div>
+      </div>
+
+      <!-- Player clock (bottom) -->
+      <div class="clock-block" id="playerClockBlock">
+        <div class="clock-label" id="playerClockLabel">You</div>
+        <div class="clock-display" id="playerClockDisplay">0:10:00</div>
+        <div class="delay-bar-wrap" id="playerDelayWrap" style="display:none;">
+          <div class="delay-bar-fill" id="playerDelayBar" style="width:100%;"></div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="game-buttons">
+        <button class="game-btn resign-btn" id="resignBtn">Resign</button>
+        <button class="game-btn" id="newGameBtn">New Game</button>
+        <button class="game-btn" id="flipBoardBtn">Flip</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Game Over Overlay -->
+  <div class="game-over-overlay" id="gameOverOverlay" style="display:none;">
+    <div class="game-over-card">
+      <div class="game-over-result" id="gameOverResult">Game Over</div>
+      <div class="game-over-detail" id="gameOverDetail"></div>
+      <div class="game-over-buttons">
+        <button class="start-game-btn" id="playAgainBtn">Play Again</button>
+        <a class="back-link-btn" href="../index.html">Back to Moni-Talk</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Promotion Dialog -->
+  <div class="promotion-overlay" id="promotionOverlay" style="display:none;">
+    <div class="promotion-card">
+      <div class="promotion-title">Promote Pawn</div>
+      <div class="promotion-choices" id="promotionChoices"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="chess.js"></script>
+</body>
+</html>

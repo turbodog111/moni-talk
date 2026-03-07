@@ -8,6 +8,18 @@ const SUITE_VERSIONS = { petal: '0.1', bloom: '0.1' };
 
 const CHANGELOG_ENTRIES = [
   {
+    label: 'v0.7.3 \u2014 Chess \u00b7 Time Controls \u00b7 Monika Commentary (soon)',
+    date: '2026-03-06',
+    items: [
+      'Chess added under Games \u2014 play against Monika powered by Stockfish (runs entirely in browser)',
+      'Full tournament time controls: base time H:MM:SS, Fischer increment, North American delay',
+      'Multi-segment time controls: e.g. 40 moves/90 min then 30 min for the rest',
+      'White\u2194Black time mirror with independent override; same rule for increment',
+      'Difficulty: Beginner / Casual / Club / Strong / Monika (Stockfish Skill Level 3\u201320)',
+      'Monika commentary panel \u2014 built, coming soon pending Spark reconnect',
+    ],
+  },
+  {
     label: 'v0.7.2 — Mood Gallery \u00b7 Strong Portraits \u00b7 Cursor Effects',
     date: '2026-03-06',
     items: [
