@@ -79,6 +79,10 @@
 
     <!-- Left: Board -->
     <div class="board-column">
+      <div class="viewing-notice" id="viewingNotice" style="display:none;">
+        Viewing <strong id="viewingMoveLabel"></strong>
+        <button class="return-live-btn" id="returnLiveBtn">Return to live &#9658;</button>
+      </div>
       <div class="board-container" id="boardContainer">
         <canvas id="chessCanvas"></canvas>
       </div>
@@ -114,6 +118,13 @@
       <div class="move-history">
         <div class="move-history-inner" id="moveHistoryInner">
           <div class="move-history-empty">No moves yet.</div>
+        </div>
+        <div class="move-nav">
+          <button class="nav-btn" id="navFirst" title="Start position" disabled>&#10218;&#10218;</button>
+          <button class="nav-btn" id="navPrev"  title="Previous move"  disabled>&#10218;</button>
+          <span class="nav-pos" id="navPos">Live</span>
+          <button class="nav-btn" id="navNext"  title="Next move"      disabled>&#10219;</button>
+          <button class="nav-btn" id="navLast"  title="Return to live" disabled>&#10219;&#10219;</button>
         </div>
       </div>
 

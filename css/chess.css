@@ -739,6 +739,104 @@
   color: #e8e8e8;
 }
 
+/* ─── Viewing notice (above board when browsing history) ─── */
+.viewing-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  background: rgba(199,87,122,0.12);
+  border: 1px solid var(--pink-mid, #f5a7b8);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text, #1a1a1a);
+}
+
+.return-live-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--pink-dark, #c7577a);
+  border-radius: 999px;
+  background: var(--pink-dark, #c7577a);
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.return-live-btn:hover { opacity: 0.85; }
+
+/* ─── Move navigation bar ─── */
+.move-history {
+  display: flex;
+  flex-direction: column;
+}
+
+.move-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--pink-mid, #f5a7b8);
+  background: var(--bg, #fff);
+  border-radius: 0 0 10px 10px;
+  flex-shrink: 0;
+}
+
+.nav-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--pink-mid, #f5a7b8);
+  border-radius: 6px;
+  background: var(--bg, #fff);
+  color: var(--text, #1a1a1a);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  padding: 0;
+}
+.nav-btn:hover:not(:disabled) {
+  background: var(--pink-pale, #fff0f3);
+  border-color: var(--pink-dark, #c7577a);
+}
+.nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.nav-pos {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  color: var(--pink-dark, #c7577a);
+  min-width: 44px;
+}
+
+/* ─── Active move highlight in history ─── */
+.move-san.active-ply {
+  background: var(--pink-dark, #c7577a);
+  color: #fff;
+  border-radius: 4px;
+}
+
+.move-san {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+.move-san:hover:not(.active-ply) {
+  background: var(--pink-pale, #fff0f3);
+}
+
 /* ─── Scrollbar ─── */
 .move-history-inner::-webkit-scrollbar { width: 4px; }
 .move-history-inner::-webkit-scrollbar-track { background: transparent; }

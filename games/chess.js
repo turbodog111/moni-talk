@@ -81,6 +81,9 @@ let segmentIdx  = 0;
 // Engine timing (minimum display delay)
 let engineRequestTime = 0;
 
+// Move navigation (null = live view, number = viewing ply N)
+let viewingPly = null;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Initialization
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
   ctx    = canvas.getContext('2d');
 
   initSegments();
+  loadSavedSettings();
   bindSetupUI();
   bindGameUI();
   window.addEventListener('resize', onResize);
@@ -317,6 +321,33 @@ function bindGameUI() {
     drawBoard();
   });
   document.getElementById('playAgainBtn').addEventListener('click', goToSetup);
+  document.getElementById('returnLiveBtn').addEventListener('click', () => navigateTo(null));
+
+  document.getElementById('navFirst').addEventListener('click', () => navigateTo(0));
+  document.getElementById('navPrev').addEventListener('click',  () => {
+    const cur = viewingPly ?? totalPlies;
+    navigateTo(cur - 1);
+  });
+  document.getElementById('navNext').addEventListener('click',  () => {
+    if (viewingPly === null) return;
+    navigateTo(viewingPly + 1);
+  });
+  document.getElementById('navLast').addEventListener('click',  () => navigateTo(null));
+
+  // Arrow key navigation
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('gameView').style.display === 'none') return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const cur = viewingPly ?? totalPlies;
+      if (cur > 0) navigateTo(cur - 1);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      if (viewingPly === null) return;
+      navigateTo(viewingPly + 1);
+    }
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -355,6 +386,107 @@ function playSoundForMove(moveObj) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Settings persistence
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SETTINGS_KEY = 'moni_chess_settings';
+
+function saveSettings() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ segments, chosenColor, skillLevel }));
+  } catch(e) {}
+}
+
+function loadSavedSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    if (!saved) return;
+    if (Array.isArray(saved.segments) && saved.segments.length > 0) {
+      segments = saved.segments;
+      renderSegments();
+    }
+    if (saved.chosenColor) {
+      chosenColor = saved.chosenColor;
+      document.querySelectorAll('.color-pill').forEach(b =>
+        b.classList.toggle('active', b.dataset.color === chosenColor));
+    }
+    if (saved.skillLevel !== undefined) {
+      skillLevel = saved.skillLevel;
+      const sl = document.getElementById('skillSlider');
+      if (sl) sl.value = skillLevel;
+      updateSkillLabel();
+      document.querySelectorAll('.difficulty-pill').forEach(b =>
+        b.classList.toggle('active', parseInt(b.dataset.skill) === skillLevel));
+    }
+  } catch(e) {}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Move Navigation
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Reconstruct a Chess instance replayed to ply N (0 = start). */
+function buildDisplayGame(ply) {
+  if (ply === null || !chess) return chess;
+  const g    = new Chess();
+  const hist = chess.history({ verbose: true });
+  for (let i = 0; i < ply; i++) if (hist[i]) g.move(hist[i]);
+  return g;
+}
+
+/** Last-move pair to highlight for the current view. */
+function getViewingLastMove() {
+  if (viewingPly === null)  return { from: lastMoveFrom, to: lastMoveTo };
+  if (viewingPly === 0)     return { from: null, to: null };
+  const hist = chess.history({ verbose: true });
+  const m    = hist[viewingPly - 1];
+  return m ? { from: m.from, to: m.to } : { from: null, to: null };
+}
+
+/** Jump to ply (null = live). */
+function navigateTo(ply) {
+  if (ply === null || (typeof ply === 'number' && ply >= totalPlies)) {
+    viewingPly = null;
+  } else {
+    viewingPly = Math.max(0, ply);
+  }
+  // Clear selection whenever we move through history
+  selectedSq   = null;
+  legalTargets = [];
+  drawBoard();
+  updateMoveHistory();
+  updateNavUI();
+}
+
+function updateNavUI() {
+  const isLive = viewingPly === null;
+  const cur    = isLive ? totalPlies : viewingPly;
+
+  document.getElementById('navFirst').disabled = cur === 0;
+  document.getElementById('navPrev').disabled  = cur === 0;
+  document.getElementById('navNext').disabled  = isLive;
+  document.getElementById('navLast').disabled  = isLive;
+
+  let posLabel;
+  if (isLive)          posLabel = 'Live';
+  else if (cur === 0)  posLabel = 'Start';
+  else {
+    const num = Math.ceil(cur / 2);
+    posLabel = cur % 2 === 1 ? `${num}.` : `${num}\u2026`;
+  }
+  document.getElementById('navPos').textContent = posLabel;
+
+  const notice = document.getElementById('viewingNotice');
+  if (isLive) {
+    notice.style.display = 'none';
+  } else {
+    notice.style.display = 'flex';
+    document.getElementById('viewingMoveLabel').textContent =
+      cur === 0 ? 'start position' : posLabel;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Start Game
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -379,6 +511,9 @@ function startGame() {
   pendingPromoTo   = null;
   wLowTimePlayed   = false;
   bLowTimePlayed   = false;
+  viewingPly       = null;
+
+  saveSettings();
 
   // Init clocks from first segment
   const seg0 = segments[0];
@@ -404,6 +539,7 @@ function startGame() {
 
   onResize();
   updateClockDisplay();
+  updateNavUI();
 
   // Init Stockfish
   initWorker();
@@ -517,7 +653,7 @@ function applyEngineMove(uciMove) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function onBoardClick(e) {
-  if (gameOver || engineThinking) return;
+  if (gameOver || engineThinking || viewingPly !== null) return;
   if (chess.turn() !== playerSide) return;
   if (pendingPromoFrom) return;
 
@@ -815,8 +951,11 @@ function pixelToSquare(x, y) {
 function drawBoard() {
   if (!ctx || !chess) return;
 
-  const size = canvas.width;
-  const sz   = size / 8;
+  const size    = canvas.width;
+  const sz      = size / 8;
+  const dispGame = buildDisplayGame(viewingPly);
+  const { from: lmFrom, to: lmTo } = getViewingLastMove();
+
   ctx.clearRect(0, 0, size, size);
 
   // 1. Squares + highlights
@@ -830,20 +969,20 @@ function drawBoard() {
       if (!sq) continue;
 
       // Last-move highlight
-      if (sq === lastMoveFrom || sq === lastMoveTo) {
+      if (sq === lmFrom || sq === lmTo) {
         ctx.fillStyle = LASTMOVE_COLOR;
         ctx.fillRect(col * sz, row * sz, sz, sz);
       }
-      // Selection highlight
-      if (sq === selectedSq) {
+      // Selection highlight (live only)
+      if (viewingPly === null && sq === selectedSq) {
         ctx.fillStyle = SEL_COLOR;
         ctx.fillRect(col * sz, row * sz, sz, sz);
       }
     }
   }
 
-  // 2. Legal move indicators
-  legalTargets.forEach(sq => {
+  // 2. Legal move indicators (live only)
+  if (viewingPly === null) legalTargets.forEach(sq => {
     const { row, col } = sqToRC(sq);
     const cx = (col + 0.5) * sz;
     const cy = (row + 0.5) * sz;
@@ -863,10 +1002,10 @@ function drawBoard() {
       ctx.arc(cx, cy, sz * 0.15, 0, Math.PI * 2);
       ctx.fill();
     }
-  });
+  });  // end: live-only legal moves
 
   // 3. Pieces — draw SVG images (cburnett set)
-  const board = chess.board();  // board[rankIdx][fileIdx], rankIdx 0=rank8
+  const board = dispGame ? dispGame.board() : chess.board();  // board[rankIdx][fileIdx], rankIdx 0=rank8
   const pad   = sz * 0.05;     // small inset so piece doesn't touch square edge
 
   for (let ri = 0; ri < 8; ri++) {
@@ -917,6 +1056,7 @@ function updateMoveHistory() {
 
   if (history.length === 0) {
     inner.innerHTML = '<div class="move-history-empty">No moves yet.</div>';
+    updateNavUI();
     return;
   }
 
@@ -924,19 +1064,49 @@ function updateMoveHistory() {
   table.className = 'move-table';
 
   for (let i = 0; i < history.length; i += 2) {
-    const row = document.createElement('div');
+    const row  = document.createElement('div');
     row.className = 'move-row';
-    const num = Math.floor(i / 2) + 1;
-    row.innerHTML = `
-      <span class="move-num">${num}.</span>
-      <span class="move-san">${history[i].san}</span>
-      <span class="move-san">${history[i + 1] ? history[i + 1].san : ''}</span>
-    `;
+    const num  = Math.floor(i / 2) + 1;
+
+    const numSpan = document.createElement('span');
+    numSpan.className   = 'move-num';
+    numSpan.textContent = `${num}.`;
+
+    const wPly = i + 1;  // ply number for white's move (1-indexed)
+    const bPly = i + 2;  // ply number for black's move
+
+    const wSpan = document.createElement('span');
+    wSpan.className   = 'move-san' + (viewingPly === wPly ? ' active-ply' : '');
+    wSpan.textContent = history[i].san;
+    wSpan.dataset.ply = wPly;
+    wSpan.addEventListener('click', () => navigateTo(wPly));
+
+    const bSpan = document.createElement('span');
+    if (history[i + 1]) {
+      bSpan.className   = 'move-san' + (viewingPly === bPly ? ' active-ply' : '');
+      bSpan.textContent = history[i + 1].san;
+      bSpan.dataset.ply = bPly;
+      bSpan.addEventListener('click', () => navigateTo(bPly));
+    }
+
+    row.appendChild(numSpan);
+    row.appendChild(wSpan);
+    row.appendChild(bSpan);
     table.appendChild(row);
   }
 
   inner.appendChild(table);
-  inner.scrollTop = inner.scrollHeight;
+
+  // Auto-scroll: follow live play, but don't jump if user is browsing history
+  if (viewingPly === null) {
+    inner.scrollTop = inner.scrollHeight;
+  } else {
+    // Scroll active ply into view
+    const active = inner.querySelector('.active-ply');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+  }
+
+  updateNavUI();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
