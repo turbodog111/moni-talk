@@ -12,10 +12,10 @@
 }
 .profile-hero img {
   width: 90px; height: 90px; border-radius: 50%; object-fit: cover;
-  border: 3px solid var(--green-mid);
+  border: 3px solid var(--accent-mid);
 }
 .profile-hero-name {
-  font-size: 22px; font-weight: 700; color: var(--green-dark);
+  font-size: 22px; font-weight: 700; color: var(--accent-dark);
 }
 .profile-hero-sub {
   font-size: 13px; color: var(--gray-text); text-align: center;
@@ -30,12 +30,12 @@
 .profile-card-header {
   display: flex; align-items: center; gap: 8px;
   padding: 14px 16px 10px; font-size: 14px; font-weight: 700;
-  color: var(--green-dark); border-bottom: 1px solid var(--gray-mid);
+  color: var(--accent-dark); border-bottom: 1px solid var(--gray-mid);
 }
 .profile-card-icon { font-size: 16px; }
 .profile-card-badge {
   margin-left: auto; font-size: 11px; font-weight: 600;
-  background: var(--green-light); color: var(--green-dark);
+  background: var(--accent-light); color: var(--accent-dark);
   padding: 1px 8px; border-radius: 10px;
 }
 .profile-card-body { padding: 14px 16px 16px; }
@@ -55,7 +55,7 @@
 .special-date-countdown {
   font-size: 11px; font-weight: 700; padding: 2px 8px;
   border-radius: 10px; white-space: nowrap; flex-shrink: 0;
-  background: var(--green-light); color: var(--green-dark);
+  background: var(--accent-light); color: var(--accent-dark);
 }
 .special-date-countdown.today {
   background: #fff3cd; color: #856404;
@@ -92,14 +92,14 @@
   font-size: 13px; font-family: inherit; outline: none;
   background: var(--bg); color: var(--text); transition: border-color 0.2s;
 }
-.special-dates-add input:focus { border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(56,161,105,0.2); }
+.special-dates-add input:focus { border-color: var(--accent-mid); box-shadow: 0 0 0 3px var(--accent-glow); }
 .special-dates-add-btn {
   padding: 7px 14px; border: none; border-radius: 8px;
-  background: var(--green-dark); color: white; font-size: 13px;
+  background: var(--accent-dark); color: white; font-size: 13px;
   font-weight: 600; cursor: pointer; white-space: nowrap;
   transition: background 0.2s;
 }
-.special-dates-add-btn:hover { background: var(--green-mid); }
+.special-dates-add-btn:hover { background: var(--accent-mid); }
 
 /* === Profile Memory List === */
 .profile-memory-list { max-height: 340px; overflow-y: auto; }
@@ -133,10 +133,10 @@
 .profile-stat-tile {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 14px 8px; border-radius: 10px;
-  background: var(--green-pale); text-align: center;
+  background: var(--accent-pale); text-align: center;
 }
 .profile-stat-value {
-  font-size: 22px; font-weight: 800; color: var(--green-dark); line-height: 1.1;
+  font-size: 22px; font-weight: 800; color: var(--accent-dark); line-height: 1.1;
 }
 .profile-stat-label {
   font-size: 11px; color: var(--gray-text); margin-top: 4px; font-weight: 500;
@@ -146,18 +146,18 @@
 .profile-body .primary-btn { margin-top: 4px; }
 
 /* === Dark Mode === */
-[data-theme="dark"] .profile-hero-name { color: var(--green-mid); }
+[data-theme="dark"] .profile-hero-name { color: var(--accent-mid); }
 [data-theme="dark"] .profile-card { background: var(--card-bg); box-shadow: var(--card-shadow); }
-[data-theme="dark"] .profile-card-header { color: var(--green-mid); border-bottom-color: var(--gray-mid); }
-[data-theme="dark"] .profile-card-badge { background: var(--green-light); color: var(--green-mid); }
-[data-theme="dark"] .special-date-countdown { background: var(--green-light); color: var(--green-mid); }
+[data-theme="dark"] .profile-card-header { color: var(--accent-mid); border-bottom-color: var(--gray-mid); }
+[data-theme="dark"] .profile-card-badge { background: var(--accent-light); color: var(--accent-mid); }
+[data-theme="dark"] .special-date-countdown { background: var(--accent-light); color: var(--accent-mid); }
 [data-theme="dark"] .special-date-countdown.today { background: #3a3520; color: #ffc107; }
 [data-theme="dark"] .special-dates-add input[type="text"],
 [data-theme="dark"] .special-dates-add input[type="date"] {
   background: #2a2a2a; color: var(--text); border-color: var(--gray-mid);
 }
-[data-theme="dark"] .profile-stat-tile { background: var(--green-pale); }
-[data-theme="dark"] .profile-stat-value { color: var(--green-mid); }
+[data-theme="dark"] .profile-stat-tile { background: var(--accent-pale); }
+[data-theme="dark"] .profile-stat-value { color: var(--accent-mid); }
 [data-theme="dark"] .profile-memory-list .memory-fact { color: var(--text); }
 
 /* === Responsive === */
