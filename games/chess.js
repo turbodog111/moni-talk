@@ -19,7 +19,9 @@ const PREMOVE_FROM_COLOR = 'rgba(90,160,255,0.62)';
 const PREMOVE_TO_COLOR   = 'rgba(90,160,255,0.38)';
 
 // Depth cap per skill level — keeps WASM response time sane
-const SKILL_DEPTH = [3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,12];
+const SKILL_DEPTH   = [3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,13,14];
+// Minimum display delay per skill level so moves don't look instant (ms)
+const SKILL_MIN_MS  = [400,400,500,500,600,600,700,700,800,800,900,900,1000,1100,1200,1400,1600,1800,2000,2200,2500];
 
 // SVG piece image cache: key = color + uppercase type (e.g. 'wK', 'bN')
 const PIECE_IMAGES = {};
@@ -335,7 +337,6 @@ function bindGameUI() {
     drawBoard();
   });
   document.getElementById('playAgainBtn').addEventListener('click', goToSetup);
-  document.getElementById('returnLiveBtn').addEventListener('click', () => navigateTo(null));
 
   document.getElementById('navFirst').addEventListener('click', () => navigateTo(0));
   document.getElementById('navPrev').addEventListener('click',  () => {
@@ -492,14 +493,9 @@ function updateNavUI() {
   }
   document.getElementById('navPos').textContent = posLabel;
 
-  const notice = document.getElementById('viewingNotice');
-  if (isLive) {
-    notice.style.display = 'none';
-  } else {
-    notice.style.display = 'flex';
-    document.getElementById('viewingMoveLabel').textContent =
-      cur === 0 ? 'start position' : posLabel;
-  }
+  // Grey-tint the board canvas when browsing history
+  const bc = document.getElementById('boardContainer');
+  if (bc) bc.classList.toggle('viewing-history', !isLive);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -623,7 +619,8 @@ function handleWorkerMsg(msg) {
     const uciMove = parts[1];
     if (!uciMove || uciMove === '(none)') return;
     const elapsed = performance.now() - engineRequestTime;
-    setTimeout(() => applyEngineMove(uciMove), Math.max(600 - elapsed, 0));
+    const minMs   = SKILL_MIN_MS[Math.min(skillLevel, 20)];
+    setTimeout(() => applyEngineMove(uciMove), Math.max(minMs - elapsed, 0));
   }
 }
 
@@ -800,6 +797,18 @@ function onBoardClick(e) {
   } else if (legalTargets.includes(sq)) {
     attemptPlayerMove(selectedSq, sq);
   } else {
+    // Special: clicking own rook while king is selected → castle shorthand
+    const selPiece     = chess.get(selectedSq);
+    const clickedPiece = chess.get(sq);
+    if (selPiece && selPiece.type === 'k' &&
+        clickedPiece && clickedPiece.type === 'r' && clickedPiece.color === playerSide) {
+      const castleMap = { h1: 'g1', a1: 'c1', h8: 'g8', a8: 'c8' };
+      const dest = castleMap[sq];
+      if (dest && legalTargets.includes(dest)) {
+        attemptPlayerMove(selectedSq, dest);
+        return;
+      }
+    }
     // Try selecting a different own piece
     const piece = chess.get(sq);
     if (piece && piece.color === playerSide) {
@@ -834,6 +843,15 @@ function handlePremoveClick(sq) {
     clearPremove(); drawBoard();
   } else {
     const piece = chess.get(sq);
+    // Special: clicking own rook when king is premoveFrom → castle premove
+    if (piece && piece.type === 'r' && piece.color === playerSide) {
+      const fp = chess.get(premoveFrom);
+      if (fp && fp.type === 'k') {
+        const castleMap = { h1: 'g1', a1: 'c1', h8: 'g8', a8: 'c8' };
+        const dest = castleMap[sq];
+        if (dest) { premoveTo = dest; drawBoard(); return; }
+      }
+    }
     if (piece && piece.color === playerSide) {
       // Re-select source
       premoveFrom = sq; premoveTo = null; premovePromo = null;

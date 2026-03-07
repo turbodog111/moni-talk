@@ -810,34 +810,14 @@
   color: #e8e8e8;
 }
 
-/* ─── Viewing notice (above board when browsing history) ─── */
-.viewing-notice {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 6px 12px;
-  margin-bottom: 8px;
-  background: rgba(199,87,122,0.12);
-  border: 1px solid var(--pink-mid, #f5a7b8);
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--text, #1a1a1a);
+/* ─── Board history-view tint ─── */
+.board-container.viewing-history #chessCanvas {
+  filter: saturate(0.35) brightness(0.86);
+  transition: filter 0.25s;
 }
-
-.return-live-btn {
-  padding: 3px 10px;
-  border: 1px solid var(--pink-dark, #c7577a);
-  border-radius: 999px;
-  background: var(--pink-dark, #c7577a);
-  color: #fff;
-  font-family: 'Nunito', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity 0.15s;
+#chessCanvas {
+  transition: filter 0.25s;
 }
-.return-live-btn:hover { opacity: 0.85; }
 
 /* ─── Move navigation bar ─── */
 .move-history {
