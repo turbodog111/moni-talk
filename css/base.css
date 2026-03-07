@@ -61,6 +61,25 @@
   --font-poem: 'Reenie Beanie', cursive;
 }
 
+/* === Green Accent Mode === */
+[data-accent="green"] {
+  --pink:           #48bb78;
+  --pink-mid:       #68d391;
+  --pink-dark:      #276749;
+  --pink-pale:      #e6f4ed;
+  --pink-bg:        #f0f9f4;
+  --chat-list-tint: #e6f4ed;
+}
+
+[data-theme="dark"][data-accent="green"] {
+  --pink:           #48bb78;
+  --pink-mid:       #38a169;
+  --pink-dark:      #276749;
+  --pink-pale:      rgba(72, 187, 120, 0.12);
+  --pink-bg:        rgba(72, 187, 120, 0.06);
+  --chat-list-tint: #0a1a10;
+}
+
 body {
   font-family: 'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: var(--bg); color: var(--text);

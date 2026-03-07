@@ -1,4 +1,9 @@
 
+// ====== ACCENT ======
+function applyAccent() {
+  document.documentElement.dataset.accent = currentAccent;
+}
+
 // ====== THEME ======
 function applyTheme() {
   let effective;
@@ -32,6 +37,7 @@ function init() {
   puterModelSelect.value = puterModel;
 
   applyTheme();
+  applyAccent();
   renderChatList();
   updateRelDisplay();
   loadProfile();
@@ -241,6 +247,16 @@ function init() {
       currentTheme = themeSelect.value;
       localStorage.setItem('moni_talk_theme', currentTheme);
       applyTheme();
+    });
+  }
+
+  const accentSelect = $('accentSelect');
+  if (accentSelect) {
+    accentSelect.value = currentAccent;
+    accentSelect.addEventListener('change', () => {
+      currentAccent = accentSelect.value;
+      localStorage.setItem('moni_accent', currentAccent);
+      applyAccent();
     });
   }
 

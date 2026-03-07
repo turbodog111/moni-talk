@@ -12,6 +12,8 @@
     var t = localStorage.getItem('moni_talk_theme') || 'system';
     var e = t === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : t;
     document.documentElement.dataset.theme = e;
+    var a = localStorage.getItem('moni_accent') || 'pink';
+    document.documentElement.dataset.accent = a;
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -584,6 +586,13 @@
             <option value="dark">Dark</option>
           </select>
           <div class="hint">Choose your preferred color theme.</div>
+          <div class="field-gap"></div>
+          <label for="accentSelect">Accent Color</label>
+          <select id="accentSelect">
+            <option value="pink">Pink (DDLC)</option>
+            <option value="green">Green (classic)</option>
+          </select>
+          <div class="hint">Switch between the classic green aesthetic and the pink DDLC theme.</div>
           <div class="field-gap"></div>
           <div class="progress-section-label">Cursor Effects</div>
 

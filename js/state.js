@@ -21,6 +21,7 @@ let puterUser = null;
 let syncTimer = null;
 let deletedChatIds = new Set(JSON.parse(localStorage.getItem('moni_talk_deleted_ids') || '[]'));
 let currentTheme = localStorage.getItem('moni_talk_theme') || 'system';
+let currentAccent = localStorage.getItem('moni_accent') || 'pink';
 let memories = (() => {
   try {
     const mems = JSON.parse(localStorage.getItem('moni_talk_memories') || '[]');
