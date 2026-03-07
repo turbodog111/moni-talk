@@ -571,7 +571,7 @@ function goToSetup() {
 function initWorker() {
   terminateWorker();
   workerReady = false;
-  worker = new Worker(new URL('./stockfish-worker.js', import.meta.url));
+  worker = new Worker(new URL('./stockfish/stockfish.js', import.meta.url));
   worker.onmessage = e => handleWorkerMsg(e.data);
   worker.postMessage('uci');
   worker.postMessage(`setoption name Skill Level value ${skillLevel}`);
