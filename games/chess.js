@@ -16,11 +16,15 @@ const LASTMOVE_COLOR  = 'rgba(220,150,170,0.55)';
 const DOT_EMPTY       = 'rgba(0,0,0,0.16)';
 const DOT_CAPTURE     = 'rgba(0,0,0,0.13)';
 
-// Unicode pieces: color + lowercase type → symbol
-const PIECE = {
-  wk:'♔', wq:'♕', wr:'♖', wb:'♗', wn:'♘', wp:'♙',
-  bk:'♚', bq:'♛', br:'♜', bb:'♝', bn:'♞', bp:'♟',
-};
+// SVG piece image cache: key = color + uppercase type (e.g. 'wK', 'bN')
+const PIECE_IMAGES = {};
+const PIECE_KEYS = ['wK','wQ','wR','wB','wN','wP','bK','bQ','bR','bB','bN','bP'];
+
+// Sound effects
+const SOUNDS = {};
+const LOW_TIME_MS = 30000;  // 30 seconds — when to play lowtime warning
+let wLowTimePlayed = false;
+let bLowTimePlayed = false;
 
 // Approximate ELO per Stockfish skill level 0–20
 const ELO_TABLE = [
@@ -89,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindSetupUI();
   bindGameUI();
   window.addEventListener('resize', onResize);
+  preloadAssets();
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -315,6 +320,41 @@ function bindGameUI() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Asset Preloading (pieces + sounds)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function preloadAssets() {
+  PIECE_KEYS.forEach(key => {
+    const img = new Image();
+    img.src = `./pieces/cburnett/${key}.svg`;
+    img.onload = () => { PIECE_IMAGES[key] = img; };
+  });
+
+  ['move', 'capture', 'check', 'lowtime'].forEach(name => {
+    const audio = new Audio(`./sounds/${name}.mp3`);
+    audio.preload = 'auto';
+    SOUNDS[name] = audio;
+  });
+}
+
+function playSound(name) {
+  const s = SOUNDS[name];
+  if (!s) return;
+  s.currentTime = 0;
+  s.play().catch(() => {});
+}
+
+function playSoundForMove(moveObj) {
+  if (chess.isCheck()) {
+    playSound('check');
+  } else if (moveObj && moveObj.captured) {
+    playSound('capture');
+  } else {
+    playSound('move');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Start Game
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -337,6 +377,8 @@ function startGame() {
   gameOver       = false;
   pendingPromoFrom = null;
   pendingPromoTo   = null;
+  wLowTimePlayed   = false;
+  bLowTimePlayed   = false;
 
   // Init clocks from first segment
   const seg0 = segments[0];
@@ -460,6 +502,7 @@ function applyEngineMove(uciMove) {
   const movedSide = chess.turn() === 'w' ? 'b' : 'w';
   onPlyMade(movedSide);
 
+  playSoundForMove(moveObj);
   updateMoveHistory();
   drawBoard();
   checkGameEnd();
@@ -548,6 +591,7 @@ function executePlayerMove(from, to, promotion) {
   const movedSide = chess.turn() === 'w' ? 'b' : 'w';
   onPlyMade(movedSide);
 
+  playSoundForMove(moveObj);
   updateMoveHistory();
   drawBoard();
   checkGameEnd();
@@ -651,6 +695,16 @@ function clockTick() {
         return;
       }
     }
+  }
+
+  // Low-time warning (once per clock, per game)
+  if (wClockMs > 0 && wClockMs < LOW_TIME_MS && !wLowTimePlayed) {
+    wLowTimePlayed = true;
+    if (turn === 'w') playSound('lowtime');
+  }
+  if (bClockMs > 0 && bClockMs < LOW_TIME_MS && !bLowTimePlayed) {
+    bLowTimePlayed = true;
+    if (turn === 'b') playSound('lowtime');
   }
 
   updateClockDisplay();
@@ -811,37 +865,22 @@ function drawBoard() {
     }
   });
 
-  // 3. Pieces
+  // 3. Pieces — draw SVG images (cburnett set)
   const board = chess.board();  // board[rankIdx][fileIdx], rankIdx 0=rank8
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
+  const pad   = sz * 0.05;     // small inset so piece doesn't touch square edge
 
   for (let ri = 0; ri < 8; ri++) {
     for (let fi = 0; fi < 8; fi++) {
       const piece = board[ri][fi];
       if (!piece) continue;
 
-      const sq       = String.fromCharCode(97 + fi) + (8 - ri);
+      const sq  = String.fromCharCode(97 + fi) + (8 - ri);
       const { row, col } = sqToRC(sq);
-      const cx = (col + 0.5) * sz;
-      const cy = (row + 0.5) * sz;
-      const sym = PIECE[piece.color + piece.type];
-      if (!sym) continue;
+      const img = PIECE_IMAGES[piece.color + piece.type.toUpperCase()];
 
-      ctx.font = `${sz * 0.74}px serif`;
-
-      // Drop shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.22)';
-      ctx.fillText(sym, cx + sz * 0.03, cy + sz * 0.04);
-
-      // Stroke outline for readability
-      ctx.strokeStyle = piece.color === 'w' ? 'rgba(120,40,60,0.55)' : 'rgba(255,220,230,0.5)';
-      ctx.lineWidth   = sz * 0.04;
-      ctx.strokeText(sym, cx, cy);
-
-      // Fill
-      ctx.fillStyle = piece.color === 'w' ? '#ffffff' : '#1a1a1a';
-      ctx.fillText(sym, cx, cy);
+      if (img) {
+        ctx.drawImage(img, col * sz + pad, row * sz + pad, sz - pad * 2, sz - pad * 2);
+      }
     }
   }
 
