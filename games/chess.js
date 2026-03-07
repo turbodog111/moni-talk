@@ -9,12 +9,17 @@ import { Chess } from 'https://cdn.jsdelivr.net/npm/chess.js@1.0.0/dist/esm/ches
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-const LIGHT_SQ        = '#FFF8F9';
-const DARK_SQ         = '#F5A7B8';
-const SEL_COLOR       = 'rgba(255,214,0,0.50)';
-const LASTMOVE_COLOR  = 'rgba(220,150,170,0.55)';
-const DOT_EMPTY       = 'rgba(0,0,0,0.16)';
-const DOT_CAPTURE     = 'rgba(0,0,0,0.13)';
+const LIGHT_SQ           = '#FFF8F9';
+const DARK_SQ            = '#F5A7B8';
+const SEL_COLOR          = 'rgba(255,214,0,0.50)';
+const LASTMOVE_COLOR     = 'rgba(220,150,170,0.55)';
+const DOT_EMPTY          = 'rgba(0,0,0,0.16)';
+const DOT_CAPTURE        = 'rgba(0,0,0,0.13)';
+const PREMOVE_FROM_COLOR = 'rgba(90,160,255,0.62)';
+const PREMOVE_TO_COLOR   = 'rgba(90,160,255,0.38)';
+
+// Depth cap per skill level — keeps WASM response time sane
+const SKILL_DEPTH = [3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,12];
 
 // SVG piece image cache: key = color + uppercase type (e.g. 'wK', 'bN')
 const PIECE_IMAGES = {};
@@ -80,6 +85,15 @@ let segmentIdx  = 0;
 
 // Engine timing (minimum display delay)
 let engineRequestTime = 0;
+
+// Engine status + thinking display
+let engineStatus     = 'offline'; // 'offline' | 'loading' | 'ready'
+let engineThinkFen   = '';        // FEN when go was sent (for PV conversion)
+
+// Premove
+let premoveFrom  = null;
+let premoveTo    = null;
+let premovePromo = null;
 
 // Move navigation (null = live view, number = viewing ply N)
 let viewingPly = null;
@@ -346,6 +360,8 @@ function bindGameUI() {
       e.preventDefault();
       if (viewingPly === null) return;
       navigateTo(viewingPly + 1);
+    } else if (e.key === 'Escape') {
+      if (premoveFrom) { clearPremove(); drawBoard(); }
     }
   });
 }
@@ -509,6 +525,7 @@ function startGame() {
   gameOver       = false;
   pendingPromoFrom = null;
   pendingPromoTo   = null;
+  clearPremove();
   wLowTimePlayed   = false;
   bLowTimePlayed   = false;
   viewingPly       = null;
@@ -570,7 +587,9 @@ function goToSetup() {
 
 function initWorker() {
   terminateWorker();
-  workerReady = false;
+  workerReady    = false;
+  engineStatus   = 'loading';
+  updateEnginePanel();
   worker = new Worker(new URL('./stockfish/stockfish.js', import.meta.url));
   worker.onmessage = e => handleWorkerMsg(e.data);
   worker.postMessage('uci');
@@ -580,14 +599,27 @@ function initWorker() {
 
 function terminateWorker() {
   if (worker) { worker.terminate(); worker = null; }
-  workerReady = false;
+  workerReady  = false;
+  engineStatus = 'offline';
 }
 
 function handleWorkerMsg(msg) {
   if (typeof msg !== 'string') return;
-  if (msg === 'readyok') { workerReady = true; return; }
+  if (msg === 'readyok') {
+    workerReady  = true;
+    engineStatus = 'ready';
+    if (!engineThinking) updateEnginePanel();
+    return;
+  }
+  // Live thinking info — parse and display
+  if (msg.startsWith('info') && msg.includes('score') &&
+      !msg.includes('upperbound') && !msg.includes('lowerbound')) {
+    const info = parseInfoLine(msg);
+    if (info) updateThinkingDisplay(info);
+    return;
+  }
   if (msg.startsWith('bestmove')) {
-    const parts = msg.split(' ');
+    const parts   = msg.split(' ');
     const uciMove = parts[1];
     if (!uciMove || uciMove === '(none)') return;
     const elapsed = performance.now() - engineRequestTime;
@@ -595,21 +627,101 @@ function handleWorkerMsg(msg) {
   }
 }
 
+function parseInfoLine(line) {
+  const tokens = line.split(' ');
+  const info   = { depth: 0, cp: null, mate: null, pv: [], nps: 0 };
+  for (let i = 0; i < tokens.length; i++) {
+    switch (tokens[i]) {
+      case 'depth': info.depth = parseInt(tokens[i + 1]); break;
+      case 'nps':   info.nps   = parseInt(tokens[i + 1]); break;
+      case 'score':
+        if (tokens[i + 1] === 'cp')   { info.cp   = parseInt(tokens[i + 2]); }
+        if (tokens[i + 1] === 'mate') { info.mate = parseInt(tokens[i + 2]); }
+        break;
+      case 'pv': info.pv = tokens.slice(i + 1); break;
+    }
+  }
+  return info.depth > 0 ? info : null;
+}
+
+function updateThinkingDisplay(info) {
+  // Eval from white's perspective (Stockfish score is from side-to-move's POV)
+  let evalStr = '';
+  if (info.mate !== null) {
+    evalStr = info.mate > 0 ? `M${info.mate}` : `-M${Math.abs(info.mate)}`;
+    if (chess && chess.turn() === 'b') evalStr = info.mate > 0 ? `-M${info.mate}` : `M${Math.abs(info.mate)}`;
+  } else if (info.cp !== null) {
+    const cpW = (chess && chess.turn() === 'b') ? -info.cp : info.cp;
+    evalStr = (cpW >= 0 ? '+' : '') + (cpW / 100).toFixed(2);
+  }
+
+  const pvSan  = pvToSan(engineThinkFen, info.pv.slice(0, 6));
+  const npsStr = info.nps > 0 ? `${(info.nps / 1000).toFixed(0)}k nps` : '';
+
+  const body = document.getElementById('commentaryBody');
+  if (!body) return;
+  body.className = 'commentary-body';
+  body.innerHTML = buildThinkingHtml(info.depth, evalStr, pvSan, npsStr);
+}
+
+function buildThinkingHtml(depth, evalStr, pvSan, npsStr) {
+  const isPos = evalStr.startsWith('+') || (evalStr.startsWith('M') && !evalStr.startsWith('-'));
+  const evalCls = evalStr ? (isPos ? 'engine-eval-pos' : 'engine-eval-neg') : '';
+  return `<div class="engine-thinking">` +
+    `<div class="engine-stats">` +
+    `<span class="engine-stat-label">Depth</span><span class="engine-stat-val">${depth || '…'}</span>` +
+    `<span class="engine-stat-sep">·</span>` +
+    `<span class="engine-stat-label">Eval</span><span class="engine-stat-val ${evalCls}">${evalStr || '…'}</span>` +
+    (npsStr ? `<span class="engine-stat-sep">·</span><span class="engine-stat-label">${npsStr}</span>` : '') +
+    `</div>` +
+    (pvSan ? `<div class="engine-pv">${pvSan}</div>` : `<div class="engine-pv engine-pv-wait">searching…</div>`) +
+    `</div>`;
+}
+
+function pvToSan(fen, pvMoves) {
+  try {
+    const g   = new Chess(fen);
+    const san = [];
+    for (const uci of pvMoves) {
+      const m = g.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || 'q' });
+      if (!m) break;
+      san.push(m.san);
+    }
+    return san.join(' ');
+  } catch (_) {
+    return pvMoves.join(' ');
+  }
+}
+
+function updateEnginePanel() {
+  const dot  = document.getElementById('engineDot');
+  const body = document.getElementById('commentaryBody');
+  if (!dot || !body) return;
+  dot.className = `engine-dot engine-dot--${engineStatus}`;
+  if (!engineThinking) {
+    if (engineStatus === 'loading') {
+      body.className = 'commentary-body';
+      body.textContent = 'Loading engine\u2026';
+    } else {
+      body.className = 'commentary-body coming-soon';
+      body.innerHTML = 'Coming soon \u2014 Monika will analyze your moves here once the Spark is back online. \u2734';
+    }
+  }
+}
+
 function requestEngineMove() {
   if (!chess || gameOver) return;
-  engineThinking = true;
+  engineThinking    = true;
   engineRequestTime = performance.now();
+  engineThinkFen    = chess.fen();
 
-  const seg = segments[segmentIdx];
+  // Show "searching" state immediately
+  const body = document.getElementById('commentaryBody');
+  if (body) { body.className = 'commentary-body'; body.innerHTML = buildThinkingHtml(0, '', '', ''); }
+
+  const depth = SKILL_DEPTH[Math.min(skillLevel, 20)];
   worker.postMessage(`position fen ${chess.fen()}`);
-
-  let goCmd;
-  if (seg.incType === 'fischer') {
-    goCmd = `go wtime ${Math.max(1, Math.round(wClockMs))} btime ${Math.max(1, Math.round(bClockMs))} winc ${seg.incWhite * 1000} binc ${seg.incBlack * 1000}`;
-  } else {
-    goCmd = `go wtime ${Math.max(1, Math.round(wClockMs))} btime ${Math.max(1, Math.round(bClockMs))}`;
-  }
-  worker.postMessage(goCmd);
+  worker.postMessage(`go depth ${depth}`);
 }
 
 function applyEngineMove(uciMove) {
@@ -644,7 +756,19 @@ function applyEngineMove(uciMove) {
   checkGameEnd();
 
   if (!gameOver) {
+    // Try executing a pending premove
+    if (premoveFrom && premoveTo) {
+      const pf = premoveFrom, pt = premoveTo, pp = premovePromo;
+      clearPremove();
+      const legal = chess.moves({ verbose: true }).some(m => m.from === pf && m.to === pt);
+      if (legal) {
+        executePlayerMove(pf, pt, pp || 'q');
+        return;
+      }
+    }
+    clearPremove();
     setStatus('Your turn');
+    updateEnginePanel();
   }
 }
 
@@ -653,9 +777,7 @@ function applyEngineMove(uciMove) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function onBoardClick(e) {
-  if (gameOver || engineThinking || viewingPly !== null) return;
-  if (chess.turn() !== playerSide) return;
-  if (pendingPromoFrom) return;
+  if (gameOver || viewingPly !== null) return;
 
   const rect   = canvas.getBoundingClientRect();
   const scaleX = canvas.width  / rect.width;
@@ -664,6 +786,12 @@ function onBoardClick(e) {
   const y  = (e.clientY - rect.top)  * scaleY;
   const sq = pixelToSquare(x, y);
   if (!sq) return;
+
+  // Premove mode: engine is thinking, let player queue a move
+  if (engineThinking) { handlePremoveClick(sq); return; }
+
+  if (chess.turn() !== playerSide) return;
+  if (pendingPromoFrom) return;
 
   if (selectedSq === null) {
     trySelectSquare(sq);
@@ -695,6 +823,35 @@ function deselect() {
   selectedSq   = null;
   legalTargets = [];
   drawBoard();
+}
+
+function handlePremoveClick(sq) {
+  if (premoveFrom === null) {
+    // First click: must be own piece
+    const piece = chess.get(sq);
+    if (piece && piece.color === playerSide) { premoveFrom = sq; drawBoard(); }
+  } else if (sq === premoveFrom) {
+    clearPremove(); drawBoard();
+  } else {
+    const piece = chess.get(sq);
+    if (piece && piece.color === playerSide) {
+      // Re-select source
+      premoveFrom = sq; premoveTo = null; premovePromo = null;
+    } else {
+      premoveTo = sq;
+      // Auto-queen pawn promotion premoves
+      const fp = chess.get(premoveFrom);
+      if (fp && fp.type === 'p') {
+        if ((playerSide === 'w' && sq[1] === '8') || (playerSide === 'b' && sq[1] === '1'))
+          premovePromo = 'q';
+      }
+    }
+    drawBoard();
+  }
+}
+
+function clearPremove() {
+  premoveFrom = null; premoveTo = null; premovePromo = null;
 }
 
 function attemptPlayerMove(from, to) {
@@ -976,6 +1133,11 @@ function drawBoard() {
       // Selection highlight (live only)
       if (viewingPly === null && sq === selectedSq) {
         ctx.fillStyle = SEL_COLOR;
+        ctx.fillRect(col * sz, row * sz, sz, sz);
+      }
+      // Premove highlight (live only)
+      if (viewingPly === null && (sq === premoveFrom || sq === premoveTo)) {
+        ctx.fillStyle = sq === premoveFrom ? PREMOVE_FROM_COLOR : PREMOVE_TO_COLOR;
         ctx.fillRect(col * sz, row * sz, sz, sz);
       }
     }
